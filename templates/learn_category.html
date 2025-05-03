@@ -1,0 +1,89 @@
+{% extends "after_staff_enter__base.html" %}
+{% block inner_main %}
+<section>
+<form method="post">
+{{ form.hidden_tag() }}
+<table class="table">
+<tr>
+<td>
+{{ form.spell_and_header.label }}{{ form.spell_and_header(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.mean_and_content.label }}{{ form.mean_and_content(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.parent_category_tags.label }}{{ form.parent_category_tags(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.sibling_category_tags.label }}{{ form.sibling_category_tags(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.child_category_tags.label }}{{ form.child_category_tags(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.is_hidden.label }}{{ form.is_hidden(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.is_exclude.label }}{{ form.is_exclude(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>
+{{ form.decide(class_="btn btn-primary btn-block") }}
+</td>
+<td></td>
+<td></td>
+<td>
+{{ form.cancel(class_="btn btn-primary btn-block") }}
+</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</table>
+</form>
+</section>
+{% endblock %}

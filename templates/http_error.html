@@ -1,0 +1,12 @@
+{% extends "error__base.html" %}
+{% block inner_main %}
+<section>
+<article>
+<div class="error-message">
+<h1>エラーコード : {{code}}</h1>
+<h2>エラー名 : {{name}}</h2>
+<h3>エラー説明 : {{description}}</h3>
+</div>
+</article>
+</section>
+{% endblock %}

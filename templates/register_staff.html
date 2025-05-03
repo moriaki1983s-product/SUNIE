@@ -1,0 +1,109 @@
+{% extends "after_admin_enter__base.html" %}
+{% block inner_main %}
+<section>
+<form method="post">
+{{ form.hidden_tag() }}
+<table class="table">
+<tr>
+<td>
+{{ form.name.label }}{{ form.name(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.kana_name.label }}{{ form.kana_name(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.pass_word.label }}{{ form.pass_word(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.sex.label }}{{ form.sex(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.blood_type.label }}{{ form.blood_type(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.birth_date.label }}{{ form.birth_date(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.is_hidden.label }}{{ form.is_hidden(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.is_exclude.label }}{{ form.is_exclude(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>
+{{ form.decide(class_="btn btn-primary btn-block") }}
+</td>
+<td></td>
+<td></td>
+<td>
+{{ form.cancel(class_="btn btn-primary btn-block") }}
+</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</table>
+</form>
+</section>
+<section>
+<br>
+<br>
+<a class="btn btn-primary" href="{{url_for('view.show_staffs')}}">職員一覧</a>
+<a class="btn btn-primary" href="{{url_for('view.search_staffs')}}">職員検索</a>
+<a class="btn btn-primary" href="{{url_for('view.register_staff')}}">職員登録</a>
+<br>
+<br>
+</section>
+<section>
+<br>
+<br>
+</section>
+{% endblock %}

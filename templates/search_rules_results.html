@@ -1,0 +1,61 @@
+{% extends "after_admin_enter__base.html" %}
+{% block inner_main %}
+<section>
+<form method="post">
+<table class="table">
+<thead class="items-header">
+<tr>
+<th scope="col1">ID</th>
+<th scope="col1">綴り&見出し</th>
+<th scope="col1">意味&内容</th>
+<th scope="col1">職員名</th>
+<th scope="col1">項目操作1</th>
+<th scope="col1">項目操作2</th>
+</tr>
+</thead>
+<tbody>
+{% for item in page_data %}
+<tr class="database-item">
+<td>{{item[0]}}</td>
+<td>{{item[1]}}</td>
+<td>{{item[2]}}</td>
+<td>{{item[3]}}</td>
+<td>
+<input id="modify-item-id" name="modify-item-id"
+type="submit" class="btn btn-primary btn-block" value="修正"
+onclick="document.getElementById('hidden-modify-item-id').value='{{item[0]}}';"/>
+</td>
+<td>
+<input id="detail-item-id" name="detail-item-id"
+type="submit" class="btn btn-primary btn-block" value="詳細"
+onclick="document.getElementById('hidden-detail-item-id').value='{{item[0]}}';"/>
+</td>
+</tr>
+{% endfor %}
+<input id="hidden-modify-item-id" name="hidden-modify-item-id" type="hidden" value=""></input>
+<input id="hidden-detail-item-id" name="hidden-detail-item-id" type="hidden" value=""></input>
+</tbody>
+</table>
+</form>
+</section>
+{% if pagination %}
+<section>
+<article>
+<div class="pagination-information">
+{{pagination.info}}
+</div>
+{{pagination.links}}
+</article>
+</section>
+{% endif %}
+<section>
+<br>
+<br>
+<a class="btn btn-primary" href="{{url_for('view.show_rules')}}">規則一覧</a>
+<a class="btn btn-primary" href="{{url_for('view.search_rules')}}">規則検索</a>
+<a class="btn btn-primary" href="{{url_for('view.import_rules')}}">規則取込</a>
+<a class="btn btn-primary" href="{{url_for('view.export_rules')}}">規則書出</a>
+<br>
+<br>
+</section>
+{% endblock %}

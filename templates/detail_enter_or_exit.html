@@ -1,0 +1,86 @@
+{% extends "after_admin_enter__base.html" %}
+{% block inner_main %}
+<section>
+{{ form.hidden_tag() }}
+<table class="table">
+<tr>
+<td>
+{{ form.id.label }}{{ form.id(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.staff_name.label }}{{ form.staff_name(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.staff_kana_name.label }}{{ form.staff_kana_name(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.reason.label }}{{ form.reason(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.enter_or_exit_at.label }}{{ form.enter_or_exit_at(class_="form-control", type="datetime-local") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.enter_or_exit_at_second.label }}{{ form.enter_or_exit_at_second(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.created_at.label }}{{ form.created_at(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.updated_at.label }}{{ form.updated_at(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.is_hidden.label }}{{ form.is_hidden(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.is_exclude.label }}{{ form.is_exclude(class_="form-control") }}
+</td>
+</tr>
+</table>
+<section>
+<br>
+<br>
+<a class="btn btn-primary" href="{{url_for('view.show_enters_or_exits')}}">入退一覧</a>
+<a class="btn btn-primary" href="{{url_for('view.search_enters_or_exits')}}">入退検索</a>
+<a class="btn btn-primary" href="{{url_for('view.register_enter_or_exit')}}">入退登録</a>
+<a class="btn btn-primary" href="{{url_for('view.import_enters_or_exits')}}">入退取込</a>
+<a class="btn btn-primary" href="{{url_for('view.export_enters_or_exits')}}">入退書出</a>
+<br>
+<br>
+</section>
+{% endblock %}

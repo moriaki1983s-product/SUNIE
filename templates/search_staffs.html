@@ -1,0 +1,137 @@
+{% extends "after_admin_enter__base.html" %}
+{% block inner_main %}
+<section>
+<form method="post">
+{{ form.hidden_tag() }}
+<table class="table">
+<tr>
+<td>
+{{ form.id.label }}{{ form.id(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.name.label }}{{ form.name(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.kana_name.label }}{{ form.kana_name(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.sex.label }}{{ form.sex(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.blood_type.label }}{{ form.blood_type(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.birth_date.label }}{{ form.birth_date(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.created_at_begin.label }}{{ form.created_at_begin(class_="form-control", type="datetime-local") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.created_at_end.label }}{{ form.created_at_end(class_="form-control", type="datetime-local") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.updated_at_begin.label }}{{ form.updated_at_begin(class_="form-control", type="datetime-local") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.updated_at_end.label }}{{ form.updated_at_end(class_="form-control", type="datetime-local") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+<div class="radio-inline">
+{{ form.sort_condition.label }}{{ form.sort_condition(class_="form-control") }}
+</div>
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+<div class="radio-inline">
+{{ form.extract_condition.label }}{{ form.extract_condition(class_="form-control") }}
+</div>
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>
+{{ form.decide(class_="btn btn-primary btn-block") }}
+</td>
+<td></td>
+<td></td>
+<td>
+{{ form.cancel(class_="btn btn-primary btn-block") }}
+</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</table>
+</form>
+</section>
+<section>
+<br>
+<br>
+<a class="btn btn-primary" href="{{url_for('view.show_staffs')}}">職員一覧</a>
+<a class="btn btn-primary" href="{{url_for('view.search_staffs')}}">職員検索</a>
+<a class="btn btn-primary" href="{{url_for('view.register_staff')}}">職員登録</a>
+<br>
+<br>
+</section>
+{% endblock %}

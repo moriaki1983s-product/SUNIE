@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+<meta name="description" content="moriaki1983によって開発された構想支援型AIアプリケーション">
+<title>sunie.ai</title>
+<link rel="shortcut icon" type="image/x-icon" href="{{url_for('static', filename='statics/visionmarks/favicon.ico')}}">
+<link rel="stylesheet" href="{{url_for('static', filename='statics/stylesheets/bootstrap.css')}}">
+<link rel="stylesheet" href="{{url_for('static', filename='statics/stylesheets/sticky-footer.css')}}">
+<link rel="stylesheet" href="{{url_for('static', filename='statics/stylesheets/entire-default.css')}}">
+</head>
+{% if background_image %}
+<body background="{{url_for('static', filename=background_image)}}" class="background-sp">
+{% else %}
+<body class="background">
+{% endif %}
+<header class="header">
+<nav class="navbar navbar-expand-lg navbar-dark bg-secondary">
+<img src="{{url_for('static', filename='statics/visionmarks/logo.png')}}" width="32" hight="32" alt="logo"/>
+<a class="navbar-brand" href="{{url_for('view.home')}}">&nbsp;&nbsp;&nbsp;&nbsp;sunie.ai&nbsp;&nbsp;&nbsp;&nbsp;</a>
+<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav4" aria-controls="navbarNav4" aria-expanded="false" aria-label="Toggle navigation">
+<span class="navbar-toggler-icon"></span>
+</button>
+<div class="collapse navbar-collapse justify-content-end" id="navbarNav4">
+<ul class="navbar-nav">
+<li class="nav-item">
+<a class="nav-link" href="{{url_for('view.home')}}">HOME</a>
+</li>
+<li class="nav-item">
+<a class="nav-link" href="{{url_for('view.guide')}}">GUIDE</a>
+</li>
+<li class="nav-item">
+<a class="nav-link" href="{{url_for('view.usage')}}">USAGE</a>
+</li>
+<li class="nav-item">
+<a class="nav-link" href="{{url_for('view.staff_enter')}}">職員入室</a>
+</li>
+<li class="nav-item">
+<a class="nav-link" href="{{url_for('view.admin_enter')}}">管理者入室</a>
+</li>
+</ul>
+</div>
+</nav>
+</header>
+<div class="display-depend-on-viewport">
+<main>
+{% block inner_main %}
+{% endblock %}
+</main>
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+{% for message in messages %}
+{% if happen_error %}
+<section>
+<article>
+<p class="error-message">{{message}}</p>
+</article>
+</section>
+{% else %}
+<section>
+<article>
+<p class="general-message">{{message}}</p>
+</article>
+</section>
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endwith %}
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+</div>
+<footer class="footer">
+<div class="container text-center">
+<p class="text-muted">Copyright &copy; 2028 created-by moriaki1983.</p>
+</div>
+</footer>
+<script src="{{url_for('static', filename='statics/javascripts/jquery-3.6.4.js')}}"></script>
+<script src="{{url_for('static', filename='statics/javascripts/bootstrap.bundle.js')}}"></script>
+<script src="{{url_for('static', filename='statics/javascripts/footer-default.js')}}"></script>
+</body>
+</html>

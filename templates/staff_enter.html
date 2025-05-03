@@ -1,0 +1,36 @@
+{% extends "before_enter__base.html" %}
+{% block inner_main %}
+<section>
+<div class="login-form">
+<form method="post">
+{{ form.hidden_tag() }}
+<p class="text-center">入室しますか?</p>
+{{ form.name.label }}{{ form.name(class_="form-control") }}
+{{ form.password.label }}{{ form.password(class_="form-control") }}
+{{ form.reason.label }}{{ form.reason(class_="form-control") }}
+<table align="center">
+<tr><td></td></tr>
+<tr><td></td></tr>
+<tr><td></td></tr>
+<tr><td></td></tr>
+<tr>
+<td>
+{{ form.decide(class_="btn btn-primary btn-block") }}
+</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>
+{{ form.cancel(class_="btn btn-primary btn-block") }}
+</td>
+</tr>
+</table>
+</form>
+</div>
+</section>
+{% endblock %}

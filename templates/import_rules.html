@@ -1,0 +1,36 @@
+{% extends "after_admin_enter__base.html" %}
+{% block inner_main %}
+<section>
+<div class="login-form">
+<form method="post">
+{{ form.hidden_tag() }}
+<p class="text-center">ファイル取込しますか?</p>
+<table align="center">
+<tr><td></td></tr>
+<tr><td></td></tr>
+<tr><td></td></tr>
+<tr><td></td></tr>
+<tr>
+{{ form.imported_file.label }}{{ form.imported_file(class_="form-control") }}
+</tr>
+<tr>
+<td>
+{{ form.decide(class_="btn btn-primary btn-block") }}
+</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>
+{{ form.cancel(class_="btn btn-primary btn-block") }}
+</td>
+</tr>
+</table>
+</form>
+</div>
+</section>
+{% endblock %}

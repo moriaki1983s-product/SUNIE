@@ -1,0 +1,92 @@
+{% extends "after_admin_enter__base.html" %}
+{% block inner_main %}
+<section>
+{{ form.hidden_tag() }}
+<table class="table">
+<tr>
+<td>
+{{ form.id.label }}{{ form.id(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.spell_and_header.label }}{{ form.spell_and_header(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.mean_and_content.label }}{{ form.mean_and_content(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.concept_and_notion.label }}{{ form.concept_and_notion(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.category_tags.label }}{{ form.category_tags(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.staff_name.label }}{{ form.staff_name(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.staff_kana_name.label }}{{ form.staff_kana_name(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.created_at.label }}{{ form.created_at(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.updated_at.label }}{{ form.updated_at(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.is_hidden.label }}{{ form.is_hidden(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.is_exclude.label }}{{ form.is_exclude(class_="form-control") }}
+</td>
+</tr>
+</table>
+<section>
+<br>
+<br>
+<a class="btn btn-primary" href="{{url_for('view.show_themes')}}">主題一覧</a>
+<a class="btn btn-primary" href="{{url_for('view.search_themes')}}">主題検索</a>
+<a class="btn btn-primary" href="{{url_for('view.import_themes')}}">主題取込</a>
+<a class="btn btn-primary" href="{{url_for('view.export_themes')}}">主題書出</a>
+<br>
+<br>
+</section>
+{% endblock %}

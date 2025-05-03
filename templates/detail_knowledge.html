@@ -1,0 +1,134 @@
+{% extends "after_admin_enter__base.html" %}
+{% block inner_main %}
+<section>
+{{ form.hidden_tag() }}
+<table class="table">
+<tr>
+<td>
+{{ form.id.label }}{{ form.id(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.spell_and_header.label }}{{ form.spell_and_header(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.mean_and_content.label }}{{ form.mean_and_content(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.concept_and_notion.label }}{{ form.concept_and_notion(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.category_tags.label }}{{ form.category_tags(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.archived_image_file_path.label }}
+<br>
+{% if archived_image_file_path == '' %}
+<p class="attention-message">現時点でイメージファイルは登録されていません.</p>
+{% else %}
+<a href="{{archived_image_file_path}}" target="_blank">イメージファイルを新しいタブで開く</a>
+{% endif %}
+{{ form.archived_image_file_path(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.archived_sound_file_path.label }}
+<br>
+{% if archived_sound_file_path == '' %}
+<p class="attention-message">現時点でサウンドファイルは登録されていません.</p>
+{% else %}
+<a href="{{archived_sound_file_path}}" target="_blank">サウンドファイルを新しいタブで開く</a>
+{% endif %}
+{{ form.archived_sound_file_path(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.archived_video_file_path.label }}
+<br>
+{% if archived_video_file_path == '' %}
+<p class="attention-message">現時点でビデオファイルは登録されていません.</p>
+{% else %}
+<a href="{{archived_video_file_path}}" target="_blank">ビデオファイルを新しいタブで開く</a>
+{% endif %}
+{{ form.archived_video_file_path(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.staff_name.label }}{{ form.staff_name(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.staff_kana_name.label }}{{ form.staff_kana_name(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.created_at.label }}{{ form.created_at(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.updated_at.label }}{{ form.updated_at(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.is_hidden.label }}{{ form.is_hidden(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.is_exclude.label }}{{ form.is_exclude(class_="form-control") }}
+</td>
+</tr>
+</table>
+<section>
+<br>
+<br>
+<a class="btn btn-primary" href="{{url_for('view.show_knowledges')}}">知識一覧</a>
+<a class="btn btn-primary" href="{{url_for('view.search_knowledges')}}">知識検索</a>
+<a class="btn btn-primary" href="{{url_for('view.import_knowledges')}}">知識取込</a>
+<a class="btn btn-primary" href="{{url_for('view.export_knowledges')}}">知識書出</a>
+<br>
+<br>
+</section>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "after_staff_enter__base.html" %}
+{% block inner_main %}
+<section>
+<table class="table">
+{% if text_from_staff %}
+<tr>
+<td>
+<label for="text-from-staff">職員からのメッセージ : </label>
+<textarea id="text-from-staff" name="text-from-staff" class="form-control" style="resize: none;" rows="8" readonly>{{text_from_staff}}</textarea>
+</td>
+</tr>
+{% else %}
+<tr>
+<td>
+<label for="text-from-staff">職員からのメッセージ : </label>
+<textarea id="text-from-staff" name="text-from-staff" class="form-control" style="resize: none;" rows="8" readonly>送信していません.</textarea>
+</td>
+</tr>
+{% endif %}
+{% if text_from_application %}
+<tr>
+<td>
+<label for="text-from-application">アプリからのメッセージ : </label>
+<textarea id="text-from-application" name="text-from-application" class="form-control" style="resize: none;" rows="8" readonly>{{text_from_application}}</textarea>
+</td>
+</tr>
+{% else %}
+<tr>
+<td>
+<label for="text-from-application">アプリからのメッセージ : </label>
+<textarea id="text-from-application" name="text-from-application" class="form-control" style="resize: none;" rows="8" readonly>返信はありません.</textarea>
+</td>
+</tr>
+{% endif %}
+</table>
+</section>
+{% endblock %}

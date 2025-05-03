@@ -1,0 +1,36 @@
+{% extends "before_enter__base.html" %}
+{% block inner_main %}
+{% if time_period == 'midnight' %}
+<section>
+<article>
+<div class="greeting-message">
+<h1>新しい一日が始まりました ...</h1>
+</div>
+</article>
+</section>
+{% elif time_period == 'morning' %}
+<section>
+<article>
+<div class="greeting-message">
+<h1>おはようございます ...</h1>
+</div>
+</article>
+</section>
+{% elif time_period == 'afternoon' %}
+<section>
+<article>
+<div class="greeting-message">
+<h1>こんにちは ...</h1>
+</div>
+</article>
+</section>
+{% else %}
+<section>
+<article>
+<div class="greeting-message">
+<h1>こんばんは ...</h1>
+</div>
+</article>
+</section>
+{% endif %}
+{% endblock %}
