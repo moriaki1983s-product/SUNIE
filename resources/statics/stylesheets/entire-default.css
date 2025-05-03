@@ -1,0 +1,200 @@
+@charset "utf-8";
+
+
+
+.greeting-message {
+    background-color: skyblue;
+    font-size: 16px;
+    color: white;
+    text-align: center;
+}
+
+.guide-message {
+    background-color: skyblue;
+    font-size: 16px;
+    color: white;
+    text-align: center;
+}
+
+.guide-content-message {
+    color: white;
+    font-size: 16px;
+    text-align: center;
+}
+
+.usage-message {
+    background-color: skyblue;
+    font-size: 16px;
+    color: white;
+    text-align: center;
+
+}
+
+.usage-content-message {
+    color: white;
+    font-size: 20px;
+    text-align: center;
+}
+
+.general-message {
+    background-color: lightgreen;
+    color: white;
+    font-size: 16px;
+    text-align: center;
+}
+
+.attention-message {
+    color: salmon;
+    font-size: 16px;
+    text-align: left;
+}
+
+.pagination-information {
+    background-color: skyblue;
+    font-size: 16px;
+    color: white;
+    text-align: center;
+}
+
+.pagination-error-message {
+    background-color: darkorchid;
+    font-size: 16px;
+    color: white;
+    text-align: center;
+}
+
+.retrive-error-message {
+    background-color: darkorchid;
+    font-size: 16px;
+    color: white;
+    text-align: center;
+}
+
+.error-message {
+    background-color: darkorchid;
+    font-size: 16px;
+    color: white;
+    text-align: center;
+}
+
+.background {
+    background-color: slategray;
+}
+
+.background-sp {
+    background-color: slategray;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+    width: 100%;
+    height: 100%;
+}
+
+.login-form {
+    width: 340px;
+    margin: 50px auto;
+}
+
+.login-form form {
+    background-color: aliceblue;
+    box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.3);
+    padding: 24px;
+    border-radius: 16px;
+}
+
+.login-form h2 {
+    margin: 0 0 15px;
+}
+
+.form-control,
+.btn {
+    min-height: 38px;
+    border-radius: 4px;
+}
+
+.btn {
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.login-form p {
+    background-color: aliceblue;
+    box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.3);
+    padding: 24px;
+    border-radius: 16px;
+}
+
+.message-item {
+    background-color: aliceblue;
+    font-size: 16px;
+    color: black;
+    text-align: center;
+}
+
+.message-image {
+    width: 400px;
+}
+
+.items-header {
+    background-color: silver;
+}
+
+.database-item {
+    background-color: aliceblue;
+    font-size: 16px;
+    color: black;
+    text-align: left;
+}
+
+.clock {
+    background-color: aliceblue;
+    color: black;
+}
+
+.current-date {
+    font-size: 14px;
+    text-align: center;
+}
+
+.current-time {
+    font-size: 28px;
+    text-align: center;
+}
+
+.hidden {
+    display: none;
+}
+
+br {
+    visibility: hidden;
+}
+
+.radio-inline ul {
+    list-style: none;
+}
+
+input[type="file"]::file-selector-button {
+    display: none;
+}
+
+@media screen and (max-width: 1500px) {
+    .display-depend-on-viewport {
+        display: none;
+    }
+}
+
+* {
+    animation-name: fadeIn;
+    animation-duration: 1s;
+    animation: fadeIn 0.7s cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
