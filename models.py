@@ -6,9 +6,11 @@
 # 既成のモジュールをインポートする.
 import os
 import sys
-from sqlalchemy import Column, Integer, String, Text, Boolean, create_engine
-from sqlalchemy.orm import sessionmaker
+from datetime import datetime, timezone
+from sqlalchemy import Column, Integer, String, Text, Boolean, Date, DateTime, create_engine
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql import func
 
 # 設定のためのモジュールをインポートする.
 import constants as consts
@@ -37,16 +39,18 @@ class Word(Base):
       spell_and_header = Column(Text, nullable=False)
       mean_and_content = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
+      theme_tag = Column(Text, nullable=False)
       intent = Column(String(consts.INTENT_LENGTH), nullable=False)
       sentiment = Column(String(consts.SENTIMENT_LENGTH), nullable=False)
+      sentiment_support = Column(String(consts.SENTIMENT_LENGTH), nullable=False)
       strength = Column(String(consts.STRENGTH_LENGTH), nullable=False)
       part_of_speech = Column(String(consts.PART_OF_SPEECH_LENGTH), nullable=False)
       first_character = Column(String(consts.FIRST_CHARACTER_LENGTH), nullable=False)
       characters_count = Column(String(consts.CHARACTERS_COUNT_LENGTH), nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
-      created_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
-      updated_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
+      created_at = Column(DateTime, nullable=False)
+      updated_at = Column(DateTime, nullable=False)
       is_hidden = Column(Boolean, nullable=False)
       is_exclude = Column(Boolean, nullable=False)
 
@@ -54,8 +58,10 @@ class Word(Base):
                    spell_and_header,
                    mean_and_content,
                    concept_and_notion,
+                   theme_tag,
                    intent,
                    sentiment,
+                   sentiment_support,
                    strength,
                    part_of_speech,
                    first_character,
@@ -70,8 +76,10 @@ class Word(Base):
           self.spell_and_header = spell_and_header
           self.mean_and_content = mean_and_content
           self.concept_and_notion = concept_and_notion
+          self.theme_tag = theme_tag
           self.intent = intent
           self.sentiment = sentiment
+          self.sentiment_support = sentiment_support
           self.strength = strength
           self.part_of_speech = part_of_speech
           self.first_character = first_character
@@ -91,11 +99,11 @@ class Theme(Base):
       spell_and_header = Column(Text, nullable=False)
       mean_and_content = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
-      category_tags = Column(Text, nullable=False)
+      category_tag = Column(Text, nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
-      created_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
-      updated_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
+      created_at = Column(DateTime, default=datetime.now(timezone.utc))
+      updated_at = Column(DateTime, default=datetime.now(timezone.utc))
       is_hidden = Column(Boolean, nullable=False)
       is_exclude = Column(Boolean, nullable=False)
 
@@ -103,7 +111,7 @@ class Theme(Base):
                    spell_and_header,
                    mean_and_content,
                    concept_and_notion,
-                   category_tags,
+                   category_tag,
                    staff_name,
                    staff_kana_name,
                    created_at,
@@ -114,7 +122,7 @@ class Theme(Base):
           self.spell_and_header = spell_and_header
           self.mean_and_content = mean_and_content
           self.concept_and_notion = concept_and_notion
-          self.category_tags = category_tags
+          self.category_tag = category_tag
           self.staff_name = staff_name
           self.staff_kana_name = staff_kana_name
           self.created_at = created_at
@@ -130,13 +138,13 @@ class Category(Base):
       spell_and_header = Column(Text, nullable=False)
       mean_and_content = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
-      parent_category_tags = Column(Text, nullable=False)
-      sibling_category_tags = Column(Text, nullable=False)
-      child_category_tags = Column(Text, nullable=False)
+      parent_category_tag = Column(Text, nullable=False)
+      sibling_category_tag = Column(Text, nullable=False)
+      child_category_tag = Column(Text, nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
-      created_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
-      updated_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
+      created_at = Column(DateTime, default=datetime.now(timezone.utc))
+      updated_at = Column(DateTime, default=datetime.now(timezone.utc))
       is_hidden = Column(Boolean, nullable=False)
       is_exclude = Column(Boolean, nullable=False)
 
@@ -144,9 +152,9 @@ class Category(Base):
                    spell_and_header,
                    mean_and_content,
                    concept_and_notion,
-                   parent_category_tags,
-                   sibling_category_tags,
-                   child_category_tags,
+                   parent_category_tag,
+                   sibling_category_tag,
+                   child_category_tag,
                    staff_name,
                    staff_kana_name,
                    created_at,
@@ -157,9 +165,9 @@ class Category(Base):
           self.spell_and_header = spell_and_header
           self.mean_and_content = mean_and_content
           self.concept_and_notion = concept_and_notion
-          self.parent_category_tags = parent_category_tags
-          self.sibling_category_tags = sibling_category_tags
-          self.child_category_tags = child_category_tags
+          self.parent_category_tag = parent_category_tag
+          self.sibling_category_tag = sibling_category_tag
+          self.child_category_tag = child_category_tag
           self.staff_name = staff_name
           self.staff_kana_name = staff_kana_name
           self.created_at = created_at
@@ -175,14 +183,14 @@ class Knowledge(Base):
       spell_and_header = Column(Text, nullable=False)
       mean_and_content = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
-      category_tags = Column(Text, nullable=False)
+      category_tag = Column(Text, nullable=False)
       archived_image_file_path = Column(String(consts.ARCHIVED_IMAGE_FILE_NAME_LENGTH), nullable=False)
       archived_sound_file_path = Column(String(consts.ARCHIVED_SOUND_FILE_NAME_LENGTH), nullable=False)
       archived_video_file_path = Column(String(consts.ARCHIVED_VIDEO_FILE_NAME_LENGTH), nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
-      created_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
-      updated_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
+      created_at = Column(DateTime, default=datetime.now(timezone.utc))
+      updated_at = Column(DateTime, default=datetime.now(timezone.utc))
       is_hidden = Column(Boolean, nullable=False)
       is_exclude = Column(Boolean, nullable=False)
 
@@ -190,7 +198,7 @@ class Knowledge(Base):
                    spell_and_header,
                    mean_and_content,
                    concept_and_notion,
-                   category_tags,
+                   category_tag,
                    archived_image_file_path,
                    archived_sound_file_path,
                    archived_video_file_path,
@@ -204,7 +212,7 @@ class Knowledge(Base):
           self.spell_and_header = spell_and_header
           self.mean_and_content = mean_and_content
           self.concept_and_notion = concept_and_notion
-          self.category_tags = category_tags
+          self.category_tag = category_tag
           self.archived_image_file_path = archived_image_file_path
           self.archived_sound_file_path = archived_sound_file_path
           self.archived_video_file_path = archived_video_file_path
@@ -223,13 +231,13 @@ class Rule(Base):
       spell_and_header = Column(Text, nullable=False)
       mean_and_content = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
-      category_tags = Column(Text, nullable=False)
-      inference_condition = Column(Text, nullable=False)
-      inference_result = Column(Text, nullable=False)
+      category_tag = Column(Text, nullable=False)
+      inference_and_speculation_condition = Column(Text, nullable=False)
+      inference_and_speculation_result = Column(Text, nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
-      created_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
-      updated_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
+      created_at = Column(DateTime, default=datetime.now(timezone.utc))
+      updated_at = Column(DateTime, default=datetime.now(timezone.utc))
       is_hidden = Column(Boolean, nullable=False)
       is_exclude = Column(Boolean, nullable=False)
 
@@ -237,22 +245,22 @@ class Rule(Base):
                    spell_and_header,
                    mean_and_content,
                    concept_and_notion,
-                   category_tags,
-                   inference_condition,
-                   inference_result,
+                   category_tag,
+                   inference_and_speculation_condition,
+                   inference_and_speculation_result,
                    staff_name,
                    staff_kana_name,
                    created_at,
                    updated_at,
                    is_hidden,
-                   is_exclude                   
+                   is_exclude
                    ):
           self.spell_and_header = spell_and_header
           self.mean_and_content = mean_and_content
           self.concept_and_notion = concept_and_notion
-          self.category_tags = category_tags
-          self.inference_condition = inference_condition
-          self.inference_result = inference_result
+          self.category_tag = category_tag
+          self.inference_and_speculation_condition = inference_and_speculation_condition
+          self.inference_and_speculation_result = inference_and_speculation_result
           self.staff_name = staff_name
           self.staff_kana_name = staff_kana_name
           self.created_at = created_at
@@ -274,8 +282,8 @@ class Reaction(Base):
       message_example_from_application = Column(Text, nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
-      created_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
-      updated_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
+      created_at = Column(DateTime, default=datetime.now(timezone.utc))
+      updated_at = Column(DateTime, default=datetime.now(timezone.utc))
       is_hidden = Column(Boolean, nullable=False)
       is_exclude = Column(Boolean, nullable=False)
 
@@ -318,8 +326,8 @@ class Generate(Base):
       generated_file_path = Column(String(consts.GENERATED_FILE_NAME_LENGTH), nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
-      created_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
-      updated_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
+      created_at = Column(DateTime, default=datetime.now(timezone.utc))
+      updated_at = Column(DateTime, default=datetime.now(timezone.utc))
       is_hidden = Column(Boolean, nullable=False)
       is_exclude = Column(Boolean, nullable=False)
 
@@ -353,8 +361,8 @@ class History(Base):
       application_message = Column(Text, nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
-      created_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
-      updated_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
+      created_at = Column(DateTime, default=datetime.now(timezone.utc))
+      updated_at = Column(DateTime, default=datetime.now(timezone.utc))
       is_hidden = Column(Boolean, nullable=False)
       is_exclude = Column(Boolean, nullable=False)
 
@@ -385,10 +393,10 @@ class EnterOrExit(Base):
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
       reason = Column(String(consts.ENTER_OR_EXIT_REASON_LENGTH), nullable=False)
-      enter_or_exit_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
-      enter_or_exit_at_second = Column(String(consts.DATE_TIME_SECOND_LENGTH), nullable=False)
-      created_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
-      updated_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
+      enter_or_exit_at = Column(DateTime, nullable=False)
+      enter_or_exit_at_second = Column(Integer, nullable=False)
+      created_at = Column(DateTime, nullable=False)
+      updated_at = Column(DateTime, nullable=False)
       is_hidden = Column(Boolean, nullable=False)
       is_exclude = Column(Boolean, nullable=False)
 
@@ -420,19 +428,19 @@ class Staff(Base):
       id = Column(Integer, primary_key=True, autoincrement=True)
       name = Column(String(consts.STAFF_NAME_LENGTH), unique=True, nullable=False)
       kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), unique=True, nullable=False)
-      pass_word = Column(String(consts.PASSWORD_LENGTH), nullable=False)
+      hashed_password = Column(String(consts.HASHED_PASSWORD_LENGTH), nullable=False)
       sex = Column(String(consts.SEX_LENGTH), nullable=False)
       blood_type = Column(String(consts.BLOOD_TYPE_LENGTH), nullable=False)
-      birth_date = Column(String(consts.BIRTH_DATE_LENGTH), nullable=False)
-      created_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
-      updated_at = Column(String(consts.DATE_TIME_LENGTH), nullable=False)
+      birth_date = Column(Date, nullable=False)
+      created_at = Column(DateTime, default=datetime.now(timezone.utc))
+      updated_at = Column(DateTime, default=datetime.now(timezone.utc))
       is_hidden = Column(Boolean, nullable=False)
       is_exclude = Column(Boolean, nullable=False)
 
       def __init__(self,
                    name,
                    kana_name,
-                   pass_word,
+                   hashed_password,
                    sex,
                    blood_type,
                    birth_date,
@@ -443,7 +451,7 @@ class Staff(Base):
                    ):
           self.name = name
           self.kana_name = kana_name
-          self.pass_word = pass_word
+          self.hashed_password = hashed_password
           self.sex = sex
           self.blood_type = blood_type
           self.birth_date = birth_date

@@ -10,8 +10,8 @@ import sys
 
 
 
-# 管理者用パスワードを宣言・定義する.
-ADMIN_PASSWORD = "secret"
+# 管理者用初期パスワードを宣言・定義する.
+ADMIN_INITIAL_PASSWORD = "secret"
 
 # パスワードの誤入力を許容する数を宣言・定義する.
 APP_LOCKOUT_NUMBER = 3
@@ -50,7 +50,7 @@ ARCHIVED_SOUND_FILE_NAME_LENGTH = GENERAL_FILE_NAME_LENGTH
 ARCHIVED_VIDEO_FILE_NAME_LENGTH = GENERAL_FILE_NAME_LENGTH
 
 # DBスキーマを構成する各種の情報の長さを宣言・定義する.
-GENERAL_ITEM_LENGTH = 32
+GENERAL_ITEM_LENGTH = 64
 
 # IDの長さを宣言・定義する.
 ID_LENGTH = GENERAL_ITEM_LENGTH
@@ -79,17 +79,14 @@ CATEGORY_LENGTH = GENERAL_ITEM_LENGTH
 # 関係種別の長さを宣言・定義する.
 RELATION_TYPE_LENGTH = GENERAL_ITEM_LENGTH
 
-# メイン関係種別の長さを宣言・定義する.
-MAIN_TYPE_LENGTH = GENERAL_ITEM_LENGTH
-
-# サブ関係種別の長さを宣言・定義する.
-SUB_TYPE_LENGTH = GENERAL_ITEM_LENGTH
-
 # 入退理由の長さを宣言・定義する.
 ENTER_OR_EXIT_REASON_LENGTH = GENERAL_ITEM_LENGTH
 
 # 入退日時の長さを宣言・定義する.
-# ENTER_OR_EXIT_DATE_TIME_LENGTH = GENERAL_ITEM_LENGTH
+ENTER_OR_EXIT_DATE_TIME_LENGTH = GENERAL_ITEM_LENGTH
+
+# 入退日時(秒数)の長さを宣言・定義する.
+ENTER_OR_EXIT_SECOND_LENGTH = GENERAL_ITEM_LENGTH
 
 # 職員名の長さを宣言・定義する.
 STAFF_NAME_LENGTH = GENERAL_ITEM_LENGTH
@@ -103,47 +100,50 @@ BIRTH_DATE_LENGTH = GENERAL_ITEM_LENGTH
 # レコード日時の長さを宣言・定義する.
 DATE_TIME_LENGTH = GENERAL_ITEM_LENGTH
 
-# レコード日時(秒数)の長さを宣言・定義する.
-DATE_TIME_SECOND_LENGTH = 16
-
 # 性別の長さを宣言・定義する.
 SEX_LENGTH = 16
 
 # 血液型の長さを宣言・定義する.
 BLOOD_TYPE_LENGTH = 16
 
-# パスワードの長さを宣言・定義する.
+# 生パスワードの長さを宣言・定義する.
 PASSWORD_LENGTH = 16
+
+# ハッシュ化パスワードの長さを宣言・定義する.
+HASHED_PASSWORD_LENGTH = 128
 
 # 一画面ごとに表示する各種の情報の数を宣言・定義する.
 GENERAL_ITEM_PER_PAGE = 100
 
 # 一画面ごとに表示する語句情報の数を宣言・定義する.
-WORD_PER_PAGE = GENERAL_ITEM_PER_PAGE
+WORD_ITEM_PER_PAGE = GENERAL_ITEM_PER_PAGE
 
 # 一画面ごとに表示する主題情報の数を宣言・定義する.
-THEME_PER_PAGE = GENERAL_ITEM_PER_PAGE
+THEME_ITEM_PER_PAGE = GENERAL_ITEM_PER_PAGE
 
 # 一画面ごとに表示する分類情報の数を宣言・定義する.
-CATEGORY_PER_PAGE = GENERAL_ITEM_PER_PAGE
+CATEGORY_ITEM_PER_PAGE = GENERAL_ITEM_PER_PAGE
 
 # 一画面ごとに表示する知識情報の数を宣言・定義する.
-KNOWLEDGE_PER_PAGE = GENERAL_ITEM_PER_PAGE
+KNOWLEDGE_ITEM_PER_PAGE = GENERAL_ITEM_PER_PAGE
 
 # 一画面ごとに表示する規則情報の数を宣言・定義する.
-RULE_PER_PAGE = GENERAL_ITEM_PER_PAGE
+RULE_ITEM_PER_PAGE = GENERAL_ITEM_PER_PAGE
+
+# 一画面ごとに表示する反応情報の数を宣言・定義する.
+REACTION_ITEM_PER_PAGE = GENERAL_ITEM_PER_PAGE
 
 # 一画面ごとに表示する生成情報の数を宣言・定義する.
-GENERATE_PER_PAGE = GENERAL_ITEM_PER_PAGE
+GENERATE_ITEM_PER_PAGE = GENERAL_ITEM_PER_PAGE
 
 # 一画面ごとに表示する履歴情報の数を宣言・定義する.
-HISTORY_PER_PAGE = GENERAL_ITEM_PER_PAGE
+HISTORY_ITEM_PER_PAGE = GENERAL_ITEM_PER_PAGE
 
 # 一画面ごとに表示する入退情報の数を宣言・定義する.
-ENTER_OR_EXIT_PER_PAGE = GENERAL_ITEM_PER_PAGE
+ENTER_OR_EXIT_ITEM_PER_PAGE = GENERAL_ITEM_PER_PAGE
 
 # 一画面ごとに表示する職員情報の数を宣言・定義する.
-STAFF_PER_PAGE = 10
+STAFF_ITEM_PER_PAGE = 10
 
 # ページネイション周りのCSSを宣言・定義する.
 PAGINATION_CSS = "bootstrap4"
@@ -226,8 +226,11 @@ HISTORY_EXPORT_PATH = TEMPORARY_PATH + "histories__export.xml"
 # アプリが一時的に使用する入退エクスポートファイルのパスを宣言・定義する.
 ENTER_OR_EXIT_EXPORT_PATH = TEMPORARY_PATH + "enters_or_exits__export.csv"
 
+# アプリ機密ファイルのパスを宣言・定義する.
+SECURITY_SETTING_PATH = "./appsec.ini"
+
 # アプリ設定ファイルのパスを宣言・定義する.
-SETTING_PATH = "./app.ini"
+ENVIRONMENT_SETTING_PATH = "./appenv.ini"
 
 # アプリ記録ファイルのパスを宣言・定義する.
 LOGGING_PATH = "./app.log"
@@ -268,13 +271,13 @@ APP_MESSAGE_OUTPUT_LENGTH = 262144
 SHORT_TERM_MEMORY_SIZE_BOTTOM = 1
 
 # 短期記憶の大きさの上限を宣言・定義する.
-SHORT_TERM_MEMORY_SIZE_TOP = 5
+SHORT_TERM_MEMORY_SIZE_TOP = 10
 
 # 長期記憶の大きさの下限を宣言・定義する.
 LONG_TERM_MEMORY_SIZE_BOTTOM = 1
 
 # 長期記憶の大きさの上限を宣言・定義する.
-LONG_TERM_MEMORY_SIZE_TOP = 5
+LONG_TERM_MEMORY_SIZE_TOP = 10
 
 # 学習の深さの下限を宣言・定義する.
 LEARN_DEPTH_BOTTOM = 1
@@ -384,8 +387,19 @@ MENU_CHOICE_2_FOR_LEARN_WORD_FORM = [
     ("unknown", "その他(分類不明)")
 ]
 
-# 語句学習フォーム内の強度メニューを宣言・定義する.
+# 語句学習フォーム内の感情補助メニューを宣言・定義する.
 MENU_CHOICE_3_FOR_LEARN_WORD_FORM = [
+    ("", ""),
+    ("calm", "冷静"),
+    ("surprise", "驚き"),
+    ("confusion", "戸惑い"),
+    ("distress", "動揺"),
+    ("excitement", "興奮"),
+    ("unknown", "その他(分類不明)")
+]
+
+# 語句学習フォーム内の強度メニューを宣言・定義する.
+MENU_CHOICE_4_FOR_LEARN_WORD_FORM = [
     ("", ""),
     ("very-weak", "とても弱い"),
     ("weak", "弱い"),
@@ -398,7 +412,7 @@ MENU_CHOICE_3_FOR_LEARN_WORD_FORM = [
 ]
 
 # 語句学習フォーム内の品詞分類メニューを宣言・定義する.
-MENU_CHOICE_4_FOR_LEARN_WORD_FORM = [
+MENU_CHOICE_5_FOR_LEARN_WORD_FORM = [
     ("", ""),
     ("noun", "名詞"),
     ("pron", "代名詞"),
@@ -495,11 +509,14 @@ MENU_CHOICE_1_FOR_SEARCH_WORD_FORM = MENU_CHOICE_1_FOR_LEARN_WORD_FORM
 # 語句検索フォーム内の感情メニューを宣言・定義する.
 MENU_CHOICE_2_FOR_SEARCH_WORD_FORM = MENU_CHOICE_2_FOR_LEARN_WORD_FORM
 
-# 語句検索フォーム内の強度メニューを宣言・定義する.
+# 語句検索フォーム内の感情補助メニューを宣言・定義する.
 MENU_CHOICE_3_FOR_SEARCH_WORD_FORM = MENU_CHOICE_3_FOR_LEARN_WORD_FORM
 
-# 語句検索フォーム内の品詞分類メニューを宣言・定義する.
+# 語句検索フォーム内の強度メニューを宣言・定義する.
 MENU_CHOICE_4_FOR_SEARCH_WORD_FORM = MENU_CHOICE_4_FOR_LEARN_WORD_FORM
+
+# 語句検索フォーム内の品詞分類メニューを宣言・定義する.
+MENU_CHOICE_5_FOR_SEARCH_WORD_FORM = MENU_CHOICE_5_FOR_LEARN_WORD_FORM
 
 # 検索フォーム全般のための整序条件メニューを宣言・定義する.
 MENU_CHOICE_1_FOR_SEARCH_FORM = [
@@ -520,29 +537,35 @@ MENU_CHOICE_FOR_UNIVERSAL_FORM = [
     ("no", "いいえ")    
 ]
 
-# 語句変更・抹消フォーム内の意図メニューを宣言・定義する.
-MENU_CHOICE_1_FOR_MODIFY_AND_ERASURE_WORD_FORM = MENU_CHOICE_1_FOR_SEARCH_WORD_FORM
+# 語句変更フォーム内の意図メニューを宣言・定義する.
+MENU_CHOICE_1_FOR_MODIFY_WORD_FORM = MENU_CHOICE_1_FOR_LEARN_WORD_FORM
 
-# 語句変更・抹消フォーム内の感情メニューを宣言・定義する.
-MENU_CHOICE_2_FOR_MODIFY_AND_ERASURE_WORD_FORM = MENU_CHOICE_2_FOR_SEARCH_WORD_FORM
+# 語句変更フォーム内の感情メニューを宣言・定義する.
+MENU_CHOICE_2_FOR_MODIFY_WORD_FORM = MENU_CHOICE_2_FOR_LEARN_WORD_FORM
 
-# 語句変更・抹消フォーム内の強度メニューを宣言・定義する.
-MENU_CHOICE_3_FOR_MODIFY_AND_ERASURE_WORD_FORM = MENU_CHOICE_3_FOR_SEARCH_WORD_FORM
+# 語句変更フォーム内の感情補助メニューを宣言・定義する.
+MENU_CHOICE_3_FOR_MODIFY_WORD_FORM = MENU_CHOICE_3_FOR_LEARN_WORD_FORM
 
-# 語句変更・抹消フォーム内の品詞分類メニューを宣言・定義する.
-MENU_CHOICE_4_FOR_MODIFY_AND_ERASURE_WORD_FORM = MENU_CHOICE_4_FOR_SEARCH_WORD_FORM
+# 語句変更フォーム内の強度メニューを宣言・定義する.
+MENU_CHOICE_4_FOR_MODIFY_WORD_FORM = MENU_CHOICE_4_FOR_LEARN_WORD_FORM
+
+# 語句変更フォーム内の品詞分類メニューを宣言・定義する.
+MENU_CHOICE_5_FOR_MODIFY_WORD_FORM = MENU_CHOICE_5_FOR_LEARN_WORD_FORM
 
 # 語句詳細フォーム内の意図メニューを宣言・定義する.
 MENU_CHOICE_1_FOR_DETAIL_WORD_FORM = MENU_CHOICE_1_FOR_LEARN_WORD_FORM
 
-# 語句詳細フォーム内の意図メニューを宣言・定義する.
+# 語句詳細フォーム内の感情メニューを宣言・定義する.
 MENU_CHOICE_2_FOR_DETAIL_WORD_FORM = MENU_CHOICE_2_FOR_LEARN_WORD_FORM
 
-# 語句詳細フォーム内の意図メニューを宣言・定義する.
+# 語句詳細フォーム内の感情補助メニューを宣言・定義する.
 MENU_CHOICE_3_FOR_DETAIL_WORD_FORM = MENU_CHOICE_3_FOR_LEARN_WORD_FORM
 
-# 語句詳細フォーム内の意図メニューを宣言・定義する.
+# 語句詳細フォーム内の強度メニューを宣言・定義する.
 MENU_CHOICE_4_FOR_DETAIL_WORD_FORM = MENU_CHOICE_4_FOR_LEARN_WORD_FORM
+
+# 語句詳細フォーム内の品詞分類メニューを宣言・定義する.
+MENU_CHOICE_5_FOR_DETAIL_WORD_FORM = MENU_CHOICE_5_FOR_LEARN_WORD_FORM
 
 # フォーム内の日時の表示形式を宣言・定義する. 
 GENERAL_DATE_FORMAT = "%Y-%m-%dT%H:%M"

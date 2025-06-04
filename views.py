@@ -23,10 +23,13 @@ from flask import (
 )
 from flask_paginate import Pagination, get_page_parameter
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import (
+     BadRequest,
      NotFound,
      InternalServerError
 )
+from markupsafe import escape
 
 # 各種フォームをインポートする.
 from forms import (
@@ -90,7 +93,8 @@ from forms import (
      ExportHistoryForm,
      ExportEnterOrExitForm,
      RetrieveGenerateForm,
-     SettingForm,
+     EnvironmentSettingForm,
+     SecuritySettingForm,
      ResetDatabaseForm
 )
 
@@ -169,23 +173,24 @@ def home():
     # 未退室のままになっている職員を特定し,
     # 現在時刻をもって自動の打刻を済ませる.
     if is_frst_rqst:
-        stffs = db_session.query(Staff).filter(Staff.is_exclude==False)
+        stffs = db_session.query(Staff).filter(Staff.is_exclude == False).order_by(Staff.id.asc()).all()
         db_session.close()
 
         for stff in stffs:
             ent_or_ext = (
-                db_session.query(EnterOrExit).filter(EnterOrExit.staff_name == stff.name).order_by(EnterOrExit.id.desc()).first()
+            db_session.query(EnterOrExit).filter(EnterOrExit.staff_name == stff.name).order_by(EnterOrExit.id.desc()).first()
             )
             db_session.close()
             if ent_or_ext is not None:
                if (ent_or_ext.reason == "clock-in" or
                    ent_or_ext.reason == "return-to-out" or
                    ent_or_ext.reason == "after-break"):
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
+                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
                    db_session.add(EnterOrExit(staff_name=stff.name,
                                               staff_kana_name=stff.kana_name,
                                               reason="application-termination",
                                               enter_or_exit_at=crrnt_dttm,
+                                              enter_or_exit_at_second="00",
                                               created_at=crrnt_dttm,
                                               updated_at=crrnt_dttm,
                                               is_hidden=False,
@@ -318,7 +323,7 @@ def staff_enter():
         rsn = stff_entr_form.reason.data
 
         # 入力された名前が使用・登録されているかを確認する.
-        stff = db_session.query(Staff).filter(Staff.name == stff_nm).first()
+        stff = db_session.query(Staff).filter(Staff.name==stff_nm).first()
         db_session.close()
 
         # 指定職員が存在しない場合には, エラーメッセージを設定して,
@@ -330,14 +335,15 @@ def staff_enter():
 
         # パスワード誤りがある場合には, エラーメッセージを設定して,
         # 入力内容を空にしたFlaskフォームと共にテンプレートを返す.
-        if psswrd != stff.pass_word:
+        # if psswrd != stff.pass_word:
+        if not check_password_hash(stff.hashed_password, psswrd):
             session["staff-enter-fault"] = str(int(session["staff-enter-fault"]) + 1)
             flash("そのパスワードは間違っています.")
             return render_template("staff_enter.html", form=stff_entr_form, happen_error=True)
 
         # 前回の入室後に, 退室処理が正常に実行されていない場合には, 自動退室記録をDBに登録する.
         ent_or_ext = (
-            db_session.query(EnterOrExit).filter(EnterOrExit.staff_name == stff.name).order_by(EnterOrExit.id.desc()).first()
+        db_session.query(EnterOrExit).filter(EnterOrExit.staff_name==stff.name).order_by(EnterOrExit.id.desc()).first()
         )
         db_session.close()
 
@@ -345,7 +351,7 @@ def staff_enter():
             if (ent_or_ext.reason == "clock-in" or
                 ent_or_ext.reason == "return-to-out" or
                 ent_or_ext.reason == "after-break"):
-                crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
+                crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
                 db_session.add(EnterOrExit(staff_name=stff.name,
                                            staff_kana_name=stff.kana_name,
                                            reason="forget-or-revocation",
@@ -360,7 +366,7 @@ def staff_enter():
                 db_session.close()
 
         # 現在のタイムスタンプを取得して, 入室記録をDBに登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(EnterOrExit(staff_name=stff.name,
                                    staff_kana_name=stff.kana_name,
                                    reason=rsn,
@@ -435,7 +441,7 @@ def staff_exit():
             return render_template("staff_exit.html", form=stff_exit_form, happen_error=True)
 
         # 現在のタイムスタンプを取得して, 退室記録をDBに登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(EnterOrExit(staff_name=session["enter-name"],
                                    staff_kana_name=session["enter-kana-name"],
                                    reason=stff_exit_form.reason.data,
@@ -460,6 +466,7 @@ def staff_exit():
 @view.route("/admin_enter", methods=["GET", "POST"])
 def admin_enter():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
+    config = configparser.ConfigParser()
     admn_entr_form = AdminEnterForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
@@ -509,8 +516,19 @@ def admin_enter():
         # フォームに入力・記憶されている内容を取得する.
         psswrd = admn_entr_form.password.data
 
+        # もしも, 機密設定ファイルが存在しなければ, 全ての項目がデフォルト値のファイルを作成する.
+        if not os.path.exists(consts.SECURITY_SETTING_PATH):
+            config["security"] = {"hashed-password" : generate_password_hash(consts.ADMIN_INITIAL_PASSWORD)}
+            with open(consts.SECURITY_SETTING_PATH, "w") as configfile:
+                 config.write(configfile)
+
+        # 機密設定ファイルの内容を読み込む.
+        # ※各設定項目が消失していた場合, デフォルト値で各項目を復元する.
+        config.read(consts.SECURITY_SETTING_PATH, encoding="utf-8")
+        hshd_psswrd = config.get("security", "hashed-password", fallback=generate_password_hash(consts.ADMIN_INITIAL_PASSWORD))
+
         # パスワードに誤りがある場合, エラーメッセージを設定して, フォームと共にテンプレートを返す.
-        if psswrd != consts.ADMIN_PASSWORD:
+        if not check_password_hash(hshd_psswrd, psswrd):
             session["admin-enter-fault"] = str(int(session["admin-enter-fault"]) + 1)
             flash("そのパスワードは間違っています.")
             return render_template("admin_enter.html", form=admn_entr_form, happen_error=True)
@@ -682,7 +700,7 @@ def send():
         txt_from_app = se.generate_message(txt_from_stff)
 
         # 履歴情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(History(staff_name=session["enter-name"],
                                staff_kana_name=session["enter-kana-name"],
                                staff_message=txt_from_stff,
@@ -782,6 +800,7 @@ def learn_word():
             lrn_wrd_form.mean_and_content.data = ""
             lrn_wrd_form.intent.data = ""
             lrn_wrd_form.sentiment.data = ""
+            lrn_wrd_form.sentiment_support.data = ""
             lrn_wrd_form.strength.data = ""
             lrn_wrd_form.part_of_speech.data = ""
             lrn_wrd_form.is_hidden=False
@@ -796,11 +815,17 @@ def learn_word():
         if lrn_wrd_form.mean_and_content.data == "":
             flash("意味&内容が入力されていません.")
             return render_template("learn_word.html", form=lrn_wrd_form, happen_error=True)
+        if lrn_wrd_form.theme_tag.data == "":
+            flash("主題タグが入力されていません.")
+            return render_template("learn_word.html", form=lrn_wrd_form, happen_error=True)
         if lrn_wrd_form.intent.data == "":
             flash("意図が選択されていません.")
             return render_template("learn_word.html", form=lrn_wrd_form, happen_error=True)
         if lrn_wrd_form.sentiment.data == "":
             flash("感情が選択されていません.")
+            return render_template("learn_word.html", form=lrn_wrd_form, happen_error=True)
+        if lrn_wrd_form.sentiment_support.data == "":
+            flash("感情補助が選択されていません.")
             return render_template("learn_word.html", form=lrn_wrd_form, happen_error=True)
         if lrn_wrd_form.strength.data == "":
             flash("強度が入力されていません.")
@@ -820,16 +845,18 @@ def learn_word():
                                     lrn_wrd_form.mean_and_content.data)
 
         # 語句情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-        db_session.add(Word(spell_and_header=lrn_wrd_form.spell_and_header.data,
-                            mean_and_content=lrn_wrd_form.mean_and_content.data,
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        db_session.add(Word(spell_and_header=escape(lrn_wrd_form.spell_and_header.data),
+                            mean_and_content=escape(lrn_wrd_form.mean_and_content.data),
                             concept_and_notion=cncpt_n_ntn,
-                            intent = lrn_wrd_form.intent.data,
-                            sentiment = lrn_wrd_form.sentiment.data,
-                            strength = lrn_wrd_form.strength.data,
-                            part_of_speech = lrn_wrd_form.part_of_speech.data,
-                            first_character = lrn_wrd_form.spell_and_header.data[0],
-                            characters_count = len(lrn_wrd_form.spell_and_header.data),
+                            theme_tag=escape(lrn_wrd_form.theme_tag.data),
+                            intent=lrn_wrd_form.intent.data,
+                            sentiment=lrn_wrd_form.sentiment.data,
+                            sentiment_support=lrn_wrd_form.sentiment_support.data,
+                            strength=lrn_wrd_form.strength.data,
+                            part_of_speech=lrn_wrd_form.part_of_speech.data,
+                            first_character=lrn_wrd_form.spell_and_header.data[0],
+                            characters_count=len(lrn_wrd_form.spell_and_header.data),
                             staff_name=session["enter-name"],
                             staff_kana_name=session["enter-kana-name"],
                             created_at=crrnt_dttm,
@@ -886,9 +913,9 @@ def learn_theme():
         if lrn_thm_form.cancel.data:
             lrn_thm_form.spell_and_header.data = ""
             lrn_thm_form.mean_and_content.data = ""
-            lrn_thm_form.category_tags.data = ""
-            lrn_thm_form.is_hidden = False
-            lrn_thm_form.is_exclude = False
+            lrn_thm_form.category_tag.data = ""
+            lrn_thm_form.is_hidden.data = False
+            lrn_thm_form.is_exclude.data = False
             return render_template("learn_theme.html", form=lrn_thm_form)
 
         # flaskフォームに入力・記憶されている内容をバリデーションする.
@@ -899,7 +926,7 @@ def learn_theme():
         if lrn_thm_form.mean_and_content.data == "":
             flash("意味&内容が入力されていません.")
             return render_template("learn_theme.html", form=lrn_thm_form, happen_error=True)
-        if lrn_thm_form.category_tags.data == "":
+        if lrn_thm_form.category_tag.data == "":
             flash("分類タグが入力されていません.")
             return render_template("learn_theme.html", form=lrn_thm_form, happen_error=True)
         if lrn_thm_form.is_hidden.data == "":
@@ -914,11 +941,11 @@ def learn_theme():
                                      lrn_thm_form.mean_and_content.data)
 
         # 主題情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-        db_session.add(Theme(spell_and_header=lrn_thm_form.spell_and_header.data,
-                             mean_and_content=lrn_thm_form.mean_and_content.data,
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        db_session.add(Theme(spell_and_header=escape(lrn_thm_form.spell_and_header.data),
+                             mean_and_content=escape(lrn_thm_form.mean_and_content.data),
                              concept_and_notion=cncpt_n_ntn,
-                             category_tags=lrn_thm_form.category_tags.data,
+                             category_tag=escape(lrn_thm_form.category_tag.data),
                              staff_name=session["enter-name"],
                              staff_kana_name=session["enter-kana-name"],
                              created_at=crrnt_dttm,
@@ -975,9 +1002,9 @@ def learn_category():
         if lrn_ctgr_form.cancel.data:
             lrn_ctgr_form.spell_and_header.data = ""
             lrn_ctgr_form.mean_and_content.data = ""
-            lrn_ctgr_form.parent_category_tags.data = ""
-            lrn_ctgr_form.sibling_category_tags.data = ""
-            lrn_ctgr_form.child_category_tags.data = ""
+            lrn_ctgr_form.parent_category_tag.data = ""
+            lrn_ctgr_form.sibling_category_tag.data = ""
+            lrn_ctgr_form.child_category_tag.data = ""
             lrn_ctgr_form.is_hidden = False
             lrn_ctgr_form.is_exclude = False
             return render_template("learn_category.html", form=lrn_ctgr_form)
@@ -990,13 +1017,13 @@ def learn_category():
         if lrn_ctgr_form.mean_and_content.data == "":
             flash("意味&内容が入力されていません.")
             return render_template("learn_category.html", form=lrn_ctgr_form, happen_error=True)
-        if lrn_ctgr_form.parent_category_tags.data == "":
+        if lrn_ctgr_form.parent_category_tag.data == "":
             flash("親分類タグが入力されていません.")
             return render_template("learn_category.html", form=lrn_ctgr_form, happen_error=True)
-        if lrn_ctgr_form.sibling_category_tags.data == "":
+        if lrn_ctgr_form.sibling_category_tag.data == "":
             flash("兄弟分類タグが入力されていません.")
             return render_template("learn_category.html", form=lrn_ctgr_form, happen_error=True)
-        if lrn_ctgr_form.child_category_tags.data == "":
+        if lrn_ctgr_form.child_category_tag.data == "":
             flash("子分類タグが入力されていません.")
             return render_template("learn_category.html", form=lrn_ctgr_form, happen_error=True)
         if lrn_ctgr_form.is_hidden.data == "":
@@ -1011,13 +1038,13 @@ def learn_category():
                                         lrn_ctgr_form.mean_and_content.data)
 
         # 分類情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-        db_session.add(Category(spell_and_header=lrn_ctgr_form.spell_and_header.data,
-                                mean_and_content=lrn_ctgr_form.mean_and_content.data,
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        db_session.add(Category(spell_and_header=escape(lrn_ctgr_form.spell_and_header.data),
+                                mean_and_content=escape(lrn_ctgr_form.mean_and_content.data),
                                 concept_and_notion=cncpt_n_ntn,
-                                parent_category_tags=lrn_ctgr_form.parent_category_tags.data,
-                                sibling_category_tags=lrn_ctgr_form.sibling_category_tags.data,
-                                child_category_tags=lrn_ctgr_form.child_category_tags.data,
+                                parent_category_tag=escape(lrn_ctgr_form.parent_category_tag.data),
+                                sibling_category_tag=escape(lrn_ctgr_form.sibling_category_tag.data),
+                                child_category_tag=escape(lrn_ctgr_form.child_category_tag.data),
                                 staff_name=session["enter-name"],
                                 staff_kana_name=session["enter-kana-name"],
                                 created_at=crrnt_dttm,
@@ -1078,7 +1105,7 @@ def learn_knowledge():
         if lrn_knwldg_form.cancel.data:
             lrn_knwldg_form.spell_and_header.data = ""
             lrn_knwldg_form.mean_and_content.data = ""
-            lrn_knwldg_form.category_tags.data = ""
+            lrn_knwldg_form.category_tag.data = ""
             lrn_knwldg_form.attached_image_file.data = ""
             lrn_knwldg_form.attached_sound_file.data = ""
             lrn_knwldg_form.attached_video_file.data = ""
@@ -1094,7 +1121,7 @@ def learn_knowledge():
         if lrn_knwldg_form.mean_and_content.data == "":
             flash("意味&内容が入力されていません.")
             return render_template("learn_knowledge.html", form=lrn_knwldg_form, happen_error=True)
-        if lrn_knwldg_form.category_tags.data == "":
+        if lrn_knwldg_form.category_tag.data == "":
             flash("分類タグが入力されていません.")
             return render_template("learn_knowledge.html", form=lrn_knwldg_form, happen_error=True)
         if lrn_knwldg_form.is_hidden.data == "":
@@ -1110,14 +1137,14 @@ def learn_knowledge():
 
         # 知識情報をレコードとして, DBに保存・登録する.
         fl_lbl = se.etc.retrieve_current_datetime_as_file_label()
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
         img_sv_pth = se.etc.archive_file(lrn_knwldg_form.attached_image_file.data, consts.ARCHIVE_IMAGE_PATH, fl_lbl)
         snd_sv_pth = se.etc.archive_file(lrn_knwldg_form.attached_sound_file.data, consts.ARCHIVE_SOUND_PATH, fl_lbl)
         vdo_sv_pth = se.etc.archive_file(lrn_knwldg_form.attached_video_file.data, consts.ARCHIVE_VIDEO_PATH, fl_lbl)
-        db_session.add(Knowledge(spell_and_header=lrn_knwldg_form.spell_and_header.data,
-                                 mean_and_content=lrn_knwldg_form.mean_and_content.data,
+        db_session.add(Knowledge(spell_and_header=escape(lrn_knwldg_form.spell_and_header.data),
+                                 mean_and_content=escape(lrn_knwldg_form.mean_and_content.data),
                                  concept_and_notion=cncpt_n_ntn,
-                                 category_tags=lrn_knwldg_form.category_tags.data,
+                                 category_tag=escape(lrn_knwldg_form.category_tag.data),
                                  archived_image_file_path=img_sv_pth,
                                  archived_sound_file_path=snd_sv_pth,
                                  archived_video_file_path=vdo_sv_pth,
@@ -1177,9 +1204,9 @@ def learn_rule():
         if lrn_rl_form.cancel.data:
             lrn_rl_form.spell_and_header.data = ""
             lrn_rl_form.mean_and_content.data = ""
-            lrn_rl_form.category_tags.data = ""
-            lrn_rl_form.inference_condition.data = ""
-            lrn_rl_form.inference_result.data = ""
+            lrn_rl_form.category_tag.data = ""
+            lrn_rl_form.inference_and_speculation_condition.data = ""
+            lrn_rl_form.inference_and_speculation_result.data = ""
             lrn_rl_form.is_hidden.data = False
             lrn_rl_form.is_exclude.data = False
             return render_template("learn_rule.html", form=lrn_rl_form)
@@ -1192,13 +1219,13 @@ def learn_rule():
         if lrn_rl_form.mean_and_content.data == "":
             flash("意味&内容が入力されていません.")
             return render_template("learn_rule.html", form=lrn_rl_form, happen_error=True)
-        if lrn_rl_form.category_tags.data == "":
+        if lrn_rl_form.category_tag.data == "":
             flash("分類タグが入力されていません.")
             return render_template("learn_rule.html", form=lrn_rl_form, happen_error=True)
-        if lrn_rl_form.inference_condition.data == "":
+        if lrn_rl_form.inference_and_speculation_condition.data == "":
             flash("推論条件が入力されていません.")
             return render_template("learn_rule.html", form=lrn_rl_form, happen_error=True)
-        if lrn_rl_form.inference_result.data == "":
+        if lrn_rl_form.inference_and_speculation_result.data == "":
             flash("推論結果が入力されていません.")
             return render_template("learn_rule.html", form=lrn_rl_form, happen_error=True)
         if lrn_rl_form.is_hidden.data == "":
@@ -1213,13 +1240,13 @@ def learn_rule():
                                     lrn_rl_form.mean_and_content.data)
 
         # 規則情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-        db_session.add(Rule(spell_and_header=lrn_rl_form.spell_and_header.data,
-                            mean_and_content=lrn_rl_form.mean_and_content.data,
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        db_session.add(Rule(spell_and_header=escape(lrn_rl_form.spell_and_header.data),
+                            mean_and_content=escape(lrn_rl_form.mean_and_content.data),
                             concept_and_notion=cncpt_n_ntn,
-                            category_tags=lrn_rl_form.category_tags.data,
-                            inference_condition=lrn_rl_form.inference_condition.data,
-                            inference_result=lrn_rl_form.inference_result.data,
+                            category_tag=escape(lrn_rl_form.category_tag.data),
+                            inference_and_speculation_condition=escape(lrn_rl_form.inference_and_speculation_condition.data),
+                            inference_and_speculation_result=escape(lrn_rl_form.inference_and_speculation_result.data),
                             staff_name=session["enter-name"],
                             staff_kana_name=session["enter-kana-name"],
                             created_at=crrnt_dttm,
@@ -1317,14 +1344,14 @@ def learn_reaction():
                                         lrn_rctn_form.mean_and_content.data)
 
         # 反応情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-        db_session.add(Reaction(spell_and_header=lrn_rctn_form.spell_and_header.data,
-                                mean_and_content=lrn_rctn_form.mean_and_content.data,
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        db_session.add(Reaction(spell_and_header=escape(lrn_rctn_form.spell_and_header.data),
+                                mean_and_content=escape(lrn_rctn_form.mean_and_content.data),
                                 concept_and_notion=cncpt_n_ntn,
-                                staff_psychology=lrn_rctn_form.staff_psychology.data,
-                                scene_and_background=lrn_rctn_form.scene_and_background.data,
-                                message_example_from_staff=lrn_rctn_form.message_example_from_staff.data,
-                                message_example_from_application=lrn_rctn_form.message_example_from_application.data,
+                                staff_psychology=escape(lrn_rctn_form.staff_psychology.data),
+                                scene_and_background=escape(lrn_rctn_form.scene_and_background.data),
+                                message_example_from_staff=escape(lrn_rctn_form.message_example_from_staff.data),
+                                message_example_from_application=escape(lrn_rctn_form.message_example_from_application.data),
                                 staff_name=session["enter-name"],
                                 staff_kana_name=session["enter-kana-name"],
                                 created_at=crrnt_dttm,
@@ -1409,9 +1436,9 @@ def generate():
         gnrtd_fl_pth = consts.DUMMY_FILE_PATH # 暫定的にダミーファイルのパスを使用する.
 
         # 生成情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-        db_session.add(Generate(spell_and_header=gen_form.spell_and_header.data,
-                                mean_and_content=gen_form.mean_and_content.data,
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        db_session.add(Generate(spell_and_header=escape(gen_form.spell_and_header.data),
+                                mean_and_content=escape(gen_form.mean_and_content.data),
                                 generated_file_path=gnrtd_fl_pth,
                                 staff_name=session["enter-name"],
                                 staff_kana_name=session["enter-kana-name"],
@@ -1483,7 +1510,7 @@ def show_words(id=None):
             db_session.close()
 
             if wrd_tmp is not None:
-                if len(wrd_tmp.id) > 6:
+                if len(str(wrd_tmp.id)) > 6:
                     id_tmp = wrd_tmp.id[0:6] + "..."
                 else:
                     id_tmp = wrd_tmp.id
@@ -1504,7 +1531,7 @@ def show_words(id=None):
                                  mn_n_cntnt_tmp,
                                  stff_nm_tmp
                                 ])
-                per_pg = consts.WORD_PER_PAGE
+                per_pg = consts.WORD_ITEM_PER_PAGE
                 pg = request.args.get(get_page_parameter(), type=int, default=1)
                 pg_dat = wrds_fnl[(pg - 1) * per_pg : pg * per_pg]
                 pgntn = Pagination(page=pg,
@@ -1514,7 +1541,7 @@ def show_words(id=None):
                                   )
                 return render_template("show_words.html", page_data=pg_dat, pagination=pgntn) 
 
-            per_pg = consts.WORD_PER_PAGE
+            per_pg = consts.WORD_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = wrds_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -1524,10 +1551,10 @@ def show_words(id=None):
                               )
             return render_template("show_words.html", page_data=pg_dat, pagination=pgntn) 
         else:
-            wrds_tmp = db_session.query(Word).order_by(Word.id).all()
+            wrds_tmp = db_session.query(Word).order_by(Word.id.asc()).all()
             db_session.close()
             for wrd_tmp in wrds_tmp:
-                 if len(wrd_tmp.id) > 6:
+                 if len(str(wrd_tmp.id)) > 6:
                      id_tmp = wrd_tmp.id[0:6] + "..."
                  else:
                      id_tmp = wrd_tmp.id
@@ -1548,7 +1575,7 @@ def show_words(id=None):
                                   mn_n_cntnt_tmp,
                                   stff_nm_tmp
                                  ])
-            per_pg = consts.WORD_PER_PAGE
+            per_pg = consts.WORD_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = wrds_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -1571,6 +1598,9 @@ def show_words(id=None):
         if request.form["hidden-detail-item-id"] != "":
             session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
             return redirect(url_for("view.detail_word"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「show_themes」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -1648,7 +1678,7 @@ def show_themes(id=None):
                                  mn_n_cntnt_tmp,
                                  stff_nm_tmp
                                 ])
-                per_pg = consts.THEME_PER_PAGE
+                per_pg = consts.THEME_ITEM_PER_PAGE
                 pg = request.args.get(get_page_parameter(), type=int, default=1)
                 pg_dat = thms_fnl[(pg - 1) * per_pg : pg * per_pg]
                 pgntn = Pagination(page=pg,
@@ -1658,7 +1688,7 @@ def show_themes(id=None):
                                   )
                 return render_template("show_themes.html", page_data=pg_dat, pagination=pgntn)
 
-            per_pg = consts.THEME_PER_PAGE
+            per_pg = consts.THEME_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = thms_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -1669,7 +1699,7 @@ def show_themes(id=None):
             return render_template("show_themes.html", page_data=pg_dat, pagination=pgntn)
 
         else:
-            thms_tmp = db_session.query(Theme).order_by(Theme.id).all()
+            thms_tmp = db_session.query(Theme).order_by(Theme.id.asc()).all()
             db_session.close()
             for thm_tmp in thms_tmp:
                  if len(str(thm_tmp.id)) > 6:
@@ -1693,7 +1723,7 @@ def show_themes(id=None):
                                   mn_n_cntnt_tmp,
                                   stff_nm_tmp
                                  ])
-            per_pg = consts.THEME_PER_PAGE
+            per_pg = consts.THEME_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = thms_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -1716,6 +1746,9 @@ def show_themes(id=None):
         if request.form["hidden-detail-item-id"] != "":
             session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
             return redirect(url_for("view.detail_word"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「show_categories」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -1793,7 +1826,7 @@ def show_categories(id=None):
                                   mn_n_cntnt_tmp,
                                   stff_nm_tmp
                                  ])
-                per_pg = consts.CATEGORY_PER_PAGE
+                per_pg = consts.CATEGORY_ITEM_PER_PAGE
                 pg = request.args.get(get_page_parameter(), type=int, default=1)
                 pg_dat = ctgrs_fnl[(pg - 1) * per_pg : pg * per_pg]
                 pgntn = Pagination(page=pg,
@@ -1803,7 +1836,7 @@ def show_categories(id=None):
                                   )
                 return render_template("show_categories.html", page_data=pg_dat, pagination=pgntn)
 
-            per_pg = consts.CATEGORY_PER_PAGE
+            per_pg = consts.CATEGORY_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = ctgrs_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -1814,7 +1847,7 @@ def show_categories(id=None):
             return render_template("show_categories.html", page_data=pg_dat, pagination=pgntn)
 
         else:
-            ctgrs_tmp = db_session.query(Category).order_by(Category.id).all()
+            ctgrs_tmp = db_session.query(Category).order_by(Category.id.asc()).all()
             db_session.close()
             for ctgr_tmp in ctgrs_tmp:
                 if len(str(ctgr_tmp.id)) > 6:
@@ -1838,7 +1871,7 @@ def show_categories(id=None):
                                   mn_n_cntnt_tmp,
                                   stff_nm_tmp
                                  ])
-            per_pg = consts.CATEGORY_PER_PAGE
+            per_pg = consts.CATEGORY_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = ctgrs_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -1861,6 +1894,9 @@ def show_categories(id=None):
         if request.form["hidden-detail-item-id"] != "":
             session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
             return redirect(url_for("view.detail_category"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「show_knowledges」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -1938,7 +1974,7 @@ def show_knowledges(id=None):
                                     mn_n_cntnt_tmp,
                                     stff_nm_tmp
                                   ])
-                per_pg = consts.KNOWLEDGE_PER_PAGE
+                per_pg = consts.KNOWLEDGE_ITEM_PER_PAGE
                 pg = request.args.get(get_page_parameter(), type=int, default=1)
                 pg_dat = knwldgs_fnl[(pg - 1) * per_pg : pg * per_pg]
                 pgntn = Pagination(page=pg,
@@ -1948,7 +1984,7 @@ def show_knowledges(id=None):
                                   )
                 return render_template("show_knowledges.html", page_data=pg_dat, pagination=pgntn)
 
-            per_pg = consts.KNOWLEDGE_PER_PAGE
+            per_pg = consts.KNOWLEDGE_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = knwldgs_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -1959,7 +1995,7 @@ def show_knowledges(id=None):
             return render_template("show_knowledges.html", page_data=pg_dat, pagination=pgntn)
 
         else:
-            knwldgs_tmp = db_session.query(Knowledge).order_by(Knowledge.id).all()
+            knwldgs_tmp = db_session.query(Knowledge).order_by(Knowledge.id.asc()).all()
             db_session.close()
             for knwldg_tmp in knwldgs_tmp:
                 if len(str(knwldg_tmp.id)) > 6:
@@ -1983,7 +2019,7 @@ def show_knowledges(id=None):
                                     mn_n_cntnt_tmp,
                                     stff_nm_tmp
                                    ])
-            per_pg = consts.KNOWLEDGE_PER_PAGE
+            per_pg = consts.KNOWLEDGE_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = knwldgs_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -2006,6 +2042,9 @@ def show_knowledges(id=None):
         if request.form["hidden-detail-item-id"] != "":
             session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
             return redirect(url_for("view.detail_knowledge"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「show_rules」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -2083,7 +2122,7 @@ def show_rules(id=None):
                                 mn_n_cntnt_tmp,
                                 stff_nm_tmp
                                ])
-                per_pg = consts.RULE_PER_PAGE
+                per_pg = consts.RULE_ITEM_PER_PAGE
                 pg = request.args.get(get_page_parameter(), type=int, default=1)
                 pg_dat = rls_fnl[(pg - 1) * per_pg : pg * per_pg]
                 pgntn = Pagination(page=pg,
@@ -2093,7 +2132,7 @@ def show_rules(id=None):
                                   )
                 return render_template("show_rules.html", page_data=pg_dat, pagination=pgntn)
 
-            per_pg = consts.RULE_PER_PAGE
+            per_pg = consts.RULE_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = rls_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -2104,7 +2143,7 @@ def show_rules(id=None):
             return render_template("show_rules.html", page_data=pg_dat, pagination=pgntn)
 
         else:
-            rls_tmp = db_session.query(Rule).order_by(Rule.id).all()
+            rls_tmp = db_session.query(Rule).order_by(Rule.id.asc()).all()
             db_session.close()
             for rl_tmp in rls_tmp:
                 if len(str(rl_tmp.id)) > 6:
@@ -2128,7 +2167,7 @@ def show_rules(id=None):
                                 mn_n_cntnt_tmp,
                                 stff_nm_tmp
                                ])
-            per_pg = consts.RULE_PER_PAGE
+            per_pg = consts.RULE_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = rls_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -2151,6 +2190,9 @@ def show_rules(id=None):
         if request.form["hidden-detail-item-id"] != "":
             session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
             return redirect(url_for("view.detail_rule"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「show_reactions」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -2228,7 +2270,7 @@ def show_reactions(id=None):
                                 mn_n_cntnt_tmp,
                                 stff_nm_tmp
                                ])
-                per_pg = consts.RULE_PER_PAGE
+                per_pg = consts.RULE_ITEM_PER_PAGE
                 pg = request.args.get(get_page_parameter(), type=int, default=1)
                 pg_dat = rctns_fnl[(pg - 1) * per_pg : pg * per_pg]
                 pgntn = Pagination(page=pg,
@@ -2238,7 +2280,7 @@ def show_reactions(id=None):
                                   )
                 return render_template("show_reactions.html", page_data=pg_dat, pagination=pgntn)
 
-            per_pg = consts.RULE_PER_PAGE
+            per_pg = consts.RULE_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = rctns_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -2249,7 +2291,7 @@ def show_reactions(id=None):
             return render_template("show_reactions.html", page_data=pg_dat, pagination=pgntn)
 
         else:
-            rctns_tmp = db_session.query(Reaction).order_by(Reaction.id).all()
+            rctns_tmp = db_session.query(Reaction).order_by(Reaction.id.asc()).all()
             db_session.close()
             for rctn_tmp in rctns_tmp:
                 if len(str(rctn_tmp.id)) > 6:
@@ -2273,7 +2315,7 @@ def show_reactions(id=None):
                                 mn_n_cntnt_tmp,
                                 stff_nm_tmp
                                ])
-            per_pg = consts.RULE_PER_PAGE
+            per_pg = consts.RULE_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = rctns_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -2296,6 +2338,9 @@ def show_reactions(id=None):
         if request.form["hidden-detail-item-id"] != "":
             session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
             return redirect(url_for("view.detail_reaction"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「show_generates」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -2373,7 +2418,7 @@ def show_generates(id=None):
                                  mn_n_cntnt_tmp,
                                  stff_nm_tmp
                                 ])
-                per_pg = consts.GENERATE_PER_PAGE
+                per_pg = consts.GENERATE_ITEM_PER_PAGE
                 pg = request.args.get(get_page_parameter(), type=int, default=1)
                 pg_dat = gens_fnl[(pg - 1) * per_pg : pg * per_pg]
                 pgntn = Pagination(page=pg,
@@ -2383,7 +2428,7 @@ def show_generates(id=None):
                                   )
                 return render_template("show_generates.html", page_data=pg_dat, pagination=pgntn)
 
-            per_pg = consts.GENERATE_PER_PAGE
+            per_pg = consts.GENERATE_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = gens_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -2394,7 +2439,7 @@ def show_generates(id=None):
             return render_template("show_generates.html", page_data=pg_dat, pagination=pgntn)
 
         else:
-            gens_tmp = db_session.query(Generate).order_by(Generate.id).all()
+            gens_tmp = db_session.query(Generate).order_by(Generate.id.asc()).all()
             db_session.close()
             for gen_tmp in gens_tmp:
                 if len(str(gen_tmp.id)) > 6:
@@ -2418,7 +2463,7 @@ def show_generates(id=None):
                                  mn_n_cntnt_tmp,
                                  stff_nm_tmp
                                 ])
-            per_pg = consts.GENERATE_PER_PAGE
+            per_pg = consts.GENERATE_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = gens_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -2441,6 +2486,9 @@ def show_generates(id=None):
         if request.form["hidden-detail-item-id"] != "":
             session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
             return redirect(url_for("view.detail_generate"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「show_histories」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -2518,7 +2566,7 @@ def show_histories(id=None):
                                   app_msg_tmp,
                                   stff_nm_tmp
                                 ])
-                per_pg = consts.HISTORY_PER_PAGE
+                per_pg = consts.HISTORY_ITEM_PER_PAGE
                 pg = request.args.get(get_page_parameter(), type=int, default=1)
                 pg_dat = hists_fnl[(pg - 1) * per_pg : pg * per_pg]
                 pgntn = Pagination(page=pg,
@@ -2528,7 +2576,7 @@ def show_histories(id=None):
                                   )
                 return render_template("show_histories.html", page_data=pg_dat, pagination=pgntn)
 
-            per_pg = consts.HISTORY_PER_PAGE
+            per_pg = consts.HISTORY_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = hists_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -2539,7 +2587,7 @@ def show_histories(id=None):
             return render_template("show_histories.html", page_data=pg_dat, pagination=pgntn)
 
         else:
-            hists_tmp = db_session.query(History).order_by(History.id).all()
+            hists_tmp = db_session.query(History).order_by(History.id.asc()).all()
             db_session.close()
             for hist_tmp in hists_tmp:
                 if len(str(hist_tmp.id)) > 6:
@@ -2563,7 +2611,7 @@ def show_histories(id=None):
                                   app_msg_tmp,
                                   stff_nm_tmp
                                 ])
-            per_pg = consts.HISTORY_PER_PAGE
+            per_pg = consts.HISTORY_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = hists_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -2586,6 +2634,9 @@ def show_histories(id=None):
         if request.form["hidden-detail-item-id"] != "":
             session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
             return redirect(url_for("view.detail_history"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「show_enters_or_exits」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -2636,7 +2687,6 @@ def show_enters_or_exits(id=None):
         session.pop("hidden-modify-item-id", None)
         session.pop("hidden-detail-item-id", None)
 
-
         # DBから入退レコードを取得してテンプレートと共に返す.
         # RIDを指定された場合は, 一つだけレコードを取得する.
         if id is not None:
@@ -2669,14 +2719,24 @@ def show_enters_or_exits(id=None):
                     rsn_tmp = "アプリ終了"
                 else:
                     rsn_tmp = "その他(分類不明)"
-                dttm_tmp = se.etc.convert_datetime_string_to_display_style(ent_or_ext_tmp.enter_or_exit_at)
-                # dttm_tmp = se.etc.convert_datetime_string_to_display_style(ent_or_ext_tmp.enter_or_exit_at)
+                if str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[1].split(":")[2] == "00":
+                    dt_tmp = str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[0] + " "
+                    tm_tmp = (
+                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[1].split(":")[0] + ":" +
+                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[1].split(":")[1] + ":" +
+                    str(ent_or_ext_tmp.enter_or_exit_at_second)
+                    )
+                    dttm_tmp = se.etc.modify_style_for_datetime_string(dt_tmp + tm_tmp, False)
+                else:
+                    dttm_tmp = (
+                    se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at), False)
+                    )
                 ents_or_exts_fnl.append([id_tmp,
                                          stff_nm_tmp,
                                          rsn_tmp,
                                          dttm_tmp
                                         ])
-                per_pg = consts.ENTER_OR_EXIT_PER_PAGE
+                per_pg = consts.ENTER_OR_EXIT_ITEM_PER_PAGE
                 pg = request.args.get(get_page_parameter(), type=int, default=1)
                 pg_dat = ents_or_exts_fnl[(pg - 1) * per_pg : pg * per_pg]
                 pgntn = Pagination(page=pg,
@@ -2686,7 +2746,7 @@ def show_enters_or_exits(id=None):
                                   )
                 return render_template("show_enters_or_exits.html", page_data=pg_dat, pagination=pgntn)
 
-            per_pg = consts.ENTER_OR_EXIT_PER_PAGE
+            per_pg = consts.ENTER_OR_EXIT_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = ents_or_exts_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -2697,7 +2757,7 @@ def show_enters_or_exits(id=None):
             return render_template("show_enters_or_exits.html", page_data=pg_dat, pagination=pgntn)
 
         else:
-            ents_or_exts_tmp = db_session.query(EnterOrExit).order_by(EnterOrExit.id).all()
+            ents_or_exts_tmp = db_session.query(EnterOrExit).order_by(EnterOrExit.id.asc()).all()
             db_session.close()
             for ent_or_ext_tmp in ents_or_exts_tmp:
                 if len(str(ent_or_ext_tmp.id)) > 6:
@@ -2726,21 +2786,32 @@ def show_enters_or_exits(id=None):
                     rsn_tmp = "アプリ終了"
                 else:
                     rsn_tmp = "その他(分類不明)"
-                dttm_tmp = se.etc.convert_datetime_string_to_display_style(ent_or_ext_tmp.enter_or_exit_at)
+                if str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[1].split(":")[2] == "00":
+                    dt_tmp = str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[0] + " "
+                    tm_tmp = (
+                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[1].split(":")[0] + ":" +
+                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[1].split(":")[1] + ":" +
+                    str(ent_or_ext_tmp.enter_or_exit_at_second)
+                    )
+                    dttm_tmp = se.etc.modify_style_for_datetime_string(dt_tmp + tm_tmp, False)
+                else:
+                    dttm_tmp = (
+                    se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at), False)
+                    )
                 ents_or_exts_fnl.append([id_tmp,
                                          stff_nm_tmp,
                                          rsn_tmp,
                                          dttm_tmp
                                         ])
-            per_pg = consts.ENTER_OR_EXIT_PER_PAGE
-            pg = request.args.get(get_page_parameter(), type=int, default=1)
-            pg_dat = ents_or_exts_fnl[(pg - 1) * per_pg : pg * per_pg]
-            pgntn = Pagination(page=pg,
-                               total=len(ents_or_exts_fnl),
-                               per_page=per_pg,
-                               css_framework=consts.PAGINATION_CSS
-                              )
-            return render_template("show_enters_or_exits.html", page_data=pg_dat, pagination=pgntn)
+                per_pg = consts.ENTER_OR_EXIT_ITEM_PER_PAGE
+                pg = request.args.get(get_page_parameter(), type=int, default=1)
+                pg_dat = ents_or_exts_fnl[(pg - 1) * per_pg : pg * per_pg]
+                pgntn = Pagination(page=pg,
+                                   total=len(ents_or_exts_fnl),
+                                   per_page=per_pg,
+                                   css_framework=consts.PAGINATION_CSS
+                                  )
+                return render_template("show_enters_or_exits.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
@@ -2755,6 +2826,9 @@ def show_enters_or_exits(id=None):
         if request.form["hidden-detail-item-id"] != "":
             session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
             return redirect(url_for("view.detail_enter_or_exit"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「show_staffs」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -2835,14 +2909,16 @@ def show_staffs(id=None):
                     bld_typ_tmp = "O型"
                 else:
                     bld_typ_tmp = "その他(分類不明)"
-                brth_dt_tmp = se.etc.convert_datetime_string_to_display_style(stff_tmp.birth_date)
+                brth_dt_tmp = (
+                se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_eventday(stff_tmp.birth_date), False)
+                )
                 stffs_fnl.append([id_tmp,
                                   nm_tmp,
                                   sex_tmp,
                                   bld_typ_tmp,
                                   brth_dt_tmp
                                  ])
-                per_pg = consts.STAFF_PER_PAGE
+                per_pg = consts.STAFF_ITEM_PER_PAGE
                 pg = request.args.get(get_page_parameter(), type=int, default=1)
                 pg_dat = stffs_fnl[(pg - 1) * per_pg : pg * per_pg]
                 pgntn = Pagination(page=pg,
@@ -2852,7 +2928,7 @@ def show_staffs(id=None):
                                   )
                 return render_template("show_staffs.html", page_data=pg_dat, pagination=pgntn)
 
-            per_pg = consts.STAFF_PER_PAGE
+            per_pg = consts.STAFF_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = stffs_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -2863,7 +2939,7 @@ def show_staffs(id=None):
             return render_template("show_staffs.html", page_data=pg_dat, pagination=pgntn)
 
         else:
-            stffs_tmp = db_session.query(Staff).order_by(Staff.id).all()
+            stffs_tmp = db_session.query(Staff).order_by(Staff.id.asc()).all()
             db_session.close()
             for stff_tmp in stffs_tmp:
                  if len(str(stff_tmp.id)) > 6:
@@ -2890,14 +2966,16 @@ def show_staffs(id=None):
                      bld_typ_tmp = "O型"
                  else:
                      bld_typ_tmp = "その他(分類不明)"
-                 brth_dt_tmp = se.etc.convert_datetime_string_to_display_style(stff_tmp.birth_date)
+                 brth_dt_tmp = (
+                 se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_eventday(stff_tmp.birth_date), False)
+                 )
                  stffs_fnl.append([id_tmp,
                                    nm_tmp,
                                    sex_tmp,
                                    bld_typ_tmp,
                                    brth_dt_tmp
                                   ])
-            per_pg = consts.STAFF_PER_PAGE
+            per_pg = consts.STAFF_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = stffs_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -2920,6 +2998,9 @@ def show_staffs(id=None):
         if request.form["hidden-detail-item-id"] != "":
             session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
             return redirect(url_for("view.detail_staff"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「search_words」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -2958,6 +3039,7 @@ def search_words():
         session.pop("mean-and-content", None)
         session.pop("intent", None)
         session.pop("sentiment", None)
+        session.pop("sentiment-support", None)
         session.pop("strength", None)
         session.pop("part-of-speech", None)
         session.pop("staff-name", None)
@@ -2978,39 +3060,41 @@ def search_words():
 
         # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
         if srch_wrd_form.cancel.data:
-            srch_wrd_form.id = ""
-            srch_wrd_form.spell_and_header = ""
-            srch_wrd_form.mean_and_content = ""
-            srch_wrd_form.intent = ""
-            srch_wrd_form.sentiment = ""
-            srch_wrd_form.strength = ""
-            srch_wrd_form.part_of_speech = ""
-            srch_wrd_form.staff_name = ""
-            srch_wrd_form.staff_kana_name = ""
-            srch_wrd_form.created_at_begin = ""
-            srch_wrd_form.created_at_end = ""
-            srch_wrd_form.updated_at_begin = ""
-            srch_wrd_form.updated_at_end = ""
-            srch_wrd_form.sort_condition = "condition-1"
-            srch_wrd_form.extract_condition = "condition-1"
+            srch_wrd_form.id.data = ""
+            srch_wrd_form.spell_and_header.data = ""
+            srch_wrd_form.mean_and_content.data = ""
+            srch_wrd_form.intent.data = ""
+            srch_wrd_form.sentiment.data = ""
+            srch_wrd_form.sentiment_support.data = ""
+            srch_wrd_form.strength.data = ""
+            srch_wrd_form.part_of_speech.data = ""
+            srch_wrd_form.staff_name.data = ""
+            srch_wrd_form.staff_kana_name.data = ""
+            srch_wrd_form.created_at_begin.data = ""
+            srch_wrd_form.created_at_end.data = ""
+            srch_wrd_form.updated_at_begin.data = ""
+            srch_wrd_form.updated_at_end.data = ""
+            srch_wrd_form.sort_condition.data = "condition-1"
+            srch_wrd_form.extract_condition.data = "condition-1"
             return render_template("search_words.html", form=srch_wrd_form)
 
         # 検索に係るセッション項目(=検索条件)を作成する.
-        session["id"] = srch_wrd_form.id
-        session["spell-and-header"] = srch_wrd_form.spell_and_header
-        session["mean-and-content"] = srch_wrd_form.mean_and_content
-        session["intent"] = srch_wrd_form.intent
-        session["sentiment"] = srch_wrd_form.sentiment
-        session["strength"] = srch_wrd_form.strength
-        session["part-of-speech"] = srch_wrd_form.part_of_speech
-        session["staff-name"] = srch_wrd_form.staff_name
-        session["staff-kana-name"] = srch_wrd_form.staff_kana_name
-        session["created-at-begin"] = srch_wrd_form.created_at_begin
-        session["created-at-end"] = srch_wrd_form.created_at_end
-        session["updated-at-begin"] = srch_wrd_form.updated_at_begin
-        session["updated-at-end"] = srch_wrd_form.updated_at_end
-        session["sort-condition"] = srch_wrd_form.sort_condition
-        session["extract-condition"] = srch_wrd_form.extract_condition
+        session["id"] = srch_wrd_form.id.data
+        session["spell-and-header"] = srch_wrd_form.spell_and_header.data
+        session["mean-and-content"] = srch_wrd_form.mean_and_content.data
+        session["intent"] = srch_wrd_form.intent.data
+        session["sentiment"] = srch_wrd_form.sentiment.data
+        session["sentiment-support"] = srch_wrd_form.sentiment_support.data
+        session["strength"] = srch_wrd_form.strength.data
+        session["part-of-speech"] = srch_wrd_form.part_of_speech.data
+        session["staff-name"] = srch_wrd_form.staff_name.data
+        session["staff-kana-name"] = srch_wrd_form.staff_kana_name.data
+        session["created-at-begin"] = srch_wrd_form.created_at_begin.data
+        session["created-at-end"] = srch_wrd_form.created_at_end.data
+        session["updated-at-begin"] = srch_wrd_form.updated_at_begin.data
+        session["updated-at-end"] = srch_wrd_form.updated_at_end.data
+        session["sort-condition"] = srch_wrd_form.sort_condition.data
+        session["extract-condition"] = srch_wrd_form.extract_condition.data
 
         # 検索条件を保持したまま, 検索結果ページへリダイレクトする.
         return redirect(url_for("view.search_words_results"))
@@ -3069,33 +3153,33 @@ def search_themes():
 
         # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
         if srch_thm_form.cancel.data:
-            srch_thm_form.id = ""
-            srch_thm_form.spell_and_header = ""
-            srch_thm_form.mean_and_content = ""
-            srch_thm_form.category_tags = ""
-            srch_thm_form.staff_name = ""
-            srch_thm_form.staff_kana_name = ""
-            srch_thm_form.created_at_begin = ""
-            srch_thm_form.created_at_end = ""
-            srch_thm_form.updated_at_begin = ""
-            srch_thm_form.updated_at_end = ""
-            srch_thm_form.sort_condition = "condition-1"
-            srch_thm_form.extract_condition = "condition-1"
+            srch_thm_form.id.data = ""
+            srch_thm_form.spell_and_header.data = ""
+            srch_thm_form.mean_and_content.data = ""
+            srch_thm_form.category_tag.data = ""
+            srch_thm_form.staff_name.data = ""
+            srch_thm_form.staff_kana_name.data = ""
+            srch_thm_form.created_at_begin.data = ""
+            srch_thm_form.created_at_end.data = ""
+            srch_thm_form.updated_at_begin.data = ""
+            srch_thm_form.updated_at_end.data = ""
+            srch_thm_form.sort_condition.data = "condition-1"
+            srch_thm_form.extract_condition.data = "condition-1"
             return render_template("search_themes.html", form=srch_thm_form)
 
         # 検索に係るセッション項目(=検索条件)を作成する.
         session["id"] = srch_thm_form.id
-        session["spell-and-header"] = srch_thm_form.spell_and_header
-        session["mean-and-content"] = srch_thm_form.mean_and_content
-        session["category-tags"] = srch_thm_form.category_tags
-        session["staff-name"] = srch_thm_form.staff_name
-        session["staff-kana-name"] = srch_thm_form.staff_kana_name
-        session["created-at-begin"] = srch_thm_form.created_at_begin
-        session["created-at-end"] = srch_thm_form.created_at_end
-        session["updated-at-begin"] = srch_thm_form.updated_at_begin
-        session["updated-at-end"] = srch_thm_form.updated_at_end
-        session["sort-condition"] = srch_thm_form.sort_condition
-        session["extract-condition"] = srch_thm_form.extract_condition
+        session["spell-and-header"] = srch_thm_form.spell_and_header.data
+        session["mean-and-content"] = srch_thm_form.mean_and_content.data
+        session["category-tags"] = srch_thm_form.category_tag.data
+        session["staff-name"] = srch_thm_form.staff_name.data
+        session["staff-kana-name"] = srch_thm_form.staff_kana_name.data
+        session["created-at-begin"] = srch_thm_form.created_at_begin.data
+        session["created-at-end"] = srch_thm_form.created_at_end.data
+        session["updated-at-begin"] = srch_thm_form.updated_at_begin.data
+        session["updated-at-end"] = srch_thm_form.updated_at_end.data
+        session["sort-condition"] = srch_thm_form.sort_condition.data
+        session["extract-condition"] = srch_thm_form.extract_condition.data
 
         # 検索条件を保持したまま, 検索結果ページへリダイレクトする.
         return redirect(url_for("view.search_themes_results"))
@@ -3156,37 +3240,37 @@ def search_categories():
 
         # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
         if srch_ctgr_form.cancel.data:
-            srch_ctgr_form.id = ""
-            srch_ctgr_form.spell_and_header = ""
-            srch_ctgr_form.mean_and_content = ""
-            srch_ctgr_form.parent_category_tags = ""
-            srch_ctgr_form.sibling_category_tags = ""
-            srch_ctgr_form.child_category_tags = ""
-            srch_ctgr_form.staff_name = ""
-            srch_ctgr_form.staff_kana_name = ""
-            srch_ctgr_form.created_at_begin = ""
-            srch_ctgr_form.created_at_end = ""
-            srch_ctgr_form.updated_at_begin = ""
-            srch_ctgr_form.updated_at_end = ""
-            srch_ctgr_form.sort_condition = "condition-1"
-            srch_ctgr_form.extract_condition = "condition-1"
+            srch_ctgr_form.id.data = ""
+            srch_ctgr_form.spell_and_header.data = ""
+            srch_ctgr_form.mean_and_content.data = ""
+            srch_ctgr_form.parent_category_tag.data = ""
+            srch_ctgr_form.sibling_category_tag.data = ""
+            srch_ctgr_form.child_category_tag.data = ""
+            srch_ctgr_form.staff_name.data = ""
+            srch_ctgr_form.staff_kana_name.data = ""
+            srch_ctgr_form.created_at_begin.data = ""
+            srch_ctgr_form.created_at_end.data = ""
+            srch_ctgr_form.updated_at_begin.data = ""
+            srch_ctgr_form.updated_at_end.data = ""
+            srch_ctgr_form.sort_condition.data = "condition-1"
+            srch_ctgr_form.extract_condition.data = "condition-1"
             return render_template("search_categories.html", form=srch_ctgr_form)
 
         # 検索に係るセッション項目(=検索条件)を作成する.
-        session["id"] = srch_ctgr_form.id
-        session["spell-and-header"] = srch_ctgr_form.spell_and_header
-        session["mean-and-content"] = srch_ctgr_form.mean_and_content
-        session["parent-category-tags"] = srch_ctgr_form.parent_category_tags
-        session["sibling-category-tags"] = srch_ctgr_form.sibling_category_tags
-        session["child-category-tags"] = srch_ctgr_form.child_category_tags
-        session["staff-name"] = srch_ctgr_form.staff_name
-        session["staff-kana-name"] = srch_ctgr_form.staff_kana_name
-        session["created-at-begin"] = srch_ctgr_form.created_at_begin
-        session["created-at-end"] = srch_ctgr_form.created_at_end
-        session["updated-at-begin"] = srch_ctgr_form.updated_at_begin
-        session["updated-at-end"] = srch_ctgr_form.updated_at_end
-        session["sort-condition"] = srch_ctgr_form.sort_condition
-        session["extract-condition"] = srch_ctgr_form.extract_condition
+        session["id"] = srch_ctgr_form.id.data
+        session["spell-and-header"] = srch_ctgr_form.spell_and_header.data
+        session["mean-and-content"] = srch_ctgr_form.mean_and_content.data
+        session["parent-category-tags"] = srch_ctgr_form.parent_category_tag.data
+        session["sibling-category-tags"] = srch_ctgr_form.sibling_category_tag.data
+        session["child-category-tags"] = srch_ctgr_form.child_category_tag.data
+        session["staff-name"] = srch_ctgr_form.staff_name.data
+        session["staff-kana-name"] = srch_ctgr_form.staff_kana_name.data
+        session["created-at-begin"] = srch_ctgr_form.created_at_begin.data
+        session["created-at-end"] = srch_ctgr_form.created_at_end.data
+        session["updated-at-begin"] = srch_ctgr_form.updated_at_begin.data
+        session["updated-at-end"] = srch_ctgr_form.updated_at_end.data
+        session["sort-condition"] = srch_ctgr_form.sort_condition.data
+        session["extract-condition"] = srch_ctgr_form.extract_condition.data
 
         # 検索条件を保持したまま, 検索結果ページへリダイレクトする.
         return redirect(url_for("view.search_categories_results"))
@@ -3248,39 +3332,39 @@ def search_knowledges():
 
         # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
         if srch_knwldg_form.cancel.data:
-            srch_knwldg_form.id = ""
-            srch_knwldg_form.spell_and_header = ""
-            srch_knwldg_form.mean_and_content = ""
-            srch_knwldg_form.category_tags = ""
-            srch_knwldg_form.has_image = ""
-            srch_knwldg_form.has_sound = ""
-            srch_knwldg_form.has_video = ""
-            srch_knwldg_form.staff_name = ""
-            srch_knwldg_form.staff_kana_name = ""
-            srch_knwldg_form.created_at_begin = ""
-            srch_knwldg_form.created_at_end = ""
-            srch_knwldg_form.updated_at_begin = ""
-            srch_knwldg_form.updated_at_end = ""
-            srch_knwldg_form.sort_condition = "condition-1"
-            srch_knwldg_form.extract_condition = "condition-1"
+            srch_knwldg_form.id.data = ""
+            srch_knwldg_form.spell_and_header.data = ""
+            srch_knwldg_form.mean_and_content.data = ""
+            srch_knwldg_form.category_tag.data = ""
+            srch_knwldg_form.has_image.data = ""
+            srch_knwldg_form.has_sound.data = ""
+            srch_knwldg_form.has_video.data = ""
+            srch_knwldg_form.staff_name.data = ""
+            srch_knwldg_form.staff_kana_name.data = ""
+            srch_knwldg_form.created_at_begin.data = ""
+            srch_knwldg_form.created_at_end.data = ""
+            srch_knwldg_form.updated_at_begin.data = ""
+            srch_knwldg_form.updated_at_end.data = ""
+            srch_knwldg_form.sort_condition.data = "condition-1"
+            srch_knwldg_form.extract_condition.data = "condition-1"
             return render_template("search_knowledges.html", form=srch_knwldg_form)
 
         # 検索に係るセッション項目(=検索条件)を作成する.
         session["id"] = srch_knwldg_form.id
-        session["spell-and-header"] = srch_knwldg_form.spell_and_header
-        session["mean-and-content"] = srch_knwldg_form.mean_and_content
-        session["category-tags"] = srch_knwldg_form.category_tags
-        session["has-image"] = srch_knwldg_form.has_image
-        session["has-sound"] = srch_knwldg_form.has_sound
-        session["has-video"] = srch_knwldg_form.has_video
-        session["staff-name"] = srch_knwldg_form.staff_name
-        session["staff-kana-name"] = srch_knwldg_form.staff_kana_name
-        session["created-at-begin"] = srch_knwldg_form.created_at_begin
-        session["created-at-end"] = srch_knwldg_form.created_at_end
-        session["updated-at-begin"] = srch_knwldg_form.updated_at_begin
-        session["updated-at-end"] = srch_knwldg_form.updated_at_end
-        session["sort-condition"] = srch_knwldg_form.sort_condition
-        session["extract-condition"] = srch_knwldg_form.extract_condition
+        session["spell-and-header"] = srch_knwldg_form.spell_and_header.data
+        session["mean-and-content"] = srch_knwldg_form.mean_and_content.data
+        session["category-tags"] = srch_knwldg_form.category_tag.data
+        session["has-image"] = srch_knwldg_form.has_image.data
+        session["has-sound"] = srch_knwldg_form.has_sound.data
+        session["has-video"] = srch_knwldg_form.has_video.data
+        session["staff-name"] = srch_knwldg_form.staff_name.data
+        session["staff-kana-name"] = srch_knwldg_form.staff_kana_name.data
+        session["created-at-begin"] = srch_knwldg_form.created_at_begin.data
+        session["created-at-end"] = srch_knwldg_form.created_at_end.data
+        session["updated-at-begin"] = srch_knwldg_form.updated_at_begin.data
+        session["updated-at-end"] = srch_knwldg_form.updated_at_end.data
+        session["sort-condition"] = srch_knwldg_form.sort_condition.data
+        session["extract-condition"] = srch_knwldg_form.extract_condition.data
 
         # 検索条件を保持したまま, 検索結果ページへリダイレクトする.
         return redirect(url_for("view.search_knowledges_results"))
@@ -3341,37 +3425,37 @@ def search_rules():
 
         # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
         if srch_rl_form.cancel.data:
-            srch_rl_form.id = ""
-            srch_rl_form.spell_and_header = ""
-            srch_rl_form.mean_and_content = ""
-            srch_rl_form.category_tags = ""
-            srch_rl_form.inference_condition = ""
-            srch_rl_form.inference_result = ""
-            srch_rl_form.staff_name = ""
-            srch_rl_form.staff_kana_name = ""
-            srch_rl_form.created_at_begin = ""
-            srch_rl_form.created_at_end = ""
-            srch_rl_form.updated_at_begin = ""
-            srch_rl_form.updated_at_end = ""
-            srch_rl_form.sort_condition = "condition-1"
-            srch_rl_form.extract_condition = "condition-1"
+            srch_rl_form.id.data = ""
+            srch_rl_form.spell_and_header.data = ""
+            srch_rl_form.mean_and_content.data = ""
+            srch_rl_form.category_tag.data = ""
+            srch_rl_form.inference_and_speculation_condition.data = ""
+            srch_rl_form.inference_and_speculation_result.data = ""
+            srch_rl_form.staff_name.data = ""
+            srch_rl_form.staff_kana_name.data = ""
+            srch_rl_form.created_at_begin.data = ""
+            srch_rl_form.created_at_end.data = ""
+            srch_rl_form.updated_at_begin.data = ""
+            srch_rl_form.updated_at_end.data = ""
+            srch_rl_form.sort_condition.data = "condition-1"
+            srch_rl_form.extract_condition.data = "condition-1"
             return render_template("search_rules.html", form=srch_rl_form)
 
         # 検索に係るセッション項目(=検索条件)を作成する.
-        session["id"] = srch_rl_form.id
-        session["spell-and-header"] = srch_rl_form.spell_and_header
-        session["mean-and-content"] = srch_rl_form.mean_and_content
-        session["category-tags"] = srch_rl_form.category_tags
-        session["inference-condition"] = srch_rl_form.inference_condition
-        session["inference-result"] = srch_rl_form.inference_result
-        session["staff-name"] = srch_rl_form.staff_name
-        session["staff-kana-name"] = srch_rl_form.staff_kana_name
-        session["created-at-begin"] = srch_rl_form.created_at_begin
-        session["created-at-end"] = srch_rl_form.created_at_end
-        session["updated-at-begin"] = srch_rl_form.updated_at_begin
-        session["updated-at-end"] = srch_rl_form.updated_at_end
-        session["sort-condition"] = srch_rl_form.sort_condition
-        session["extract-condition"] = srch_rl_form.extract_condition
+        session["id"] = srch_rl_form.id.data
+        session["spell-and-header"] = srch_rl_form.spell_and_header.data
+        session["mean-and-content"] = srch_rl_form.mean_and_content.data
+        session["category-tags"] = srch_rl_form.category_tag.data
+        session["inference-and-speculation-condition"] = srch_rl_form.inference_and_speculation_condition.data
+        session["inference-and-speculation-result"] = srch_rl_form.inference_and_speculation_result.data
+        session["staff-name"] = srch_rl_form.staff_name.data
+        session["staff-kana-name"] = srch_rl_form.staff_kana_name.data
+        session["created-at-begin"] = srch_rl_form.created_at_begin.data
+        session["created-at-end"] = srch_rl_form.created_at_end.data
+        session["updated-at-begin"] = srch_rl_form.updated_at_begin.data
+        session["updated-at-end"] = srch_rl_form.updated_at_end.data
+        session["sort-condition"] = srch_rl_form.sort_condition.data
+        session["extract-condition"] = srch_rl_form.extract_condition.data
 
         # 検索条件を保持したまま, 検索結果ページへリダイレクトする.
         return redirect(url_for("view.search_rules_results"))
@@ -3433,39 +3517,39 @@ def search_reactions():
 
         # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
         if srch_rctn_form.cancel.data:
-            srch_rctn_form.id = ""
-            srch_rctn_form.spell_and_header = ""
-            srch_rctn_form.mean_and_content = ""
-            srch_rctn_form.staff_psychology = ""
-            srch_rctn_form.scene_and_background = ""
-            srch_rctn_form.message_example_from_staff = ""
-            srch_rctn_form.message_example_from_application = ""
-            srch_rctn_form.staff_name = ""
-            srch_rctn_form.staff_kana_name = ""
-            srch_rctn_form.created_at_begin = ""
-            srch_rctn_form.created_at_end = ""
-            srch_rctn_form.updated_at_begin = ""
-            srch_rctn_form.updated_at_end = ""
-            srch_rctn_form.sort_condition = "condition-1"
-            srch_rctn_form.extract_condition = "condition-1"
+            srch_rctn_form.id.data = ""
+            srch_rctn_form.spell_and_header.data = ""
+            srch_rctn_form.mean_and_content.data = ""
+            srch_rctn_form.staff_psychology.data = ""
+            srch_rctn_form.scene_and_background.data = ""
+            srch_rctn_form.message_example_from_staff.data = ""
+            srch_rctn_form.message_example_from_application.data = ""
+            srch_rctn_form.staff_name.data = ""
+            srch_rctn_form.staff_kana_name.data = ""
+            srch_rctn_form.created_at_begin.data = ""
+            srch_rctn_form.created_at_end.data = ""
+            srch_rctn_form.updated_at_begin.data = ""
+            srch_rctn_form.updated_at_end.data = ""
+            srch_rctn_form.sort_condition.data = "condition-1"
+            srch_rctn_form.extract_condition.data = "condition-1"
             return render_template("search_reactions.html", form=srch_rctn_form)
 
         # 検索に係るセッション項目(=検索条件)を作成する.
-        session["id"] = srch_rctn_form.id
-        session["spell-and-header"] = srch_rctn_form.spell_and_header
-        session["mean-and-content"] = srch_rctn_form.mean_and_content
-        session["staff-psychology"] = srch_rctn_form.staff_psychology
-        session["scene-and-background"] = srch_rctn_form.scene_and_background
-        session["message-example-from-staff"] = srch_rctn_form.message_example_from_staff
-        session["message-example-from-application"] = srch_rctn_form.message_example_from_application
-        session["staff-name"] = srch_rctn_form.staff_name
-        session["staff-kana-name"] = srch_rctn_form.staff_kana_name
-        session["created-at-begin"] = srch_rctn_form.created_at_begin
-        session["created-at-end"] = srch_rctn_form.created_at_end
-        session["updated-at-begin"] = srch_rctn_form.updated_at_begin
-        session["updated-at-end"] = srch_rctn_form.updated_at_end
-        session["sort-condition"] = srch_rctn_form.sort_condition
-        session["extract-condition"] = srch_rctn_form.extract_condition
+        session["id"] = srch_rctn_form.id.data
+        session["spell-and-header"] = srch_rctn_form.spell_and_header.data
+        session["mean-and-content"] = srch_rctn_form.mean_and_content.data
+        session["staff-psychology"] = srch_rctn_form.staff_psychology.data
+        session["scene-and-background"] = srch_rctn_form.scene_and_background.data
+        session["message-example-from-staff"] = srch_rctn_form.message_example_from_staff.data
+        session["message-example-from-application"] = srch_rctn_form.message_example_from_application.data
+        session["staff-name"] = srch_rctn_form.staff_name.data
+        session["staff-kana-name"] = srch_rctn_form.staff_kana_name.data
+        session["created-at-begin"] = srch_rctn_form.created_at_begin.data
+        session["created-at-end"] = srch_rctn_form.created_at_end.data
+        session["updated-at-begin"] = srch_rctn_form.updated_at_begin.data
+        session["updated-at-end"] = srch_rctn_form.updated_at_end.data
+        session["sort-condition"] = srch_rctn_form.sort_condition.data
+        session["extract-condition"] = srch_rctn_form.extract_condition.data
 
         # 検索条件を保持したまま, 検索結果ページへリダイレクトする.
         return redirect(url_for("view.search_reactions_results"))
@@ -3523,31 +3607,31 @@ def search_generates():
 
         # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
         if srch_gen_form.cancel.data:
-            srch_gen_form.id = ""
-            srch_gen_form.spell_and_header = ""
-            srch_gen_form.mean_and_content = ""
-            srch_gen_form.staff_name = ""
-            srch_gen_form.staff_kana_name = ""
-            srch_gen_form.created_at_begin = ""
-            srch_gen_form.created_at_end = ""
-            srch_gen_form.updated_at_begin = ""
-            srch_gen_form.updated_at_end = ""
-            srch_gen_form.sort_condition = "condition-1"
-            srch_gen_form.extract_condition = "condition-1"
+            srch_gen_form.id.data = ""
+            srch_gen_form.spell_and_header.data = ""
+            srch_gen_form.mean_and_content.data = ""
+            srch_gen_form.staff_name.data = ""
+            srch_gen_form.staff_kana_name.data = ""
+            srch_gen_form.created_at_begin.data = ""
+            srch_gen_form.created_at_end.data = ""
+            srch_gen_form.updated_at_begin.data = ""
+            srch_gen_form.updated_at_end.data = ""
+            srch_gen_form.sort_condition.data = "condition-1"
+            srch_gen_form.extract_condition.data = "condition-1"
             return render_template("search_generates.html", form=srch_gen_form)
 
         # 検索に係るセッション項目(=検索条件)を作成する.
         session["id"] = srch_gen_form.id
-        session["spell-and-header"] = srch_gen_form.spell_and_header
-        session["mean-and-content"] = srch_gen_form.mean_and_content
-        session["staff-name"] = srch_gen_form.staff_name
-        session["staff-kana-name"] = srch_gen_form.staff_kana_name
-        session["created-at-begin"] = srch_gen_form.created_at_begin
-        session["created-at-end"] = srch_gen_form.created_at_end
-        session["updated-at-begin"] = srch_gen_form.updated_at_begin
-        session["updated-at-end"] = srch_gen_form.updated_at_end
-        session["sort-condition"] = srch_gen_form.sort_condition
-        session["extract-condition"] = srch_gen_form.extract_condition
+        session["spell-and-header"] = srch_gen_form.spell_and_header.data
+        session["mean-and-content"] = srch_gen_form.mean_and_content.data
+        session["staff-name"] = srch_gen_form.staff_name.data
+        session["staff-kana-name"] = srch_gen_form.staff_kana_name.data
+        session["created-at-begin"] = srch_gen_form.created_at_begin.data
+        session["created-at-end"] = srch_gen_form.created_at_end.data
+        session["updated-at-begin"] = srch_gen_form.updated_at_begin.data
+        session["updated-at-end"] = srch_gen_form.updated_at_end.data
+        session["sort-condition"] = srch_gen_form.sort_condition.data
+        session["extract-condition"] = srch_gen_form.extract_condition.data
 
         # 検索条件を保持したまま, 検索結果ページへリダイレクトする.
         return redirect(url_for("view.search_generates_results"))
@@ -3605,31 +3689,31 @@ def search_histories():
 
         # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
         if srch_hist_form.cancel.data:
-            srch_hist_form.id = ""
-            srch_hist_form.staff_message = ""
-            srch_hist_form.application_message = ""
-            srch_hist_form.staff_name = ""
-            srch_hist_form.staff_kana_name = ""
-            srch_hist_form.created_at_begin = ""
-            srch_hist_form.created_at_end = ""
-            srch_hist_form.updated_at_begin = ""
-            srch_hist_form.updated_at_end = ""
-            srch_hist_form.sort_condition = "condition-1"
-            srch_hist_form.extract_condition = "condition-1"
+            srch_hist_form.id.data = ""
+            srch_hist_form.staff_message.data = ""
+            srch_hist_form.application_message.data = ""
+            srch_hist_form.staff_name.data = ""
+            srch_hist_form.staff_kana_name.data = ""
+            srch_hist_form.created_at_begin.data = ""
+            srch_hist_form.created_at_end.data = ""
+            srch_hist_form.updated_at_begin.data = ""
+            srch_hist_form.updated_at_end.data = ""
+            srch_hist_form.sort_condition.data = "condition-1"
+            srch_hist_form.extract_condition.data = "condition-1"
             return render_template("search_histories.html", form=srch_hist_form)
 
         # 検索に係るセッション項目(=検索条件)を作成する.
-        session["id"] = srch_hist_form.id
-        session["staff-message"] = srch_hist_form.staff_message
-        session["application-message"] = srch_hist_form.application_message
-        session["staff-name"] = srch_hist_form.staff_name
-        session["staff-kana-name"] = srch_hist_form.staff_kana_name
-        session["created-at-begin"] = srch_hist_form.created_at_begin
-        session["created-at-end"] = srch_hist_form.created_at_end
-        session["updated-at-begin"] = srch_hist_form.updated_at_begin
-        session["updated-at-end"] = srch_hist_form.updated_at_end
-        session["sort-condition"] = srch_hist_form.sort_condition
-        session["extract-condition"] = srch_hist_form.extract_condition
+        session["id"] = srch_hist_form.id.data
+        session["staff-message"] = srch_hist_form.staff_message.data
+        session["application-message"] = srch_hist_form.application_message.data
+        session["staff-name"] = srch_hist_form.staff_name.data
+        session["staff-kana-name"] = srch_hist_form.staff_kana_name.data
+        session["created-at-begin"] = srch_hist_form.created_at_begin.data
+        session["created-at-end"] = srch_hist_form.created_at_end.data
+        session["updated-at-begin"] = srch_hist_form.updated_at_begin.data
+        session["updated-at-end"] = srch_hist_form.updated_at_end.data
+        session["sort-condition"] = srch_hist_form.sort_condition.data
+        session["extract-condition"] = srch_hist_form.extract_condition.data
 
         # 検索条件を保持したまま, 検索結果ページへリダイレクトする.
         return redirect(url_for("view.search_histories_results"))
@@ -3667,10 +3751,11 @@ def search_enters_or_exits():
 
         # 検索に係るセッション項目(=検索条件)を削除してからテンプレートを返す.
         session.pop("id", None)
-        session.pop("reason", None)
-        session.pop("enter-or-exit-at", None)
         session.pop("staff-name", None)
         session.pop("staff-kana-name", None)
+        session.pop("reason", None)
+        session.pop("enter-or-exit-at", None)
+        session.pop("enter-or-exit-at-second", None)
         session.pop("created-at-begin", None)
         session.pop("created-at-end", None)
         session.pop("updated-at-begin", None)
@@ -3687,31 +3772,32 @@ def search_enters_or_exits():
 
         # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
         if srch_entr_or_exit_form.cancel.data:
-            srch_entr_or_exit_form.id = ""
-            srch_entr_or_exit_form.reason = ""
-            srch_entr_or_exit_form.enter_or_exit_at = ""
-            srch_entr_or_exit_form.staff_name = ""
-            srch_entr_or_exit_form.staff_kana_name = ""
-            srch_entr_or_exit_form.created_at_begin = ""
-            srch_entr_or_exit_form.created_at_end = ""
-            srch_entr_or_exit_form.updated_at_begin = ""
-            srch_entr_or_exit_form.updated_at_end = ""
-            srch_entr_or_exit_form.sort_condition = "condition-1"
-            srch_entr_or_exit_form.extract_condition = "condition-1"
+            srch_entr_or_exit_form.id.data = ""
+            srch_entr_or_exit_form.staff_name.data = ""
+            srch_entr_or_exit_form.staff_kana_name.data = ""
+            srch_entr_or_exit_form.reason.data = ""
+            srch_entr_or_exit_form.enter_or_exit_at.data = ""
+            srch_entr_or_exit_form.created_at_begin.data = ""
+            srch_entr_or_exit_form.created_at_end.data = ""
+            srch_entr_or_exit_form.updated_at_begin.data = ""
+            srch_entr_or_exit_form.updated_at_end.data = ""
+            srch_entr_or_exit_form.sort_condition.data = "condition-1"
+            srch_entr_or_exit_form.extract_condition.data = "condition-1"
             return render_template("search_enters_or_exits.html", form=srch_entr_or_exit_form)
 
         # 検索に係るセッション項目(=検索条件)を作成する.
-        session["id"] = srch_entr_or_exit_form.id
-        session["reason"] = srch_entr_or_exit_form.reason
-        session["enter-or-exit-at"] = srch_entr_or_exit_form.enter_or_exit_at
-        session["staff-name"] = srch_entr_or_exit_form.staff_name
-        session["staff-kana-name"] = srch_entr_or_exit_form.staff_kana_name
-        session["created-at-begin"] = srch_entr_or_exit_form.created_at_begin
-        session["created-at-end"] = srch_entr_or_exit_form.created_at_end
-        session["updated-at-begin"] = srch_entr_or_exit_form.updated_at_begin
-        session["updated-at-end"] = srch_entr_or_exit_form.updated_at_end
-        session["sort-condition"] = srch_entr_or_exit_form.sort_condition
-        session["extract-condition"] = srch_entr_or_exit_form.extract_condition
+        session["id"] = srch_entr_or_exit_form.id.data
+        session["staff-name"] = srch_entr_or_exit_form.staff_name.data
+        session["staff-kana-name"] = srch_entr_or_exit_form.staff_kana_name.data
+        session["reason"] = srch_entr_or_exit_form.reason.data
+        session["enter-or-exit-at-begin"] = srch_entr_or_exit_form.enter_or_exit_at_begin.data
+        session["enter-or-exit-at-end"] = srch_entr_or_exit_form.enter_or_exit_at_end.data
+        session["created-at-begin"] = srch_entr_or_exit_form.created_at_begin.data
+        session["created-at-end"] = srch_entr_or_exit_form.created_at_end.data
+        session["updated-at-begin"] = srch_entr_or_exit_form.updated_at_begin.data
+        session["updated-at-end"] = srch_entr_or_exit_form.updated_at_end.data
+        session["sort-condition"] = srch_entr_or_exit_form.sort_condition.data
+        session["extract-condition"] = srch_entr_or_exit_form.extract_condition.data
 
         # 検索条件を保持したまま, 検索結果ページへリダイレクトする.
         return redirect(url_for("view.search_enters_or_exits_results"))
@@ -3770,33 +3856,33 @@ def search_staffs():
 
         # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
         if srch_stff_form.cancel.data:
-            srch_stff_form.id = ""
-            srch_stff_form.name = ""
-            srch_stff_form.kana_name = ""
-            srch_stff_form.sex = ""
-            srch_stff_form.blood_type = ""
-            srch_stff_form.birth_date = ""
-            srch_stff_form.created_at_begin = ""
-            srch_stff_form.created_at_end = ""
-            srch_stff_form.updated_at_begin = ""
-            srch_stff_form.updated_at_end = ""
-            srch_stff_form.sort_condition = "condition-1"
-            srch_stff_form.extract_condition = "condition-1"
+            srch_stff_form.id.data = ""
+            srch_stff_form.name.data = ""
+            srch_stff_form.kana_name.data = ""
+            srch_stff_form.sex.data = ""
+            srch_stff_form.blood_type.data = ""
+            srch_stff_form.birth_date.data = ""
+            srch_stff_form.created_at_begin.data = ""
+            srch_stff_form.created_at_end.data = ""
+            srch_stff_form.updated_at_begin.data = ""
+            srch_stff_form.updated_at_end.data = ""
+            srch_stff_form.sort_condition.data = "condition-1"
+            srch_stff_form.extract_condition.data = "condition-1"
             return render_template("search_staffs.html", form=srch_stff_form)
 
         # 検索に係るセッション項目(=検索条件)を作成する.
-        session["id"] = srch_stff_form.id
-        session["name"] = srch_stff_form.name
-        session["kana-name"] = srch_stff_form.kana_name
-        session["sex"] = srch_stff_form.sex
-        session["blood-type"] = srch_stff_form.blood_type
-        session["birth-date"] = srch_stff_form.birth_date
-        session["created-at-begin"] = srch_stff_form.created_at_begin
-        session["created-at-end"] = srch_stff_form.created_at_end
-        session["updated-at-begin"] = srch_stff_form.updated_at_begin
-        session["updated-at-end"] = srch_stff_form.updated_at_end
-        session["sort-condition"] = srch_stff_form.sort_condition
-        session["extract-condition"] = srch_stff_form.extract_condition
+        session["id"] = srch_stff_form.id.data
+        session["name"] = srch_stff_form.name.data
+        session["kana-name"] = srch_stff_form.kana_name.data
+        session["sex"] = srch_stff_form.sex.data
+        session["blood-type"] = srch_stff_form.blood_type.data
+        session["birth-date"] = srch_stff_form.birth_date.data
+        session["created-at-begin"] = srch_stff_form.created_at_begin.data
+        session["created-at-end"] = srch_stff_form.created_at_end.data
+        session["updated-at-begin"] = srch_stff_form.updated_at_begin.data
+        session["updated-at-end"] = srch_stff_form.updated_at_end.data
+        session["sort-condition"] = srch_stff_form.sort_condition.data
+        session["extract-condition"] = srch_stff_form.extract_condition.data
 
         # 検索条件を保持したまま, 検索結果ページへリダイレクトする.
         return redirect(url_for("view.search_staffs_results"))
@@ -3805,6 +3891,11 @@ def search_staffs():
 # 「search_words_results」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
 @view.route("/search_words_results", methods=["GET", "POST"])
 def search_words_results():
+    # 関数内で使用する変数・オブジェクトを宣言・定義する.
+    wrds_tmp = []
+    wrds_fnl = []
+    is_srch_done = False
+
     # 該当のURLエンドポイントに入ったことをロギングする.
     rslt = se.etc.logging__info("view at /search_words_results")
 
@@ -3828,8 +3919,349 @@ def search_words_results():
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_words_results"
 
-        #@ ここで, モデルへの検索を行い, 検索結果をまとめて返す.
-        return render_template("search_words_results.html")
+        # 検索条件(=検索キー)となる値をまとめて取得する.
+        id = str(session["id"]).split(" ")
+        spll_n_hdr = str(session["spell-and-header"])
+        mn_n_cntnt = str(session["mean-and-content"])
+        intnt = str(session["intent"])
+        sntmnt = str(session["sentiment"])
+        sntmnt_spprt = str(session["sentiment-support"])
+        strngth = str(session["strength"])
+        prt_of_spch = str(session["part-of-speech"])
+        stff_nm = str(session["staff-name"]).split(" ")
+        stff_kn_nm = str(session["staff-kana-name"]).split(" ")
+        crtd_at_bgn = session["created-at-begin"]
+        crtd_at_end = session["created-at-end"]
+        updtd_at_bgn = session["updated-at-begin"]
+        updtd_at_end = session["updated-at-end"]
+        srt_cndtn = str(session["sort-condition"])
+        extrct_cndtn = str(session["extract-condition"])
+
+        # 各種の検索条件に基づいてレコードを検索する.
+        if (((len(id) == 1) and (id[0] == "")) == False):
+            srch_trgt = id
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.id.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.id.in_(srch_trgt)).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.id.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.id.in_(srch_trgt)).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((spll_n_hdr != "") and (is_srch_done == False)):
+            srch_trgt = [spll_n_hdr]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.spell_and_header.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.spell_and_header.in_(srch_trgt)).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.spell_and_header.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.spell_and_header.in_(srch_trgt)).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((mn_n_cntnt != "") and (is_srch_done == False)):
+            srch_trgt = [mn_n_cntnt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.mean_and_content.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.mean_and_content.in_(srch_trgt)).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.mean_and_content.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.mean_and_content.in_(srch_trgt)).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((intnt != "") and (is_srch_done == False)):
+            srch_trgt = [intnt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.intent.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.intent.in_(srch_trgt)).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.intent.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.intent.in_(srch_trgt)).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((sntmnt != "") and (is_srch_done == False)):
+            srch_trgt = [sntmnt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.sentiment.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.sentiment.in_(srch_trgt)).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.sentiment.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.sentiment.in_(srch_trgt)).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((sntmnt_spprt != "") and (is_srch_done == False)):
+            srch_trgt = [sntmnt_spprt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.sentiment_support.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.sentiment_support.in_(srch_trgt)).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.sentiment_support.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.sentiment_support.in_(srch_trgt)).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((strngth != "") and (is_srch_done == False)):
+            srch_trgt = [strngth]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.strength.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.strength.in_(srch_trgt)).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.strength.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.strength.in_(srch_trgt)).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((prt_of_spch != "") and (is_srch_done == False)):
+            srch_trgt = [prt_of_spch]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.part_of_speech.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.part_of_speech.in_(srch_trgt)).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.part_of_speech.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.part_of_speech.in_(srch_trgt)).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_nm) == 1) and (stff_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.staff_name.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.staff_name.in_(srch_trgt)).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.staff_name.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.staff_name.in_(srch_trgt)).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_kn_nm) == 1) and (stff_kn_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_kn_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.staff_kana_name.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.staff_kana_name.in_(srch_trgt)).order_by(Word.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.staff_kana_name.in_(srch_trgt), Word.is_hidden == False).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  wrds_tmp = (
+                  db_session.query(Word).filter(Word.staff_kana_name.in_(srch_trgt)).order_by(Word.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((crtd_at_bgn is not None) and (crtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  wrds_tmp = db_session.query(Word).filter(Word.created_at >= crtd_at_bgn, Word.created_at <= crtd_at_end, Word.is_hidden == False).order_by(Word.id.asc()).all()
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  wrds_tmp = db_session.query(Word).filter(Word.created_at >= crtd_at_bgn, Word.created_at <= crtd_at_end).order_by(Word.id.asc()).all()
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  wrds_tmp = db_session.query(Word).filter(Word.created_at >= crtd_at_bgn, Word.created_at <= crtd_at_end, Word.is_hidden == False).order_by(Word.id.desc()).all()
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  wrds_tmp = db_session.query(Word).filter(Word.created_at >= crtd_at_bgn, Word.created_at <= crtd_at_end).order_by(Word.id.desc()).all()
+                  db_session.close()
+                  is_srch_done = True
+        if (((updtd_at_bgn is not None) and (updtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  wrds_tmp = db_session.query(Word).filter(Word.created_at >= updtd_at_bgn, Word.created_at <= updtd_at_end, Word.is_hidden == False).order_by(Word.id.asc()).all()
+                  db_session.close()
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  wrds_tmp = db_session.query(Word).filter(Word.created_at >= updtd_at_bgn, Word.created_at <= updtd_at_end).order_by(Word.id.asc()).all()
+                  db_session.close()
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  wrds_tmp = db_session.query(Word).filter(Word.created_at >= updtd_at_bgn, Word.created_at <= updtd_at_end, Word.is_hidden == False).order_by(Word.id.desc()).all()
+                  db_session.close()
+            else:
+                  wrds_tmp = db_session.query(Word).filter(Word.created_at >= updtd_at_bgn, Word.created_at <= updtd_at_end).order_by(Word.id.desc()).all()
+                  db_session.close()
+
+        # 検索結果を整形し, 配列にセットしてテンプレートと共に返す.
+        if wrds_tmp is not None:
+            for wrd_tmp in wrds_tmp:
+                if len(str(wrd_tmp.id)) > 6:
+                    id_tmp = wrd_tmp.id[0:6] + "..."
+                else:
+                    id_tmp = wrd_tmp.id
+                if len(wrd_tmp.spell_and_header) > 6:
+                    spll_n_hdr_tmp = wrd_tmp.spell_and_header[0:6] + "..."
+                else:
+                    spll_n_hdr_tmp = wrd_tmp.spell_and_header
+                if len(wrd_tmp.mean_and_content) > 6:
+                    mn_n_cntnt_tmp = wrd_tmp.mean_and_content[0:6] + "..."
+                else:
+                    mn_n_cntnt_tmp = wrd_tmp.mean_and_content
+                if len(wrd_tmp.staff_name) > 6:
+                    stff_nm_tmp = wrd_tmp.staff_name[0:6] + "..."
+                else:
+                    stff_nm_tmp = wrd_tmp.staff_name
+                wrds_fnl.append([id_tmp,
+                                 spll_n_hdr_tmp,
+                                 mn_n_cntnt_tmp,
+                                 stff_nm_tmp
+                                ])
+        per_pg = consts.WORD_ITEM_PER_PAGE
+        pg = request.args.get(get_page_parameter(), type=int, default=1)
+        pg_dat = wrds_fnl[(pg - 1) * per_pg : pg * per_pg]
+        pgntn = Pagination(page=pg,
+                           total=len(wrds_fnl),
+                           per_page=per_pg,
+                           css_framework=consts.PAGINATION_CSS
+                          )
+        return render_template("search_words_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
@@ -3837,14 +4269,26 @@ def search_words_results():
         if session["referrer-page"] != "view.search_words_results":
             return redirect(url_for("view.search_words_results"))
 
-        #@ ここで, フォーム内のボタンが押されたときの動作を実装する.
-        #@ ※ここには, 仮のコードを記述しておいた...
-        return redirect(url_for("view.search_words_results"))
+        # フォームボタン群の中から, 押下されたボタンに応じたページへリダイレクトする.
+        if request.form["hidden-modify-item-id"] != "":
+            session["hidden-modify-item-id"] = request.form["hidden-modify-item-id"]
+            return redirect(url_for("view.modify_word"))
+        if request.form["hidden-detail-item-id"] != "":
+            session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
+            return redirect(url_for("view.detail_word"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「search_themes_results」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
 @view.route("/search_themes_results", methods=["GET", "POST"])
 def search_themes_results():
+    # 関数内で使用する変数・オブジェクトを宣言・定義する.
+    thms_tmp = []
+    thms_fnl = []
+    is_srch_done = False
+
     # 該当のURLエンドポイントに入ったことをロギングする.
     rslt = se.etc.logging__info("view at /search_themes_results")
 
@@ -3868,8 +4312,255 @@ def search_themes_results():
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_themes_results"
 
-        #@ ここで, モデルへの検索を行い, 検索結果をまとめて返す.
-        return render_template("search_themes_results.html")
+        # 検索条件(=検索キー)となる値をまとめて取得する.
+        id = str(session["id"]).split(" ")
+        spll_n_hdr = str(session["spell-and-header"])
+        mn_n_cntnt = str(session["mean-and-content"])
+        ctgr_tgs = str(session["category-tags"]).split(" ")
+        stff_nm = str(session["staff-name"]).split(" ")
+        stff_kn_nm = str(session["staff-kana-name"]).split(" ")
+        crtd_at_bgn = session["created-at-begin"]
+        crtd_at_end = session["created-at-end"]
+        updtd_at_bgn = session["updated-at-begin"]
+        updtd_at_end = session["updated-at-end"]
+        srt_cndtn = str(session["sort-condition"])
+        extrct_cndtn = str(session["extract-condition"])
+
+        # 各種の検索条件に基づいてレコードを検索する.
+        if (((len(id) == 1) and (id[0] == "")) == False):
+            srch_trgt = id
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.id.in_(srch_trgt), Theme.is_hidden == False).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.id.in_(srch_trgt)).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.id.in_(srch_trgt), Theme.is_hidden == False).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.id.in_(srch_trgt)).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((spll_n_hdr != "") and (is_srch_done == False)):
+            srch_trgt = [spll_n_hdr]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.spell_and_header.in_(srch_trgt), Theme.is_hidden == False).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.spell_and_header.in_(srch_trgt)).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.spell_and_header.in_(srch_trgt), Theme.is_hidden == False).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.spell_and_header.in_(srch_trgt)).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((mn_n_cntnt != "") and (is_srch_done == False)):
+            srch_trgt = [mn_n_cntnt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.mean_and_content.in_(srch_trgt), Theme.is_hidden == False).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.mean_and_content.in_(srch_trgt)).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.mean_and_content.in_(srch_trgt), Theme.is_hidden == False).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.mean_and_content.in_(srch_trgt)).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((len(ctgr_tgs) == 1) and (ctgr_tgs[0] == "")) == False):
+            srch_trgt = ctgr_tgs
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.mean_and_content.in_(srch_trgt), Theme.is_hidden == False).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.mean_and_content.in_(srch_trgt)).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.mean_and_content.in_(srch_trgt), Theme.is_hidden == False).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.mean_and_content.in_(srch_trgt)).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_nm) == 1) and (stff_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.staff_name.in_(srch_trgt), Theme.is_hidden == False).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.staff_name.in_(srch_trgt)).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.staff_name.in_(srch_trgt), Theme.is_hidden == False).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.staff_name.in_(srch_trgt)).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_kn_nm) == 1) and (stff_kn_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_kn_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.staff_kana_name.in_(srch_trgt), Theme.is_hidden == False).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.staff_kana_name.in_(srch_trgt)).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.staff_kana_name.in_(srch_trgt), Theme.is_hidden == False).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.staff_kana_name.in_(srch_trgt)).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((crtd_at_bgn is not None) and (crtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.created_at >= crtd_at_bgn, Theme.created_at <= crtd_at_end, Theme.is_hidden == False).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.created_at >= crtd_at_bgn, Theme.created_at <= crtd_at_end).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.created_at >= crtd_at_bgn, Theme.created_at <= crtd_at_end, Theme.is_hidden == False).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  wrds_tmp = db_session.query(Theme).filter(Theme.created_at >= crtd_at_bgn, Theme.created_at <= crtd_at_end).order_by(Theme.id.desc()).all()
+                  db_session.close()
+                  is_srch_done = True
+        if (((updtd_at_bgn is not None) and (updtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.created_at >= updtd_at_bgn, Theme.created_at <= updtd_at_end, Theme.is_hidden == False).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.created_at >= updtd_at_bgn, Theme.created_at <= updtd_at_end).order_by(Theme.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.created_at >= updtd_at_bgn, Theme.created_at <= updtd_at_end, Theme.is_hidden == False).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+            else:
+                  thms_tmp = (
+                  db_session.query(Theme).filter(Theme.created_at >= updtd_at_bgn, Theme.created_at <= updtd_at_end).order_by(Theme.id.desc()).all()
+                  )
+                  db_session.close()
+
+        # 検索結果を整形し, 配列にセットしてテンプレートと共に返す.
+        if thms_tmp is not None:
+            for thm_tmp in thms_tmp:
+                if len(str(thm_tmp.id)) > 6:
+                    id_tmp = thm_tmp.id[0:6] + "..."
+                else:
+                    id_tmp = thm_tmp.id
+                if len(thm_tmp.spell_and_header) > 6:
+                    spll_n_hdr_tmp = thm_tmp.spell_and_header[0:6] + "..."
+                else:
+                    spll_n_hdr_tmp = thm_tmp.spell_and_header
+                if len(thm_tmp.mean_and_content) > 6:
+                    mn_n_cntnt_tmp = thm_tmp.mean_and_content[0:6] + "..."
+                else:
+                    mn_n_cntnt_tmp = thm_tmp.mean_and_content
+                if len(thm_tmp.staff_name) > 6:
+                    stff_nm_tmp = thm_tmp.staff_name[0:6] + "..."
+                else:
+                    stff_nm_tmp = thm_tmp.staff_name
+                thms_fnl.append([id_tmp,
+                                 spll_n_hdr_tmp,
+                                 mn_n_cntnt_tmp,
+                                 stff_nm_tmp
+                                ])
+        per_pg = consts.THEME_ITEM_PER_PAGE
+        pg = request.args.get(get_page_parameter(), type=int, default=1)
+        pg_dat = thms_fnl[(pg - 1) * per_pg : pg * per_pg]
+        pgntn = Pagination(page=pg,
+                           total=len(thms_fnl),
+                           per_page=per_pg,
+                           css_framework=consts.PAGINATION_CSS
+                          )
+        return render_template("search_themes_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
@@ -3877,14 +4568,26 @@ def search_themes_results():
         if session["referrer-page"] != "view.search_themes_results":
             return redirect(url_for("view.search_themes_results"))
 
-        #@ ここで, フォーム内のボタンが押されたときの動作を実装する.
-        #@ ※ここには, 仮のコードを記述しておいた...
-        return redirect(url_for("view.search_themes_results"))
+        # フォームボタン群の中から, 押下されたボタンに応じたページへリダイレクトする.
+        if request.form["hidden-modify-item-id"] != "":
+            session["hidden-modify-item-id"] = request.form["hidden-modify-item-id"]
+            return redirect(url_for("view.modify_theme"))
+        if request.form["hidden-detail-item-id"] != "":
+            session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
+            return redirect(url_for("view.detail_theme"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「search_categories_results」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
 @view.route("/search_categories_results", methods=["GET", "POST"])
 def search_categories_results():
+    # 関数内で使用する変数・オブジェクトを宣言・定義する.
+    ctgrs_tmp = []
+    ctgrs_fnl = []
+    is_srch_done = False
+
     # 該当のURLエンドポイントに入ったことをロギングする.
     rslt = se.etc.logging__info("view at /search_categories_results")
 
@@ -3908,8 +4611,311 @@ def search_categories_results():
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_categories_results"
 
-        #@ ここで, モデルへの検索を行い, 検索結果をまとめて返す.
-        return render_template("search_categories_results.html")
+        # 検索条件(=検索キー)となる値をまとめて取得する.
+        id = str(session["id"]).split(" ")
+        spll_n_hdr = str(session["spell-and-header"])
+        mn_n_cntnt = str(session["mean-and-content"])
+        prnt_ctgr_tgs = str(session["parent-category-tags"]).split(" ")
+        sblng_ctgr_tgs = str(session["sibling-category-tags"]).split(" ")
+        chld_ctgr_tgs = str(session["child-category-tags"]).split(" ")
+        stff_nm = str(session["staff-name"]).split(" ")
+        stff_kn_nm = str(session["staff-kana-name"]).split(" ")
+        crtd_at_bgn = session["created-at-begin"]
+        crtd_at_end = session["created-at-end"]
+        updtd_at_bgn = session["updated-at-begin"]
+        updtd_at_end = session["updated-at-end"]
+        srt_cndtn = str(session["sort-condition"])
+        extrct_cndtn = str(session["extract-condition"])
+
+        # 各種の検索条件に基づいてレコードを検索する.
+        if (((len(id) == 1) and (id[0] == "")) == False):
+            srch_trgt = id
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.id.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.id.in_(srch_trgt)).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.id.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.id.in_(srch_trgt)).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((spll_n_hdr != "") and (is_srch_done == False)):
+            srch_trgt = [spll_n_hdr]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.spell_and_header.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.spell_and_header.in_(srch_trgt)).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.spell_and_header.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.spell_and_header.in_(srch_trgt)).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((mn_n_cntnt != "") and (is_srch_done == False)):
+            srch_trgt = [mn_n_cntnt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt)).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt)).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((len(prnt_ctgr_tgs) == 1) and (prnt_ctgr_tgs[0] == "")) == False):
+            srch_trgt = prnt_ctgr_tgs
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt)).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt)).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((len(sblng_ctgr_tgs) == 1) and (sblng_ctgr_tgs[0] == "")) == False):
+            srch_trgt = sblng_ctgr_tgs
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt)).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt)).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((len(chld_ctgr_tgs) == 1) and (chld_ctgr_tgs[0] == "")) == False):
+            srch_trgt = chld_ctgr_tgs
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt)).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.mean_and_content.in_(srch_trgt)).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_nm) == 1) and (stff_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.staff_name.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.staff_name.in_(srch_trgt)).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.staff_name.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.staff_name.in_(srch_trgt)).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_kn_nm) == 1) and (stff_kn_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_kn_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.staff_kana_name.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.staff_kana_name.in_(srch_trgt)).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.staff_kana_name.in_(srch_trgt), Category.is_hidden == False).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.staff_kana_name.in_(srch_trgt)).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((crtd_at_bgn is not None) and (crtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.created_at >= crtd_at_bgn, Category.created_at <= crtd_at_end, Category.is_hidden == False).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.created_at >= crtd_at_bgn, Category.created_at <= crtd_at_end).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.created_at >= crtd_at_bgn, Category.created_at <= crtd_at_end, Category.is_hidden == False).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.created_at >= crtd_at_bgn, Category.created_at <= crtd_at_end).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((updtd_at_bgn is not None) and (updtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.created_at >= updtd_at_bgn, Category.created_at <= updtd_at_end, Category.is_hidden == False).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.created_at >= updtd_at_bgn, Category.created_at <= updtd_at_end).order_by(Category.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.created_at >= updtd_at_bgn, Category.created_at <= updtd_at_end, Category.is_hidden == False).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+            else:
+                  ctgrs_tmp = (
+                  db_session.query(Category).filter(Category.created_at >= updtd_at_bgn, Category.created_at <= updtd_at_end).order_by(Category.id.desc()).all()
+                  )
+                  db_session.close()
+
+        # 検索結果を整形し, 配列にセットしてテンプレートと共に返す.
+        if ctgrs_tmp is not None:
+            for ctgr_tmp in ctgrs_tmp:
+                if len(str(ctgr_tmp.id)) > 6:
+                    id_tmp = ctgr_tmp.id[0:6] + "..."
+                else:
+                    id_tmp = ctgr_tmp.id
+                if len(ctgr_tmp.spell_and_header) > 6:
+                    spll_n_hdr_tmp = ctgr_tmp.spell_and_header[0:6] + "..."
+                else:
+                    spll_n_hdr_tmp = ctgr_tmp.spell_and_header
+                if len(ctgr_tmp.mean_and_content) > 6:
+                    mn_n_cntnt_tmp = ctgr_tmp.mean_and_content[0:6] + "..."
+                else:
+                    mn_n_cntnt_tmp = ctgr_tmp.mean_and_content
+                if len(ctgr_tmp.staff_name) > 6:
+                    stff_nm_tmp = ctgr_tmp.staff_name[0:6] + "..."
+                else:
+                    stff_nm_tmp = ctgr_tmp.staff_name
+                ctgrs_fnl.append([id_tmp,
+                                 spll_n_hdr_tmp,
+                                 mn_n_cntnt_tmp,
+                                 stff_nm_tmp
+                                ])
+        per_pg = consts.CATEGORY_ITEM_PER_PAGE
+        pg = request.args.get(get_page_parameter(), type=int, default=1)
+        pg_dat = ctgrs_fnl[(pg - 1) * per_pg : pg * per_pg]
+        pgntn = Pagination(page=pg,
+                           total=len(ctgrs_fnl),
+                           per_page=per_pg,
+                           css_framework=consts.PAGINATION_CSS
+                          )
+        return render_template("search_categories_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
@@ -3917,14 +4923,26 @@ def search_categories_results():
         if session["referrer-page"] != "view.search_categories_results":
             return redirect(url_for("view.search_categories_results"))
 
-        #@ ここで, フォーム内のボタンが押されたときの動作を実装する.
-        #@ ※ここには, 仮のコードを記述しておいた...
-        return redirect(url_for("view.search_categories_results"))
+        # フォームボタン群の中から, 押下されたボタンに応じたページへリダイレクトする.
+        if request.form["hidden-modify-item-id"] != "":
+            session["hidden-modify-item-id"] = request.form["hidden-modify-item-id"]
+            return redirect(url_for("view.modify_category"))
+        if request.form["hidden-detail-item-id"] != "":
+            session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
+            return redirect(url_for("view.detail_category"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「search_knowledges_results」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
 @view.route("/search_knowledges_results", methods=["GET", "POST"])
 def search_knowledges_results():
+    # 関数内で使用する変数・オブジェクトを宣言・定義する.
+    knwldgs_tmp = []
+    knwldgs_fnl = []
+    is_srch_done = False
+
     # 該当のURLエンドポイントに入ったことをロギングする.
     rslt = se.etc.logging__info("view at /search_knowledges_results")
 
@@ -3948,8 +4966,338 @@ def search_knowledges_results():
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_knowledges_results"
 
-        #@ ここで, モデルへの検索を行い, 検索結果をまとめて返す.
-        return render_template("search_knowledges_results.html")
+        # 検索条件(=検索キー)となる値をまとめて取得する.
+        id = str(session["id"]).split(" ")
+        spll_n_hdr = str(session["spell-and-header"])
+        mn_n_cntnt = str(session["mean-and-content"])
+        ctgr_tgs = str(session["category-tags"]).split(" ")
+        has_img = str(session["has-image"])
+        has_snd = str(session["has-sound"])
+        has_vdo = str(session["has-video"])
+        stff_nm = str(session["staff-name"]).split(" ")
+        stff_kn_nm = str(session["staff-kana-name"]).split(" ")
+        crtd_at_bgn = session["created-at-begin"]
+        crtd_at_end = session["created-at-end"]
+        updtd_at_bgn = session["updated-at-begin"]
+        updtd_at_end = session["updated-at-end"]
+        srt_cndtn = str(session["sort-condition"])
+        extrct_cndtn = str(session["extract-condition"])
+
+        # 各種の検索条件に基づいてレコードを検索する.
+        if (((len(id) == 1) and (id[0] == "")) == False):
+            srch_trgt = id
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.id.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.id.in_(srch_trgt)).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.id.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.id.in_(srch_trgt)).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((spll_n_hdr != "") and (is_srch_done == False)):
+            srch_trgt = [spll_n_hdr]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.spell_and_header.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.spell_and_header.in_(srch_trgt)).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.spell_and_header.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.spell_and_header.in_(srch_trgt)).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((mn_n_cntnt != "") and (is_srch_done == False)):
+            srch_trgt = [mn_n_cntnt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt)).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt)).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((len(ctgr_tgs) == 1) and (ctgr_tgs[0] == "")) == False):
+            srch_trgt = ctgr_tgs
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt)).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt)).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((has_img != "") and (is_srch_done == False)):
+            srch_trgt = [mn_n_cntnt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt)).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt)).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((has_snd != "") and (is_srch_done == False)):
+            srch_trgt = [mn_n_cntnt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt)).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt)).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((has_vdo != "") and (is_srch_done == False)):
+            srch_trgt = [mn_n_cntnt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt)).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.mean_and_content.in_(srch_trgt)).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_nm) == 1) and (stff_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.staff_name.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.staff_name.in_(srch_trgt)).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.staff_name.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.staff_name.in_(srch_trgt)).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_kn_nm) == 1) and (stff_kn_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_kn_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.staff_kana_name.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.staff_kana_name.in_(srch_trgt)).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.staff_kana_name.in_(srch_trgt), Knowledge.is_hidden == False).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.staff_kana_name.in_(srch_trgt)).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((crtd_at_bgn is not None) and (crtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.created_at >= crtd_at_bgn, Knowledge.created_at <= crtd_at_end, Knowledge.is_hidden == False).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.created_at >= crtd_at_bgn, Knowledge.created_at <= crtd_at_end).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.created_at >= crtd_at_bgn, Knowledge.created_at <= crtd_at_end, Knowledge.is_hidden == False).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.created_at >= crtd_at_bgn, Knowledge.created_at <= crtd_at_end).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((updtd_at_bgn is not None) and (updtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.created_at >= updtd_at_bgn, Knowledge.created_at <= updtd_at_end, Knowledge.is_hidden == False).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.created_at >= updtd_at_bgn, Knowledge.created_at <= updtd_at_end).order_by(Knowledge.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.created_at >= updtd_at_bgn, Knowledge.created_at <= updtd_at_end, Knowledge.is_hidden == False).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+            else:
+                  knwldgs_tmp = (
+                  db_session.query(Knowledge).filter(Knowledge.created_at >= updtd_at_bgn, Knowledge.created_at <= updtd_at_end).order_by(Knowledge.id.desc()).all()
+                  )
+                  db_session.close()
+
+        # 検索結果を整形し, 配列にセットしてテンプレートと共に返す.
+        if knwldgs_tmp is not None:
+            for knwldg_tmp in knwldgs_tmp:
+                if len(str(knwldg_tmp.id)) > 6:
+                    id_tmp = knwldg_tmp.id[0:6] + "..."
+                else:
+                    id_tmp = knwldg_tmp.id
+                if len(knwldg_tmp.spell_and_header) > 6:
+                    spll_n_hdr_tmp = knwldg_tmp.spell_and_header[0:6] + "..."
+                else:
+                    spll_n_hdr_tmp = knwldg_tmp.spell_and_header
+                if len(knwldg_tmp.mean_and_content) > 6:
+                    mn_n_cntnt_tmp = knwldg_tmp.mean_and_content[0:6] + "..."
+                else:
+                    mn_n_cntnt_tmp = knwldg_tmp.mean_and_content
+                if len(knwldg_tmp.staff_name) > 6:
+                    stff_nm_tmp = knwldg_tmp.staff_name[0:6] + "..."
+                else:
+                    stff_nm_tmp = knwldg_tmp.staff_name
+                knwldgs_fnl.append([id_tmp,
+                                 spll_n_hdr_tmp,
+                                 mn_n_cntnt_tmp,
+                                 stff_nm_tmp
+                                ])
+        per_pg = consts.KNOWLEDGE_ITEM_PER_PAGE
+        pg = request.args.get(get_page_parameter(), type=int, default=1)
+        pg_dat = knwldgs_fnl[(pg - 1) * per_pg : pg * per_pg]
+        pgntn = Pagination(page=pg,
+                           total=len(knwldgs_fnl),
+                           per_page=per_pg,
+                           css_framework=consts.PAGINATION_CSS
+                          )
+        return render_template("search_knowledges_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
@@ -3957,14 +5305,26 @@ def search_knowledges_results():
         if session["referrer-page"] != "view.search_knowledges_results":
             return redirect(url_for("view.search_knowledges_results"))
 
-        #@ ここで, フォーム内のボタンが押されたときの動作を実装する.
-        #@ ※ここには, 仮のコードを記述しておいた...
-        return redirect(url_for("view.search_knowledges_results"))
+        # フォームボタン群の中から, 押下されたボタンに応じたページへリダイレクトする.
+        if request.form["hidden-modify-item-id"] != "":
+            session["hidden-modify-item-id"] = request.form["hidden-modify-item-id"]
+            return redirect(url_for("view.modify_knowledge"))
+        if request.form["hidden-detail-item-id"] != "":
+            session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
+            return redirect(url_for("view.detail_knowledge"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「search_rules_results」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
 @view.route("/search_rules_results", methods=["GET", "POST"])
 def search_rules_results():
+    # 関数内で使用する変数・オブジェクトを宣言・定義する.
+    rls_tmp = []
+    rls_fnl = []
+    is_srch_done = False
+
     # 該当のURLエンドポイントに入ったことをロギングする.
     rslt = se.etc.logging__info("view at /search_rules_results")
 
@@ -3988,8 +5348,311 @@ def search_rules_results():
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_rules_results"
 
-        #@ ここで, モデルへの検索を行い, 検索結果をまとめて返す.
-        return render_template("search_rules_results.html")
+        # 検索条件(=検索キー)となる値をまとめて取得する.
+        id = str(session["id"]).split(" ")
+        spll_n_hdr = str(session["spell-and-header"])
+        mn_n_cntnt = str(session["mean-and-content"])
+        ctgr_tgs = str(session["category-tags"]).split(" ")
+        infrnc_n_spcltn_cndtn = str(session["inference-and-speculation-condition"])
+        infrnc_n_spcltn_rslt = str(session["inference-and-speculation-result"])
+        stff_nm = str(session["staff-name"]).split(" ")
+        stff_kn_nm = str(session["staff-kana-name"]).split(" ")
+        crtd_at_bgn = session["created-at-begin"]
+        crtd_at_end = session["created-at-end"]
+        updtd_at_bgn = session["updated-at-begin"]
+        updtd_at_end = session["updated-at-end"]
+        srt_cndtn = str(session["sort-condition"])
+        extrct_cndtn = str(session["extract-condition"])
+
+        # 各種の検索条件に基づいてレコードを検索する.
+        if (((len(id) == 1) and (id[0] == "")) == False):
+            srch_trgt = id
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.id.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.id.in_(srch_trgt)).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.id.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.id.in_(srch_trgt)).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((spll_n_hdr != "") and (is_srch_done == False)):
+            srch_trgt = [spll_n_hdr]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.spell_and_header.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.spell_and_header.in_(srch_trgt)).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.spell_and_header.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.spell_and_header.in_(srch_trgt)).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((mn_n_cntnt != "") and (is_srch_done == False)):
+            srch_trgt = [mn_n_cntnt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt)).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt)).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((len(ctgr_tgs) == 1) and (ctgr_tgs[0] == "")) == False):
+            srch_trgt = ctgr_tgs
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt)).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt)).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((infrnc_n_spcltn_cndtn != "") and (is_srch_done == False)):
+            srch_trgt = [infrnc_n_spcltn_cndtn]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt)).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt)).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((infrnc_n_spcltn_rslt != "") and (is_srch_done == False)):
+            srch_trgt = [infrnc_n_spcltn_rslt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt)).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.mean_and_content.in_(srch_trgt)).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_nm) == 1) and (stff_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.staff_name.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.staff_name.in_(srch_trgt)).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.staff_name.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.staff_name.in_(srch_trgt)).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_kn_nm) == 1) and (stff_kn_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_kn_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.staff_kana_name.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.staff_kana_name.in_(srch_trgt)).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.staff_kana_name.in_(srch_trgt), Rule.is_hidden == False).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.staff_kana_name.in_(srch_trgt)).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((crtd_at_bgn is not None) and (crtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.created_at >= crtd_at_bgn, Rule.created_at <= crtd_at_end, Rule.is_hidden == False).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.created_at >= crtd_at_bgn, Rule.created_at <= crtd_at_end).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.created_at >= crtd_at_bgn, Rule.created_at <= crtd_at_end, Rule.is_hidden == False).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.created_at >= crtd_at_bgn, Rule.created_at <= crtd_at_end).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((updtd_at_bgn is not None) and (updtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.created_at >= updtd_at_bgn, Rule.created_at <= updtd_at_end, Rule.is_hidden == False).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.created_at >= updtd_at_bgn, Rule.created_at <= updtd_at_end).order_by(Rule.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  wrls_tmp = (
+                  db_session.query(Rule).filter(Rule.created_at >= updtd_at_bgn, Rule.created_at <= updtd_at_end, Rule.is_hidden == False).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+            else:
+                  rls_tmp = (
+                  db_session.query(Rule).filter(Rule.created_at >= updtd_at_bgn, Rule.created_at <= updtd_at_end).order_by(Rule.id.desc()).all()
+                  )
+                  db_session.close()
+
+        # 検索結果を整形し, 配列にセットしてテンプレートと共に返す.
+        if rls_tmp is not None:
+            for rl_tmp in rls_tmp:
+                if len(str(rl_tmp.id)) > 6:
+                    id_tmp = rl_tmp.id[0:6] + "..."
+                else:
+                    id_tmp = rl_tmp.id
+                if len(rl_tmp.spell_and_header) > 6:
+                    spll_n_hdr_tmp = rl_tmp.spell_and_header[0:6] + "..."
+                else:
+                    spll_n_hdr_tmp = rl_tmp.spell_and_header
+                if len(rl_tmp.mean_and_content) > 6:
+                    mn_n_cntnt_tmp = rl_tmp.mean_and_content[0:6] + "..."
+                else:
+                    mn_n_cntnt_tmp = rl_tmp.mean_and_content
+                if len(rl_tmp.staff_name) > 6:
+                    stff_nm_tmp = rl_tmp.staff_name[0:6] + "..."
+                else:
+                    stff_nm_tmp = rl_tmp.staff_name
+                rls_fnl.append([id_tmp,
+                                 spll_n_hdr_tmp,
+                                 mn_n_cntnt_tmp,
+                                 stff_nm_tmp
+                                ])
+        per_pg = consts.RULE_ITEM_PER_PAGE
+        pg = request.args.get(get_page_parameter(), type=int, default=1)
+        pg_dat = rls_fnl[(pg - 1) * per_pg : pg * per_pg]
+        pgntn = Pagination(page=pg,
+                           total=len(rls_fnl),
+                           per_page=per_pg,
+                           css_framework=consts.PAGINATION_CSS
+                          )
+        return render_template("search_rules_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
@@ -3997,14 +5660,26 @@ def search_rules_results():
         if session["referrer-page"] != "view.search_rules_results":
             return redirect(url_for("view.search_rules_results"))
 
-        #@ ここで, フォーム内のボタンが押されたときの動作を実装する.
-        #@ ※ここには, 仮のコードを記述しておいた...
-        return redirect(url_for("view.search_rules_results"))
+        # フォームボタン群の中から, 押下されたボタンに応じたページへリダイレクトする.
+        if request.form["hidden-modify-item-id"] != "":
+            session["hidden-modify-item-id"] = request.form["hidden-modify-item-id"]
+            return redirect(url_for("view.modify_rule"))
+        if request.form["hidden-detail-item-id"] != "":
+            session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
+            return redirect(url_for("view.detail_rule"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「search_reactions_results」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
 @view.route("/search_reactions_results", methods=["GET", "POST"])
 def search_reactions_results():
+    # 関数内で使用する変数・オブジェクトを宣言・定義する.
+    rctns_tmp = []
+    rctns_fnl = []
+    is_srch_done = False
+
     # 該当のURLエンドポイントに入ったことをロギングする.
     rslt = se.etc.logging__info("view at /search_reactions_results")
 
@@ -4028,8 +5703,338 @@ def search_reactions_results():
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_reactions_results"
 
-        #@ ここで, モデルへの検索を行い, 検索結果をまとめて返す.
-        return render_template("search_reactions_results.html")
+        # 検索条件(=検索キー)となる値をまとめて取得する.
+        id = str(session["id"]).split(" ")
+        spll_n_hdr = str(session["spell-and-header"])
+        mn_n_cntnt = str(session["mean-and-content"])
+        stff_psych = str(session["staff-psychology"])
+        scn_n_bck = str(session["scene-and-background"])
+        msg_exmpl_frm_stff = str(session["message-example-from-staff"])
+        msg_exmpl_frm_app = str(session["message-example-from-application"])
+        stff_nm = str(session["staff-name"]).split(" ")
+        stff_kn_nm = str(session["staff-kana-name"]).split(" ")
+        crtd_at_bgn = session["created-at-begin"]
+        crtd_at_end = session["created-at-end"]
+        updtd_at_bgn = session["updated-at-begin"]
+        updtd_at_end = session["updated-at-end"]
+        srt_cndtn = str(session["sort-condition"])
+        extrct_cndtn = str(session["extract-condition"])
+
+        # 各種の検索条件に基づいてレコードを検索する.
+        if (((len(id) == 1) and (id[0] == "")) == False):
+            srch_trgt = id
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.id.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.id.in_(srch_trgt)).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.id.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.id.in_(srch_trgt)).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((spll_n_hdr != "") and (is_srch_done == False)):
+            srch_trgt = [spll_n_hdr]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.spell_and_header.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.spell_and_header.in_(srch_trgt)).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.spell_and_header.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.spell_and_header.in_(srch_trgt)).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((mn_n_cntnt != "") and (is_srch_done == False)):
+            srch_trgt = [mn_n_cntnt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt)).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt)).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((stff_psych != "") and (is_srch_done == False)):
+            srch_trgt = [stff_psych]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt)).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt)).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((scn_n_bck != "") and (is_srch_done == False)):
+            srch_trgt = [scn_n_bck]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt)).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt)).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((msg_exmpl_frm_stff != "") and (is_srch_done == False)):
+            srch_trgt = [msg_exmpl_frm_stff]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt)).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  wrds_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt)).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((msg_exmpl_frm_app != "") and (is_srch_done == False)):
+            srch_trgt = [msg_exmpl_frm_app]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt)).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.mean_and_content.in_(srch_trgt)).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_nm) == 1) and (stff_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.staff_name.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.staff_name.in_(srch_trgt)).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.staff_name.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.staff_name.in_(srch_trgt)).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_kn_nm) == 1) and (stff_kn_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_kn_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.staff_kana_name.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.staff_kana_name.in_(srch_trgt)).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.staff_kana_name.in_(srch_trgt), Reaction.is_hidden == False).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.staff_kana_name.in_(srch_trgt)).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((crtd_at_bgn is not None) and (crtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.created_at >= crtd_at_bgn, Reaction.created_at <= crtd_at_end, Reaction.is_hidden == False).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.created_at >= crtd_at_bgn, Reaction.created_at <= crtd_at_end).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.created_at >= crtd_at_bgn, Reaction.created_at <= crtd_at_end, Reaction.is_hidden == False).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.created_at >= crtd_at_bgn, Reaction.created_at <= crtd_at_end).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((updtd_at_bgn is not None) and (updtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.created_at >= updtd_at_bgn, Reaction.created_at <= updtd_at_end, Reaction.is_hidden == False).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.created_at >= updtd_at_bgn, Reaction.created_at <= updtd_at_end).order_by(Reaction.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.created_at >= updtd_at_bgn, Reaction.created_at <= updtd_at_end, Reaction.is_hidden == False).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+            else:
+                  rctns_tmp = (
+                  db_session.query(Reaction).filter(Reaction.created_at >= updtd_at_bgn, Reaction.created_at <= updtd_at_end).order_by(Reaction.id.desc()).all()
+                  )
+                  db_session.close()
+
+        # 検索結果を整形し, 配列にセットしてテンプレートと共に返す.
+        if rctns_tmp is not None:
+            for rctn_tmp in rctns_tmp:
+                if len(str(rctn_tmp.id)) > 6:
+                    id_tmp = rctn_tmp.id[0:6] + "..."
+                else:
+                    id_tmp = rctn_tmp.id
+                if len(rctn_tmp.spell_and_header) > 6:
+                    spll_n_hdr_tmp = rctn_tmp.spell_and_header[0:6] + "..."
+                else:
+                    spll_n_hdr_tmp = rctn_tmp.spell_and_header
+                if len(rctn_tmp.mean_and_content) > 6:
+                    mn_n_cntnt_tmp = rctn_tmp.mean_and_content[0:6] + "..."
+                else:
+                    mn_n_cntnt_tmp = rctn_tmp.mean_and_content
+                if len(rctn_tmp.staff_name) > 6:
+                    stff_nm_tmp = rctn_tmp.staff_name[0:6] + "..."
+                else:
+                    stff_nm_tmp = rctn_tmp.staff_name
+                rctns_fnl.append([id_tmp,
+                                 spll_n_hdr_tmp,
+                                 mn_n_cntnt_tmp,
+                                 stff_nm_tmp
+                                ])
+        per_pg = consts.REACTION_ITEM_PER_PAGE
+        pg = request.args.get(get_page_parameter(), type=int, default=1)
+        pg_dat = rctns_fnl[(pg - 1) * per_pg : pg * per_pg]
+        pgntn = Pagination(page=pg,
+                           total=len(rctns_fnl),
+                           per_page=per_pg,
+                           css_framework=consts.PAGINATION_CSS
+                          )
+        return render_template("search_reactions_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
@@ -4037,14 +6042,26 @@ def search_reactions_results():
         if session["referrer-page"] != "view.search_reactions_results":
             return redirect(url_for("view.search_reactions_results"))
 
-        #@ ここで, フォーム内のボタンが押されたときの動作を実装する.
-        #@ ※ここには, 仮のコードを記述しておいた...
-        return redirect(url_for("view.search_reactions_results"))
+        # フォームボタン群の中から, 押下されたボタンに応じたページへリダイレクトする.
+        if request.form["hidden-modify-item-id"] != "":
+            session["hidden-modify-item-id"] = request.form["hidden-modify-item-id"]
+            return redirect(url_for("view.modify_reaction"))
+        if request.form["hidden-detail-item-id"] != "":
+            session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
+            return redirect(url_for("view.detail_reaction"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「search_generates_results」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
 @view.route("/search_generates_results", methods=["GET", "POST"])
 def search_generates_results():
+    # 関数内で使用する変数・オブジェクトを宣言・定義する.
+    gens_tmp = []
+    gens_fnl = []
+    is_srch_done = False
+
     # 該当のURLエンドポイントに入ったことをロギングする.
     rslt = se.etc.logging__info("view at /search_generates_results")
 
@@ -4068,8 +6085,230 @@ def search_generates_results():
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_generates_results"
 
-        #@ ここで, モデルへの検索を行い, 検索結果をまとめて返す.
-        return render_template("search_generatess_results.html")
+        # 検索条件(=検索キー)となる値をまとめて取得する.
+        id = str(session["id"]).split(" ")
+        spll_n_hdr = str(session["spell-and-header"])
+        mn_n_cntnt = str(session["mean-and-content"])
+        stff_nm = str(session["staff-name"]).split(" ")
+        stff_kn_nm = str(session["staff-kana-name"]).split(" ")
+        crtd_at_bgn = session["created-at-begin"]
+        crtd_at_end = session["created-at-end"]
+        updtd_at_bgn = session["updated-at-begin"]
+        updtd_at_end = session["updated-at-end"]
+        srt_cndtn = str(session["sort-condition"])
+        extrct_cndtn = str(session["extract-condition"])
+
+        # 各種の検索条件に基づいてレコードを検索する.
+        if (((len(id) == 1) and (id[0] == "")) == False):
+            srch_trgt = id
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.id.in_(srch_trgt), Generate.is_hidden == False).order_by(Generate.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.id.in_(srch_trgt)).order_by(Generate.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.id.in_(srch_trgt), Generate.is_hidden == False).order_by(Generate.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.id.in_(srch_trgt)).order_by(Generate.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((spll_n_hdr != "") and (is_srch_done == False)):
+            srch_trgt = [spll_n_hdr]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.spell_and_header.in_(srch_trgt), Generate.is_hidden == False).order_by(Generate.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.spell_and_header.in_(srch_trgt)).order_by(Generate.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.spell_and_header.in_(srch_trgt), Generate.is_hidden == False).order_by(Generate.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.spell_and_header.in_(srch_trgt)).order_by(Generate.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((mn_n_cntnt != "") and (is_srch_done == False)):
+            srch_trgt = [mn_n_cntnt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.mean_and_content.in_(srch_trgt), Generate.is_hidden == False).order_by(Generate.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.mean_and_content.in_(srch_trgt)).order_by(Generate.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.mean_and_content.in_(srch_trgt), Generate.is_hidden == False).order_by(Generate.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.mean_and_content.in_(srch_trgt)).order_by(Generate.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_nm) == 1) and (stff_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.staff_name.in_(srch_trgt), Generate.is_hidden == False).order_by(Generate.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.staff_name.in_(srch_trgt)).order_by(Generate.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.staff_name.in_(srch_trgt), Generate.is_hidden == False).order_by(Generate.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.staff_name.in_(srch_trgt)).order_by(Generate.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_kn_nm) == 1) and (stff_kn_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_kn_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.staff_kana_name.in_(srch_trgt), Generate.is_hidden == False).order_by(Generate.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.staff_kana_name.in_(srch_trgt)).order_by(Generate.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.staff_kana_name.in_(srch_trgt), Generate.is_hidden == False).order_by(Generate.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.staff_kana_name.in_(srch_trgt)).order_by(Generate.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((crtd_at_bgn is not None) and (crtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.created_at >= crtd_at_bgn, Generate.created_at <= crtd_at_end, Generate.is_hidden == False).order_by(Generate.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.created_at >= crtd_at_bgn, Generate.created_at <= crtd_at_end).order_by(Generate.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.created_at >= crtd_at_bgn, Generate.created_at <= crtd_at_end, Generate.is_hidden == False).order_by(Generate.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.created_at >= crtd_at_bgn, Generate.created_at <= crtd_at_end).order_by(Generate.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((updtd_at_bgn is not None) and (updtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.created_at >= updtd_at_bgn, Generate.created_at <= updtd_at_end, Generate.is_hidden == False).order_by(Generate.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.created_at >= updtd_at_bgn, Generate.created_at <= updtd_at_end).order_by(Generate.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.created_at >= updtd_at_bgn, Generate.created_at <= updtd_at_end, Generate.is_hidden == False).order_by(Generate.id.desc()).all()
+                  )
+                  db_session.close()
+            else:
+                  gens_tmp = (
+                  db_session.query(Generate).filter(Generate.created_at >= updtd_at_bgn, Generate.created_at <= updtd_at_end).order_by(Generate.id.desc()).all()
+                  )
+                  db_session.close()
+
+        # 検索結果を整形し, 配列にセットしてテンプレートと共に返す.
+        if gens_tmp is not None:
+            for gen_tmp in gens_tmp:
+                if len(str(gen_tmp.id)) > 6:
+                    id_tmp = gen_tmp.id[0:6] + "..."
+                else:
+                    id_tmp = gen_tmp.id
+                if len(gen_tmp.spell_and_header) > 6:
+                    spll_n_hdr_tmp = gen_tmp.spell_and_header[0:6] + "..."
+                else:
+                    spll_n_hdr_tmp = gen_tmp.spell_and_header
+                if len(gen_tmp.mean_and_content) > 6:
+                    mn_n_cntnt_tmp = gen_tmp.mean_and_content[0:6] + "..."
+                else:
+                    mn_n_cntnt_tmp = gen_tmp.mean_and_content
+                if len(gen_tmp.staff_name) > 6:
+                    stff_nm_tmp = gen_tmp.staff_name[0:6] + "..."
+                else:
+                    stff_nm_tmp = gen_tmp.staff_name
+                gens_fnl.append([id_tmp,
+                                 spll_n_hdr_tmp,
+                                 mn_n_cntnt_tmp,
+                                 stff_nm_tmp
+                                ])
+        per_pg = consts.GENERATE_ITEM_PER_PAGE
+        pg = request.args.get(get_page_parameter(), type=int, default=1)
+        pg_dat = gens_fnl[(pg - 1) * per_pg : pg * per_pg]
+        pgntn = Pagination(page=pg,
+                           total=len(gens_fnl),
+                           per_page=per_pg,
+                           css_framework=consts.PAGINATION_CSS
+                          )
+        return render_template("search_generatess_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
@@ -4077,14 +6316,26 @@ def search_generates_results():
         if session["referrer-page"] != "view.search_generates_results":
             return redirect(url_for("view.search_generates_results"))
 
-        #@ ここで, フォーム内のボタンが押されたときの動作を実装する.
-        #@ ※ここには, 仮のコードを記述しておいた...
-        return redirect(url_for("view.search_generates_results"))
+        # フォームボタン群の中から, 押下されたボタンに応じたページへリダイレクトする.
+        if request.form["hidden-retrieve-item-id"] != "":
+            session["hidden-retrieve-item-id"] = request.form["hidden-retrieve-item-id"]
+            return redirect(url_for("view.retrieve_generate"))
+        if request.form["hidden-detail-item-id"] != "":
+            session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
+            return redirect(url_for("view.detail_generate"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「search_histories_results」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
 @view.route("/search_histories_results", methods=["GET", "POST"])
 def search_histories_results():
+    # 関数内で使用する変数・オブジェクトを宣言・定義する.
+    hists_tmp = []
+    hists_fnl = []
+    is_srch_done = False
+
     # 該当のURLエンドポイントに入ったことをロギングする.
     rslt = se.etc.logging__info("view at /search_histories_results")
 
@@ -4108,8 +6359,230 @@ def search_histories_results():
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_histories_results"
 
-        #@ ここで, モデルへの検索を行い, 検索結果をまとめて返す.
-        return render_template("search_histories_results.html")
+        # 検索条件(=検索キー)となる値をまとめて取得する.
+        id = str(session["id"]).split(" ")
+        stff_msg = str(session["staff-message"])
+        app_msg = str(session["application-message"])
+        stff_nm = str(session["staff-name"]).split(" ")
+        stff_kn_nm = str(session["staff-kana-name"]).split(" ")
+        crtd_at_bgn = session["created-at-begin"]
+        crtd_at_end = session["created-at-end"]
+        updtd_at_bgn = session["updated-at-begin"]
+        updtd_at_end = session["updated-at-end"]
+        srt_cndtn = str(session["sort-condition"])
+        extrct_cndtn = str(session["extract-condition"])
+
+        # 各種の検索条件に基づいてレコードを検索する.
+        if (((len(id) == 1) and (id[0] == "")) == False):
+            srch_trgt = id
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.id.in_(srch_trgt), History.is_hidden == False).order_by(History.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.id.in_(srch_trgt)).order_by(History.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.id.in_(srch_trgt), History.is_hidden == False).order_by(History.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  hists_tmp = (
+                  db_session.query(History).filter(History.id.in_(srch_trgt)).order_by(History.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((stff_msg != "") and (is_srch_done == False)):
+            srch_trgt = [stff_msg]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.staff_message.in_(srch_trgt), History.is_hidden == False).order_by(History.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.staff_message.in_(srch_trgt)).order_by(History.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.staff_message.in_(srch_trgt), History.is_hidden == False).order_by(History.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  hists_tmp = (
+                  db_session.query(History).filter(History.staff_message.in_(srch_trgt)).order_by(History.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((app_msg != "") and (is_srch_done == False)):
+            srch_trgt = [app_msg]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.application_message.in_(srch_trgt), History.is_hidden == False).order_by(History.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.application_message.in_(srch_trgt)).order_by(History.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.application_message.in_(srch_trgt), History.is_hidden == False).order_by(History.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  hists_tmp = (
+                  db_session.query(History).filter(History.application_message.in_(srch_trgt)).order_by(History.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_nm) == 1) and (stff_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.staff_name.in_(srch_trgt), History.is_hidden == False).order_by(History.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.staff_name.in_(srch_trgt)).order_by(History.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.staff_name.in_(srch_trgt), History.is_hidden == False).order_by(History.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  hists_tmp = (
+                  db_session.query(History).filter(History.staff_name.in_(srch_trgt)).order_by(History.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_kn_nm) == 1) and (stff_kn_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_kn_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.staff_kana_name.in_(srch_trgt), History.is_hidden == False).order_by(History.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.staff_kana_name.in_(srch_trgt)).order_by(History.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.staff_kana_name.in_(srch_trgt), History.is_hidden == False).order_by(History.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  hists_tmp = (
+                  db_session.query(History).filter(History.staff_kana_name.in_(srch_trgt)).order_by(History.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((crtd_at_bgn is not None) and (crtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.created_at >= crtd_at_bgn, History.created_at <= crtd_at_end, History.is_hidden == False).order_by(History.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.created_at >= crtd_at_bgn, History.created_at <= crtd_at_end).order_by(History.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.created_at >= crtd_at_bgn, History.created_at <= crtd_at_end, History.is_hidden == False).order_by(History.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  hists_tmp = (
+                  db_session.query(History).filter(History.created_at >= crtd_at_bgn, History.created_at <= crtd_at_end).order_by(History.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((updtd_at_bgn is not None) and (updtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.created_at >= updtd_at_bgn, History.created_at <= updtd_at_end, History.is_hidden == False).order_by(History.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.created_at >= updtd_at_bgn, History.created_at <= updtd_at_end).order_by(History.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  hists_tmp = (
+                  db_session.query(History).filter(History.created_at >= updtd_at_bgn, History.created_at <= updtd_at_end, History.is_hidden == False).order_by(History.id.desc()).all()
+                  )
+                  db_session.close()
+            else:
+                  hists_tmp = (
+                  db_session.query(History).filter(History.created_at >= updtd_at_bgn, History.created_at <= updtd_at_end).order_by(History.id.desc()).all()
+                  )
+                  db_session.close()
+
+        # 検索結果を整形し, 配列にセットしてテンプレートと共に返す.
+        if hists_tmp is not None:
+            for hist_tmp in hists_tmp:
+                if len(str(hist_tmp.id)) > 6:
+                    id_tmp = hist_tmp.id[0:6] + "..."
+                else:
+                    id_tmp = hist_tmp.id
+                if len(hist_tmp.staff_message) > 6:
+                    stff_msg_tmp = hist_tmp.staff_message[0:6] + "..."
+                else:
+                    stff_msg_tmp = hist_tmp.staff_message
+                if len(hist_tmp.application_message) > 6:
+                    app_msg_tmp = hist_tmp.application_message[0:6] + "..."
+                else:
+                    app_msg_tmp = hist_tmp.application_message
+                if len(hist_tmp.staff_name) > 6:
+                    stff_nm_tmp = hist_tmp.staff_name[0:6] + "..."
+                else:
+                    stff_nm_tmp = hist_tmp.staff_name
+                hists_fnl.append([id_tmp,
+                                 stff_msg_tmp,
+                                 app_msg_tmp,
+                                 stff_nm_tmp
+                                ])
+        per_pg = consts.HISTORY_ITEM_PER_PAGE
+        pg = request.args.get(get_page_parameter(), type=int, default=1)
+        pg_dat = hists_fnl[(pg - 1) * per_pg : pg * per_pg]
+        pgntn = Pagination(page=pg,
+                           total=len(hists_fnl),
+                           per_page=per_pg,
+                           css_framework=consts.PAGINATION_CSS
+                          )
+        return render_template("search_histories_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
@@ -4117,14 +6590,23 @@ def search_histories_results():
         if session["referrer-page"] != "view.search_histories_results":
             return redirect(url_for("view.search_histories_results"))
 
-        #@ ここで, フォーム内のボタンが押されたときの動作を実装する.
-        #@ ※ここには, 仮のコードを記述しておいた...
-        return redirect(url_for("view.search_histories_results"))
+        # フォームボタン群の中から, 押下されたボタンに応じたページへリダイレクトする.
+        if request.form["hidden-detail-item-id"] != "":
+            session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
+            return redirect(url_for("view.detail_history"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「search_enters_or_exits_results」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
 @view.route("/search_enters_or_exits_results", methods=["GET", "POST"])
 def search_enters_or_exits_results():
+    # 関数内で使用する変数・オブジェクトを宣言・定義する.
+    entrs_or_exits_tmp = []
+    entrs_or_exits_fnl = []
+    is_srch_done = False
+
     # 該当のURLエンドポイントに入ったことをロギングする.
     rslt = se.etc.logging__info("view at /search_enters_or_exits_results")
 
@@ -4148,8 +6630,255 @@ def search_enters_or_exits_results():
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_enters_or_exits_results"
 
-        #@ ここで, モデルへの検索を行い, 検索結果をまとめて返す.
-        return render_template("search_enters_or_exits_results.html")
+        # 検索条件(=検索キー)となる値をまとめて取得する.
+        id = str(session["id"]).split(" ")
+        stff_nm = str(session["staff-name"]).split(" ")
+        stff_kn_nm = str(session["staff-kana-name"]).split(" ")
+        rsn = session["reason"]
+        entr_or_exit_at_bgn = session["enter-or-exit-at-begin"]
+        entr_or_exit_at_end = session["enter-or-exit-at-end"]
+        entr_or_exit_at_scnd = str(session["enter-or-exit-at-second"])
+        crtd_at_bgn = session["created-at-begin"]
+        crtd_at_end = session["created-at-end"]
+        updtd_at_bgn = session["updated-at-begin"]
+        updtd_at_end = session["updated-at-end"]
+        srt_cndtn = str(session["sort-condition"])
+        extrct_cndtn = str(session["extract-condition"])
+
+        # 各種の検索条件に基づいてレコードを検索する.
+        if (((len(id) == 1) and (id[0] == "")) == False):
+            srch_trgt = id
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.id.in_(srch_trgt), EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.id.in_(srch_trgt)).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.id.in_(srch_trgt), EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.id.in_(srch_trgt)).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_nm) == 1) and (stff_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.staff_name.in_(srch_trgt), EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.staff_name.in_(srch_trgt)).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.staff_name.in_(srch_trgt), EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.staff_name.in_(srch_trgt)).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_kn_nm) == 1) and (stff_kn_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_kn_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.staff_kana_name.in_(srch_trgt), EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.staff_kana_name.in_(srch_trgt)).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.staff_kana_name.in_(srch_trgt), EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.staff_kana_name.in_(srch_trgt)).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((rsn != "") and (is_srch_done == False)):
+            srch_trgt = [rsn]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.reason.in_(srch_trgt), EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.reason.in_(srch_trgt)).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.reason.in_(srch_trgt), EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.reason.in_(srch_trgt)).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((entr_or_exit_at_bgn is not None) and (entr_or_exit_at_end is not None) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.enter_or_exit_at >= entr_or_exit_at_bgn, EnterOrExit.enter_or_exit_at <= entr_or_exit_at_end, EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.enter_or_exit_at >= entr_or_exit_at_bgn, EnterOrExit.enter_or_exit_at <= entr_or_exit_at_end).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.enter_or_exit_at >= entr_or_exit_at_bgn, EnterOrExit.enter_or_exit_at <= entr_or_exit_at_end, EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.enter_or_exit_at >= entr_or_exit_at_bgn, EnterOrExit.enter_or_exit_at <= entr_or_exit_at_end).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((entr_or_exit_at_scnd != "") and (is_srch_done == False)):
+            srch_trgt = [entr_or_exit_at_scnd]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.enter_or_exit_at_second.in_(srch_trgt), EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.enter_or_exit_at_second.in_(srch_trgt)).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.enter_or_exit_at_second.in_(srch_trgt), EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.enter_or_exit_at_second.in_(srch_trgt)).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((crtd_at_bgn is not None) and (crtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.created_at >= crtd_at_bgn, EnterOrExit.created_at <= crtd_at_end, EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.created_at >= crtd_at_bgn, EnterOrExit.created_at <= crtd_at_end).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.created_at >= crtd_at_bgn, EnterOrExit.created_at <= crtd_at_end, EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.created_at >= crtd_at_bgn, EnterOrExit.created_at <= crtd_at_end).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((updtd_at_bgn is not None) and (updtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.created_at >= updtd_at_bgn, EnterOrExit.created_at <= updtd_at_end, EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.created_at >= updtd_at_bgn, EnterOrExit.created_at <= updtd_at_end).order_by(EnterOrExit.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  entrs_or_exits_tmp = (
+                  db_session.query(EnterOrExit).filter(EnterOrExit.created_at >= updtd_at_bgn, EnterOrExit.created_at <= updtd_at_end, EnterOrExit.is_hidden == False).order_by(EnterOrExit.id.desc()).all()
+                  )
+                  db_session.close()
+            else:
+                  entrs_or_exits_tmp = db_session.query(EnterOrExit).filter(EnterOrExit.created_at >= updtd_at_bgn, EnterOrExit.created_at <= updtd_at_end).order_by(EnterOrExit.id.desc()).all()
+                  db_session.close()
+
+        # 検索結果を整形し, 配列にセットしてテンプレートと共に返す.
+        if entrs_or_exits_tmp is not None:
+            for entr_or_exit_tmp in entrs_or_exits_tmp:
+                if len(str(entr_or_exit_tmp.id)) > 6:
+                    id_tmp = entr_or_exit_tmp.id[0:6] + "..."
+                else:
+                    id_tmp = entr_or_exit_tmp.id
+                if len(entr_or_exit_tmp.staff_name) > 6:
+                    stff_nm_tmp = entr_or_exit_tmp.staff_name[0:6] + "..."
+                else:
+                    stff_nm_tmp = entr_or_exit_tmp.staff_name
+                if len(entr_or_exit_tmp.reason) > 6:
+                    rsn_tmp = entr_or_exit_tmp.reason[0:6] + "..."
+                else:
+                    rsn_tmp = entr_or_exit_tmp.reason
+                if len(entr_or_exit_tmp.enter_or_exit_at) > 6:
+                    entr_or_exit_at_tmp = entr_or_exit_tmp.enter_or_exit_at[0:6] + "..."
+                else:
+                    entr_or_exit_at_tmp = entr_or_exit_tmp.enter_or_exit_at
+                entrs_or_exits_fnl.append([id_tmp,
+                                           stff_nm_tmp,
+                                           rsn_tmp,
+                                           entr_or_exit_at_tmp
+                                          ])
+        per_pg = consts.ENTER_OR_EXIT_ITEM_PER_PAGE
+        pg = request.args.get(get_page_parameter(), type=int, default=1)
+        pg_dat = entrs_or_exits_fnl[(pg - 1) * per_pg : pg * per_pg]
+        pgntn = Pagination(page=pg,
+                           total=len(entrs_or_exits_fnl),
+                           per_page=per_pg,
+                           css_framework=consts.PAGINATION_CSS
+                          )
+        return render_template("search_enters_or_exits_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
@@ -4157,14 +6886,26 @@ def search_enters_or_exits_results():
         if session["referrer-page"] != "view.search_enters_or_exits_results":
             return redirect(url_for("view.search_enters_or_exits_results"))
 
-        #@ ここで, フォーム内のボタンが押されたときの動作を実装する.
-        #@ ※ここには, 仮のコードを記述しておいた...
-        return redirect(url_for("view.search_enters_or_exits_results"))
+        # フォームボタン群の中から, 押下されたボタンに応じたページへリダイレクトする.
+        if request.form["hidden-modify-item-id"] != "":
+            session["hidden-modify-item-id"] = request.form["hidden-modify-item-id"]
+            return redirect(url_for("view.modify_enter_or_exit"))
+        if request.form["hidden-detail-item-id"] != "":
+            session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
+            return redirect(url_for("view.detail_enter_or_exit"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「search_staffs_results」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
 @view.route("/search_staffs_results", methods=["GET", "POST"])
 def search_staffs_results():
+    # 関数内で使用する変数・オブジェクトを宣言・定義する.
+    stffs_tmp = []
+    stffs_fnl = []
+    is_srch_done = False
+
     # 該当のURLエンドポイントに入ったことをロギングする.
     rslt = se.etc.logging__info("view at /search_staffs_results")
 
@@ -4188,8 +6929,257 @@ def search_staffs_results():
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_staffs_results"
 
-        #@ ここで, モデルへの検索を行い, 検索結果をまとめて返す.
-        return render_template("search_staffs_results.html")
+        # 検索条件(=検索キー)となる値をまとめて取得する.
+        id = str(session["id"]).split(" ")
+        sex = session["sex"]
+        bld_typ = session["blood-type"]
+        brth_dt = session["birth-date"]
+        stff_nm = str(session["staff-name"]).split(" ")
+        stff_kn_nm = str(session["staff-kana-name"]).split(" ")
+        crtd_at_bgn = session["created-at-begin"]
+        crtd_at_end = session["created-at-end"]
+        updtd_at_bgn = session["updated-at-begin"]
+        updtd_at_end = session["updated-at-end"]
+        srt_cndtn = str(session["sort-condition"])
+        extrct_cndtn = str(session["extract-condition"])
+
+        # 各種の検索条件に基づいてレコードを検索する.
+        if (((len(id) == 1) and (id[0] == "")) == False):
+            srch_trgt = id
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.id.in_(srch_trgt), Staff.is_hidden == False).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.id.in_(srch_trgt)).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.id.in_(srch_trgt), Staff.is_hidden == False).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.id.in_(srch_trgt)).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_nm) == 1) and (stff_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.name.in_(srch_trgt), Staff.is_hidden == False).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.name.in_(srch_trgt)).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.name.in_(srch_trgt), Staff.is_hidden == False).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.name.in_(srch_trgt)).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((((len(stff_kn_nm) == 1) and (stff_kn_nm[0] == "")) == False) and (is_srch_done == False)):
+            srch_trgt = stff_kn_nm
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.kana_name.in_(srch_trgt), Staff.is_hidden == False).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.kana_name.in_(srch_trgt)).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.kana_name.in_(srch_trgt), Staff.is_hidden == False).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.kana_name.in_(srch_trgt)).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((sex != "") and (is_srch_done == False)):
+            srch_trgt = [sex]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.sex.in_(srch_trgt), Staff.is_hidden == False).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.sex.in_(srch_trgt)).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.sex.in_(srch_trgt), Staff.is_hidden == False).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.sex.in_(srch_trgt)).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((bld_typ != "") and (is_srch_done == False)):
+            srch_trgt = [bld_typ]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.blood_type.in_(srch_trgt), Staff.is_hidden == False).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.blood_type.in_(srch_trgt)).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.blood_type.in_(srch_trgt), Staff.is_hidden == False).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  entrs_or_exits_tmp = (
+                  db_session.query(Staff).filter(Staff.blood_type.in_(srch_trgt)).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if ((brth_dt != "") and (is_srch_done == False)):
+            srch_trgt = [brth_dt]
+            if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.birth_date.in_(srch_trgt), Staff.is_hidden == False).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.birth_date.in_(srch_trgt)).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.birth_date.in_(srch_trgt), Staff.is_hidden == False).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.birth_date.in_(srch_trgt)).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((crtd_at_bgn is not None) and (crtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.created_at >= crtd_at_bgn, Staff.created_at <= crtd_at_end, Staff.is_hidden == False).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.created_at >= crtd_at_bgn, Staff.created_at <= crtd_at_end).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.created_at >= crtd_at_bgn, Staff.created_at <= crtd_at_end, Staff.is_hidden == False).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+            else:
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.created_at >= crtd_at_bgn, Staff.created_at <= crtd_at_end).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+                  is_srch_done = True
+        if (((updtd_at_bgn is not None) and (updtd_at_end is not None)) and (is_srch_done == False)):
+            if ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.created_at >= updtd_at_bgn, Staff.created_at <= updtd_at_end, Staff.is_hidden == False).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-1") and (extrct_cndtn=="condition-2")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.created_at >= updtd_at_bgn, Staff.created_at <= updtd_at_end).order_by(Staff.id.asc()).all()
+                  )
+                  db_session.close()
+            elif ((srt_cndtn=="condition-2") and (extrct_cndtn=="condition-1")):
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.created_at >= updtd_at_bgn, Staff.created_at <= updtd_at_end, Staff.is_hidden == False).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+            else:
+                  stffs_tmp = (
+                  db_session.query(Staff).filter(Staff.created_at >= updtd_at_bgn, Staff.created_at <= updtd_at_end).order_by(Staff.id.desc()).all()
+                  )
+                  db_session.close()
+
+        # 検索結果を整形し, 配列にセットしてテンプレートと共に返す.
+        if stffs_tmp is not None:
+            for stff_tmp in stffs_tmp:
+                if len(str(stff_tmp.id)) > 6:
+                    id_tmp = stff_tmp.id[0:6] + "..."
+                else:
+                    id_tmp = stff_tmp.id
+                if len(stff_tmp.name) > 6:
+                    nm_tmp = stff_tmp.name[0:6] + "..."
+                else:
+                    nm_tmp = stff_tmp.name
+                if len(stff_tmp.sex) > 6:
+                    sex_tmp = stff_tmp.sex[0:6] + "..."
+                else:
+                    sex_tmp = stff_tmp.sex
+                if len(stff_tmp.blood_type) > 6:
+                    bld_typ_tmp = stff_tmp.blood_type[0:6] + "..."
+                else:
+                    bld_typ_tmp = stff_tmp.blood_type
+                stffs_fnl.append([id_tmp,
+                                 nm_tmp,
+                                 sex_tmp,
+                                 bld_typ_tmp
+                                ])
+        per_pg = consts.STAFF_ITEM_PER_PAGE
+        pg = request.args.get(get_page_parameter(), type=int, default=1)
+        pg_dat = stffs_fnl[(pg - 1) * per_pg : pg * per_pg]
+        pgntn = Pagination(page=pg,
+                           total=len(stffs_fnl),
+                           per_page=per_pg,
+                           css_framework=consts.PAGINATION_CSS
+                          )
+        return render_template("search_staffs_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
@@ -4197,9 +7187,16 @@ def search_staffs_results():
         if session["referrer-page"] != "view.search_staffs_results":
             return redirect(url_for("view.search_staffs_results"))
 
-        #@ ここで, フォーム内のボタンが押されたときの動作を実装する.
-        #@ ※ここには, 仮のコードを記述しておいた...
-        return redirect(url_for("view.search_staffs_results"))
+        # フォームボタン群の中から, 押下されたボタンに応じたページへリダイレクトする.
+        if request.form["hidden-modify-item-id"] != "":
+            session["hidden-modify-item-id"] = request.form["hidden-modify-item-id"]
+            return redirect(url_for("view.modify_staff"))
+        if request.form["hidden-detail-item-id"] != "":
+            session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
+            return redirect(url_for("view.detail_staff"))
+
+        # フォームが改竄されているので, その旨を通知するために例外を発生させる.
+        raise BadRequest
 
 
 # 「register_enter_or_exit」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -4263,11 +7260,10 @@ def register_enter_or_exit():
         if rgstr_entr_or_exit_form.enter_or_exit_at.data is None:
             flash("入退日時が入力されていません.")
             return render_template("register_enter_or_exit.html", form=rgstr_entr_or_exit_form, happen_error=True)
-        if not se.reg.check_numeric_in_en(rgstr_entr_or_exit_form.enter_or_exit_at_second.data):
-            flash("入退日時-秒数が有効な数字ではありません.")
+        if rgstr_entr_or_exit_form.enter_or_exit_at_second.data is None:
+            flash("入退日時-秒数が入力されていません.")
             return render_template("register_enter_or_exit.html", form=rgstr_entr_or_exit_form, happen_error=True)
-        if ((int(rgstr_entr_or_exit_form.enter_or_exit_at_second.data) < 0) or
-             (int(rgstr_entr_or_exit_form.enter_or_exit_at_second.data) > 59)):
+        if ((rgstr_entr_or_exit_form.enter_or_exit_at_second.data < 0) or (rgstr_entr_or_exit_form.enter_or_exit_at_second.data > 59)):
             flash("入退日時-秒数が有効な範囲を超えています.")
             return render_template("register_enter_or_exit.html", form=rgstr_entr_or_exit_form, happen_error=True)
         if rgstr_entr_or_exit_form.is_hidden.data == "":
@@ -4278,21 +7274,18 @@ def register_enter_or_exit():
             return render_template("register_enter_or_exit.html", form=rgstr_entr_or_exit_form, happen_error=True)
 
         # 入退情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-        if rgstr_entr_or_exit_form.enter_or_exit_at_second.data == "":
-            crrnt_dttm_scnd = "00"
-        elif ((int(rgstr_entr_or_exit_form.enter_or_exit_at_second.data) < 10) and
-               (len(rgstr_entr_or_exit_form.enter_or_exit_at_second.data) == 1)):
-            crrnt_dttm_scnd = "0" + rgstr_entr_or_exit_form.enter_or_exit_at_second.data
+        if rgstr_entr_or_exit_form.enter_or_exit_at_second.data < 10:
+            crrnt_dttm_scnd = "0" + str(rgstr_entr_or_exit_form.enter_or_exit_at_second.data)
         else:
-            crrnt_dttm_scnd = rgstr_entr_or_exit_form.enter_or_exit_at_second.data
+            crrnt_dttm_scnd = str(rgstr_entr_or_exit_form.enter_or_exit_at_second.data)
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(EnterOrExit(staff_name = rgstr_entr_or_exit_form.staff_name.data,
                                    staff_kana_name = rgstr_entr_or_exit_form.staff_kana_name.data,
                                    reason = rgstr_entr_or_exit_form.reason.data,
                                    enter_or_exit_at = rgstr_entr_or_exit_form.enter_or_exit_at.data,
                                    enter_or_exit_at_second = crrnt_dttm_scnd,
-                                   created_at= crrnt_dttm,
-                                   updated_at = crrnt_dttm,
+                                   created_at=crrnt_dttm,
+                                   updated_at=crrnt_dttm,
                                    is_hidden = (True if rgstr_entr_or_exit_form.is_hidden.data == "yes" else False),
                                    is_exclude = (True if rgstr_entr_or_exit_form.is_exclude.data == "yes" else False)
         ))
@@ -4344,7 +7337,7 @@ def register_staff():
         if rgstr_stff_form.cancel.data:
             rgstr_stff_form.name.data = ""
             rgstr_stff_form.kana_name.data = ""
-            rgstr_stff_form.pass_word.data = ""
+            rgstr_stff_form.password.data = ""
             rgstr_stff_form.sex.data = ""
             rgstr_stff_form.blood_type.data = ""
             rgstr_stff_form.birth_date.data = ""
@@ -4378,7 +7371,7 @@ def register_staff():
         if rgstr_stff_form.kana_name.data == "":
             flash("職員カナ名が入力されていません.")
             return render_template("register_staff.html", form=rgstr_stff_form, happen_error=True)
-        if rgstr_stff_form.pass_word.data == "":
+        if rgstr_stff_form.password.data == "":
             flash("パスワードが入力されていません.")
             return render_template("register_staff.html", form=rgstr_stff_form, happen_error=True)
         if rgstr_stff_form.sex.data == "":
@@ -4399,11 +7392,8 @@ def register_staff():
         if not se.reg.check_katakana_uppercase_in_ja(rgstr_stff_form.kana_name.data):
             flash("職員カナ名は, カタカナのみにしてください.")
             return render_template("register_staff.html", form=rgstr_stff_form, happen_error=True)
-        if len(rgstr_stff_form.pass_word.data) > consts.PASSWORD_LENGTH:
+        if len(rgstr_stff_form.password.data) > consts.PASSWORD_LENGTH:
             flash("パスワードは, " + str(consts.PASSWORD_LENGTH) + "文字以内にしてください.")
-            return render_template("register_staff.html", form=rgstr_stff_form, happen_error=True)
-        if not se.reg.check_alphabetic_numeric_and_symbol_with_space_in_en(rgstr_stff_form.pass_word.data):
-            flash("パスワードは, 半角英数字と半角記号の組合せにしてください.")
             return render_template("register_staff.html", form=rgstr_stff_form, happen_error=True)
         if ((" " in rgstr_stff_form.name.data) or ("　" in rgstr_stff_form.name.data)):
             flash("職員名の一部として, 半角スペースと全角スペースは使用できません.")
@@ -4411,8 +7401,8 @@ def register_staff():
         if ((" " in rgstr_stff_form.kana_name.data) or ("　" in rgstr_stff_form.kana_name.data)):
             flash("職員カナ名の一部として, 半角スペースと全角スペースは使用できません.")
             return render_template("register_staff.html", form=rgstr_stff_form, happen_error=True)
-        if ((" " in rgstr_stff_form.pass_word.data) or ("　" in rgstr_stff_form.pass_word.data)):
-            flash("パスワードの一部として, 半角スペースと全角スペースは使用できません.")
+        if " " in rgstr_stff_form.password.data:
+            flash("パスワードの一部として, 半角スペースは使用できません.")
             return render_template("register_staff.html", form=rgstr_stff_form, happen_error=True)
 
         drtn_in_dys__crit1 = se.etc.retrieve_timedelta_from_years(consts.STAFF_AGE_TOP)
@@ -4433,10 +7423,11 @@ def register_staff():
             return render_template("register_staff.html", form=rgstr_stff_form, happen_error=True)
 
         # 職員情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
+        hshd_psswrd = generate_password_hash(rgstr_stff_form.password.data)
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(Staff(name=rgstr_stff_form.name.data,
                              kana_name=rgstr_stff_form.kana_name.data,
-                             pass_word=rgstr_stff_form.pass_word.data,
+                             hashed_password=hshd_psswrd,
                              sex=rgstr_stff_form.sex.data,
                              blood_type=rgstr_stff_form.blood_type.data,
                              birth_date=rgstr_stff_form.birth_date.data,
@@ -4486,21 +7477,25 @@ def modify_word():
     if request.method == "GET":
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
-        session["referrer-page"] = "view.admin_dashboard"
+        session["referrer-page"] = "view.modify_word"
 
         # 指定IDの語句レコードをDBから取得する.
         wrd = (
-            db_session.query(Word).filter(Word.id == session["hidden-modify-item-id"]).first()
+        db_session.query(Word).filter(Word.id == session["hidden-modify-item-id"]).first()
         )
         db_session.close()
 
         # フォームにレコードの内容を複写して, フォームと共にテンプレートを返す.
         mod_wrd_form.spell_and_header.data = wrd.spell_and_header
         mod_wrd_form.mean_and_content.data = wrd.mean_and_content
+        mod_wrd_form.theme_tag.data = wrd.theme_tag
         mod_wrd_form.intent.data = wrd.intent
         mod_wrd_form.sentiment.data = wrd.sentiment
+        mod_wrd_form.sentiment_support.data = wrd.sentiment_support
         mod_wrd_form.strength.data = wrd.strength
         mod_wrd_form.part_of_speech.data = wrd.part_of_speech
+        mod_wrd_form.staff_name.data = wrd.staff_name
+        mod_wrd_form.staff_kana_name.data = wrd.staff_kana_name
         mod_wrd_form.is_hidden.data = ("yes" if wrd.is_hidden == True else "no")
         mod_wrd_form.is_exclude.data = ("yes" if wrd.is_exclude == True else "no")
         return render_template("modify_word.html", form=mod_wrd_form)
@@ -4513,7 +7508,7 @@ def modify_word():
 
         # フォームの取消ボタンが押下されたら, 強制的に現在ページへリダイレクトする.
         if mod_wrd_form.cancel.data:
-            return redirect(url_for("view.modify_word"))
+            return redirect(url_for("view.admin_dashboard"))
 
         # flaskフォームに入力・記憶されている内容をバリデーションする.
         # 基準を満たさない場合, フォームと共にテンプレートを返す.
@@ -4523,17 +7518,29 @@ def modify_word():
         if mod_wrd_form.mean_and_content.data == "":
             flash("意味&内容が入力されていません.")
             return render_template("modify_word.html", form=mod_wrd_form, happen_error=True)
+        if mod_wrd_form.theme_tag.data == "":
+            flash("主題タグが入力されていません.")
+            return render_template("modify_word.html", form=mod_wrd_form, happen_error=True)
         if mod_wrd_form.intent.data == "":
             flash("意図が選択されていません.")
             return render_template("modify_word.html", form=mod_wrd_form, happen_error=True)
         if mod_wrd_form.sentiment.data == "":
             flash("感情が選択されていません.")
             return render_template("modify_word.html", form=mod_wrd_form, happen_error=True)
+        if mod_wrd_form.sentiment_support.data == "":
+            flash("感情補助が選択されていません.")
+            return render_template("modify_word.html", form=mod_wrd_form, happen_error=True)
         if mod_wrd_form.strength.data == "":
-            flash("強度が入力されていません.")
+            flash("強度が選択されていません.")
             return render_template("modify_word.html", form=mod_wrd_form, happen_error=True)
         if mod_wrd_form.part_of_speech.data == "":
             flash("品詞分類が選択されていません.")
+            return render_template("modify_word.html", form=mod_wrd_form, happen_error=True)
+        if mod_wrd_form.staff_name.data == "":
+            flash("職員名が入力されていません.")
+            return render_template("modify_word.html", form=mod_wrd_form, happen_error=True)
+        if mod_wrd_form.staff_kana_name.data == "":
+            flash("職員カナ名が入力されていません.")
             return render_template("modify_word.html", form=mod_wrd_form, happen_error=True)
         if mod_wrd_form.is_hidden.data == "":
             flash("秘匿の是非が選択されていません.")
@@ -4544,22 +7551,24 @@ def modify_word():
 
         # 指定IDの語句レコードを取得し, その内容を上書きしてから, DBセッションを閉じる.
         wrd = (
-            db_session.query(Word).filter(Word.id == session["hidden-modify-item-id"]).first()
+        db_session.query(Word).filter(Word.id == session["hidden-modify-item-id"]).first()
         )
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-        wrd.spell_and_header=mod_wrd_form.spell_and_header.data
-        wrd.mean_and_content=mod_wrd_form.mean_and_content.data
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        wrd.spell_and_header = escape(mod_wrd_form.spell_and_header.data)
+        wrd.mean_and_content = escape(mod_wrd_form.mean_and_content.data)
+        wrd.theme_tag = escape(mod_wrd_form.theme_tag.data)
         wrd.intent = mod_wrd_form.intent.data
         wrd.sentiment = mod_wrd_form.sentiment.data
+        wrd.sentiment_support = mod_wrd_form.sentiment_support.data
         wrd.strength = mod_wrd_form.strength.data
         wrd.part_of_speech = mod_wrd_form.part_of_speech.data
         wrd.first_character = mod_wrd_form.spell_and_header.data[0]
         wrd.characters_count = len(mod_wrd_form.spell_and_header.data)
-        wrd.staff_name=session["enter-name"]
-        wrd.staff_kana_name=session["enter-kana-name"]
-        wrd.updated_at=crrnt_dttm
-        wrd.is_hidden=(True if mod_wrd_form.is_hidden == "yes" else False)
-        wrd.is_exclude=(True if mod_wrd_form.is_exclude == "yes" else False)
+        wrd.staff_name = escape(mod_wrd_form.staff_name.data)
+        wrd.staff_kana_name = escape(mod_wrd_form.staff_kana_name.data)
+        wrd.updated_at = crrnt_dttm
+        wrd.is_hidden = (True if mod_wrd_form.is_hidden.data == "yes" else False)
+        wrd.is_exclude = (True if mod_wrd_form.is_exclude.data == "yes" else False)
         db_session.commit()
         db_session.close()
 
@@ -4605,14 +7614,16 @@ def modify_theme():
 
         # 指定IDの主題レコードをDBから取得する.
         thm = (
-            db_session.query(Theme).filter(Theme.id == session["hidden-modify-item-id"]).first()
+        db_session.query(Theme).filter(Theme.id == session["hidden-modify-item-id"]).first()
         )
         db_session.close()
 
         # フォームにレコードの内容を複写して, フォームと共にテンプレートを返す.
         mod_thm_form.spell_and_header.data = thm.spell_and_header
         mod_thm_form.mean_and_content.data = thm.mean_and_content
-        mod_thm_form.category_tags.data = thm.category_tags
+        mod_thm_form.category_tag.data = thm.category_tag
+        mod_thm_form.staff_name.data = thm.staff_name
+        mod_thm_form.staff_kana_name.data = thm.staff_kana_name
         mod_thm_form.is_hidden.data = ("yes" if thm.is_hidden == True else "no")
         mod_thm_form.is_exclude.data = ("yes" if thm.is_exclude == True else "no")
         return render_template("learn_theme.html", form=mod_thm_form)
@@ -4635,9 +7646,15 @@ def modify_theme():
         if mod_thm_form.mean_and_content.data == "":
             flash("意味&内容が入力されていません.")
             return render_template("modify_theme.html", form=mod_thm_form, happen_error=True)
-        if mod_thm_form.category_tags.data == "":
+        if mod_thm_form.category_tag.data == "":
             flash("分類タグが入力されていません.")
             return render_template("modify_theme.html", form=mod_thm_form, happen_error=True)
+        if mod_thm_form.staff_name.data == "":
+            flash("職員名が入力されていません.")
+            return render_template("modify_word.html", form=mod_thm_form, happen_error=True)
+        if mod_thm_form.staff_kana_name.data == "":
+            flash("職員カナ名が入力されていません.")
+            return render_template("modify_word.html", form=mod_thm_form, happen_error=True)
         if mod_thm_form.is_hidden.data == "":
             flash("秘匿の是非が選択されていません.")
             return render_template("modify_theme.html", form=mod_thm_form, happen_error=True)
@@ -4647,12 +7664,14 @@ def modify_theme():
 
         # 指定IDの主題レコードを取得し, その内容を上書きしてから, DBセッションを閉じる.
         thm = (
-            db_session.query(Theme).filter(Theme.id == session["hidden-modify-item-id"]).first()
+        db_session.query(Theme).filter(Theme.id == session["hidden-modify-item-id"]).first()
         )
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-        thm.spell_and_header = mod_thm_form.spell_and_header.data
-        thm.mean_and_content = mod_thm_form.mean_and_content.data
-        thm.category_tags = mod_thm_form.category_tags.data
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        thm.spell_and_header = escape(mod_thm_form.spell_and_header.data)
+        thm.mean_and_content = escape(mod_thm_form.mean_and_content.data)
+        thm.category_tag = escape(mod_thm_form.category_tag.data)
+        thm.staff_name = escape(mod_thm_form.staff_name.data)
+        thm.staff_kana_name = escape(mod_thm_form.staff_kana_name.data)
         thm.updated_at = crrnt_dttm
         thm.is_hidden = (True if mod_thm_form.is_hidden.data == "Yes" else False)
         thm.is_exclude = (True if mod_thm_form.is_exclude.data == "Yes" else False)
@@ -4701,16 +7720,18 @@ def modify_category():
 
         # 指定IDの分類レコードをDBから取得する.
         ctgr = (
-            db_session.query(Category).filter(Category.id == session["hidden-modify-item-id"]).first()
+        db_session.query(Category).filter(Category.id == session["hidden-modify-item-id"]).first()
         )
         db_session.close()
 
         # フォームにレコードの内容を複写して, フォームと共にテンプレートを返す.
         mod_ctgr_form.spell_and_header.data = ctgr.spell_and_header
         mod_ctgr_form.mean_and_content.data = ctgr.mean_and_content
-        mod_ctgr_form.parent_category_tags.data = ctgr.parent_category_tags
-        mod_ctgr_form.sibling_category_tags.data = ctgr.sibling_category_tags
-        mod_ctgr_form.child_category_tags.data = ctgr.child_category_tags
+        mod_ctgr_form.parent_category_tag.data = ctgr.parent_category_tag
+        mod_ctgr_form.sibling_category_tag.data = ctgr.sibling_category_tag
+        mod_ctgr_form.child_category_tag.data = ctgr.child_category_tag
+        mod_ctgr_form.staff_name.data = ctgr.staff_name
+        mod_ctgr_form.staff_kana_name.data = ctgr.staff_kana_name
         mod_ctgr_form.is_hidden = ("yes" if ctgr.is_hidden == True else "no")
         mod_ctgr_form.is_exclude = ("yes" if ctgr.is_exclude == True else "no")
         return render_template("learn_category.html", form=mod_ctgr_form)
@@ -4733,15 +7754,21 @@ def modify_category():
         if mod_ctgr_form.mean_and_content.data == "":
             flash("意味&内容が入力されていません.")
             return render_template("modify_category.html", form=mod_ctgr_form, happen_error=True)
-        if mod_ctgr_form.parent_category_tags.data == "":
+        if mod_ctgr_form.parent_category_tag.data == "":
             flash("親分類タグが入力されていません.")
             return render_template("modify_category.html", form=mod_ctgr_form, happen_error=True)
-        if mod_ctgr_form.sibling_category_tags.data == "":
+        if mod_ctgr_form.sibling_category_tag.data == "":
             flash("兄弟分類タグが入力されていません.")
             return render_template("modify_category.html", form=mod_ctgr_form, happen_error=True)
-        if mod_ctgr_form.child_category_tags.data == "":
+        if mod_ctgr_form.child_category_tag.data == "":
             flash("子分類タグが入力されていません.")
             return render_template("modify_category.html", form=mod_ctgr_form, happen_error=True)
+        if mod_ctgr_form.staff_name.data == "":
+            flash("職員名が入力されていません.")
+            return render_template("modify_word.html", form=mod_ctgr_form, happen_error=True)
+        if mod_ctgr_form.staff_kana_name.data == "":
+            flash("職員カナ名が入力されていません.")
+            return render_template("modify_word.html", form=mod_ctgr_form, happen_error=True)
         if mod_ctgr_form.is_hidden.data == "":
             flash("秘匿の是非が選択されていません.")
             return render_template("modify_word.html", form=mod_ctgr_form, happen_error=True)
@@ -4751,16 +7778,16 @@ def modify_category():
 
         # 指定IDの分類レコードを取得し, その内容を上書きしてから, DBセッションを閉じる.
         ctgr = (
-            db_session.query(Category).filter(Category.id == session["hidden-modify-item-id"]).first()
+        db_session.query(Category).filter(Category.id == session["hidden-modify-item-id"]).first()
         )
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-        ctgr.spell_and_header = mod_ctgr_form.spell_and_header.data
-        ctgr.mean_and_content = mod_ctgr_form.mean_and_content.data
-        ctgr.parent_category_tags = mod_ctgr_form.parent_category_tags.data
-        ctgr.sibling_category_tags = mod_ctgr_form.sibling_category_tags.data
-        ctgr.child_category_tags = mod_ctgr_form.child_category_tags.data
-        ctgr.staff_name = session["enter-name"]
-        ctgr.staff_kana_name = session["enter-kana-name"]
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        ctgr.spell_and_header = escape(mod_ctgr_form.spell_and_header.data)
+        ctgr.mean_and_content = escape(mod_ctgr_form.mean_and_content.data)
+        ctgr.parent_category_tag = escape(mod_ctgr_form.parent_category_tag.data)
+        ctgr.sibling_category_tag = escape(mod_ctgr_form.sibling_category_tag.data)
+        ctgr.child_category_tag = escape(mod_ctgr_form.child_category_tag.data)
+        ctgr.staff_name = escape(mod_ctgr_form.staff_name.data)
+        ctgr.staff_kana_name = escape(mod_ctgr_form.staff_kana_name.data)
         ctgr.updated_at = crrnt_dttm
         ctgr.is_hidden = (True if mod_ctgr_form.is_hidden.data == "yes" else False)
         ctgr.is_exclude = (True if mod_ctgr_form.is_exclude.data == "yes" else False)
@@ -4809,14 +7836,14 @@ def modify_knowledge():
 
         # 指定IDの知識レコードをDBから取得する.
         knwldg = (
-            db_session.query(Knowledge).filter(Knowledge.id == session["hidden-modify-item-id"]).first()
+        db_session.query(Knowledge).filter(Knowledge.id == session["hidden-modify-item-id"]).first()
         )
         db_session.close()
 
         # フォームにレコードの内容を複写して, フォームと共にテンプレートを返す.
         mod_knwldg_form.spell_and_header.data = knwldg.spell_and_header
         mod_knwldg_form.mean_and_content.data = knwldg.mean_and_content
-        mod_knwldg_form.category_tags.data = knwldg.category_tags
+        mod_knwldg_form.category_tag.data = knwldg.category_tag
         mod_knwldg_form.staff_name.data = knwldg.staff_name
         mod_knwldg_form.staff_kana_name.data = knwldg.staff_kana_name
         mod_knwldg_form.is_hidden.data = ("yes" if knwldg.is_hidden == True else "no")
@@ -4845,9 +7872,15 @@ def modify_knowledge():
         if mod_knwldg_form.mean_and_content.data == "":
             flash("意味&内容が入力されていません.")
             return render_template("modify_knowledge.html", form=mod_knwldg_form, happen_error=True)
-        if mod_knwldg_form.category_tags.data == "":
+        if mod_knwldg_form.category_tag.data == "":
             flash("分類タグが入力されていません.")
             return render_template("modify_knowledge.html", form=mod_knwldg_form, happen_error=True)
+        if mod_knwldg_form.staff_name == "":
+            flash("職員名が入力されていません.")
+            return render_template("modify_word.html", form=mod_knwldg_form, happen_error=True)
+        if mod_knwldg_form.staff_kana_name == "":
+            flash("職員カナ名が入力されていません.")
+            return render_template("modify_word.html", form=mod_knwldg_form, happen_error=True)
         if mod_knwldg_form.is_hidden.data == "":
             flash("秘匿の是非が選択されていません.")
             return render_template("modify_knowledge.html", form=mod_knwldg_form, happen_error=True)
@@ -4857,21 +7890,23 @@ def modify_knowledge():
 
         # 指定IDの知識レコードを取得し, その内容を上書きしてから, DBセッションを閉じる.
         knwldg = (
-            db_session.query(Knowledge).filter(Knowledge.id == session["hidden-modify-item-id"]).first()
+        db_session.query(Knowledge).filter(Knowledge.id == session["hidden-modify-item-id"]).first()
         )
 
         # 指定IDの知識レコードを取得し, その内容を上書きしてから, DBセッションを閉じる.
         fl_lbl = se.etc.retrieve_current_datetime_as_file_label()
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
         archvd_img_fl_pth = se.etc.archive_file(mod_knwldg_form.attached_image_file.data, consts.ARCHIVE_IMAGE_PATH, fl_lbl)
         archvd_snd_fl_pth = se.etc.archive_file(mod_knwldg_form.attached_sound_file.data, consts.ARCHIVE_SOUND_PATH, fl_lbl)
         archvd_vdo_fl_pth = se.etc.archive_file(mod_knwldg_form.attached_video_file.data, consts.ARCHIVE_VIDEO_PATH, fl_lbl)
-        knwldg.spell_and_header = mod_knwldg_form.spell_and_header.data
-        knwldg.mean_and_content = mod_knwldg_form.mean_and_content.data
-        knwldg.category_tags = mod_knwldg_form.category_tags.data
+        knwldg.spell_and_header = escape(mod_knwldg_form.spell_and_header.data)
+        knwldg.mean_and_content = escape(mod_knwldg_form.mean_and_content.data)
+        knwldg.category_tag = escape(mod_knwldg_form.category_tag.data)
         knwldg.archived_image_file_path = archvd_img_fl_pth
         knwldg.archived_sound_file_path = archvd_snd_fl_pth
         knwldg.archived_video_file_path = archvd_vdo_fl_pth
+        knwldg.staff_name = escape(mod_knwldg_form.staff_name.data)
+        knwldg.staff_kana_name = escape(mod_knwldg_form.staff_kana_name.data)
         knwldg.updated_at = crrnt_dttm
         knwldg.is_hidden = (True if mod_knwldg_form.is_hidden.data == "yes" else False)
         knwldg.is_exclude = (True if mod_knwldg_form.is_exclude.data == "yes" else False)
@@ -4931,9 +7966,11 @@ def modify_rule():
         # フォームにレコードの内容を複写して, フォームと共にテンプレートを返す.
         mod_rl_form.spell_and_header.data = rl.spell_and_header
         mod_rl_form.mean_and_content.data = rl.mean_and_content
-        mod_rl_form.category_tags.data = rl.category_tags
-        mod_rl_form.inference_condition.data = rl.inference_condition
-        mod_rl_form.inference_result.data = rl.inference_result
+        mod_rl_form.category_tag.data = rl.category_tag
+        mod_rl_form.inference_and_speculation_condition.data = rl.inference_and_speculation_condition
+        mod_rl_form.inference_and_speculation_result.data = rl.inference_and_speculation_result
+        mod_rl_form.staff_name.data = rl.staff_name
+        mod_rl_form.staff_kana_name.data = rl.staff_kana_name
         mod_rl_form.is_hidden.data = ("yes" if rl.is_hidden == True else "no")
         mod_rl_form.is_exclude.data = ("yes" if rl.is_exclude == True else "no")
         return render_template("modify_knowledge.html", form=mod_rl_form)
@@ -4956,15 +7993,21 @@ def modify_rule():
         if mod_rl_form.mean_and_content.data == "":
             flash("意味&内容が入力されていません.")
             return render_template("modify_rule.html", form=mod_rl_form, happen_error=True)
-        if mod_rl_form.category_tags.data == "":
+        if mod_rl_form.category_tag.data == "":
             flash("分類タグが入力されていません.")
             return render_template("modify_rule.html", form=mod_rl_form, happen_error=True)
-        if mod_rl_form.inference_condition.data == "":
+        if mod_rl_form.inference_and_speculation_condition.data == "":
             flash("推論条件が入力されていません.")
             return render_template("modify_rule.html", form=mod_rl_form, happen_error=True)
-        if mod_rl_form.inference_result.data == "":
+        if mod_rl_form.inference_and_speculation_result.data == "":
             flash("推論結果が入力されていません.")
             return render_template("modify_rule.html", form=mod_rl_form, happen_error=True)
+        if mod_rl_form.staff_name.data == "":
+            flash("職員名が入力されていません.")
+            return render_template("modify_word.html", form=mod_rl_form, happen_error=True)
+        if mod_rl_form.staff_kana_name.data == "":
+            flash("職員カナ名が入力されていません.")
+            return render_template("modify_word.html", form=mod_rl_form, happen_error=True)
         if mod_rl_form.is_hidden.data == "":
             flash("秘匿の是非が選択されていません.")
             return render_template("modify_rule.html", form=mod_rl_form, happen_error=True)
@@ -4976,12 +8019,14 @@ def modify_rule():
         rl = (
         db_session.query(Rule).filter(Rule.id == session["hidden-modify-item-id"]).first()
         )
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-        rl.spell_and_header = mod_rl_form.spell_and_header.data
-        rl.mean_and_content = mod_rl_form.mean_and_content.data
-        rl.category_tags = mod_rl_form.category_tags.data
-        rl.inference_condition = mod_rl_form.inference_condition.data
-        rl.inference_result = mod_rl_form.inference_result.data
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        rl.spell_and_header = escape(mod_rl_form.spell_and_header.data)
+        rl.mean_and_content = escape(mod_rl_form.mean_and_content.data)
+        rl.category_tag = escape(mod_rl_form.category_tag.data)
+        rl.inference_and_speculation_condition = escape(mod_rl_form.inference_and_speculation_condition.data)
+        rl.inference_and_speculation_result = escape(mod_rl_form.inference_and_speculation_result.data)
+        rl.staff_name = escape(mod_rl_form.staff_name.data)
+        rl.staff_kana_name = escape(mod_rl_form.staff_kana_name.data)
         rl.updated_at = crrnt_dttm
         rl.is_hidden = (True if mod_rl_form.is_hidden.data == "yes" else False)
         rl.is_exclude = (True if mod_rl_form.is_exclude.data == "yes" else False)
@@ -5041,6 +8086,8 @@ def modify_reaction():
         mod_rctn_form.scene_and_background.data = rctn.scene_and_background
         mod_rctn_form.message_example_from_staff.data = rctn.message_example_from_staff
         mod_rctn_form.message_example_from_application.data = rctn.message_example_from_application
+        mod_rctn_form.staff_name.data = rctn.staff_name
+        mod_rctn_form.staff_kana_name.data = rctn.staff_kana_name
         mod_rctn_form.is_hidden.data = ("yes" if rctn.is_hidden == True else "no")
         mod_rctn_form.is_exclude.data = ("yes" if rctn.is_exclude == True else "no")
         return render_template("modify_reaction.html", form=mod_rctn_form)
@@ -5075,6 +8122,12 @@ def modify_reaction():
         if mod_rctn_form.message_example_from_application.data == "":
             flash("アプリメッセージ例が入力されていません.")
             return render_template("modify_reaction.html", form=mod_rctn_form, happen_error=True)
+        if mod_rctn_form.staff_name.data == "":
+            flash("職員名が入力されていません.")
+            return render_template("modify_word.html", form=mod_rctn_form, happen_error=True)
+        if mod_rctn_form.staff_kana_name.data == "":
+            flash("職員カナ名が入力されていません.")
+            return render_template("modify_word.html", form=mod_rctn_form, happen_error=True)
         if mod_rctn_form.is_hidden.data == "":
             flash("秘匿の是非が選択されていません.")
             return render_template("modify_reaction.html", form=mod_rctn_form, happen_error=True)
@@ -5086,13 +8139,15 @@ def modify_reaction():
         rctn = (
         db_session.query(Reaction).filter(Reaction.id == session["hidden-modify-item-id"]).first()
         )
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-        rctn.spell_and_header = mod_rctn_form.spell_and_header.data
-        rctn.mean_and_content = mod_rctn_form.mean_and_content.data
-        rctn.staff_psychology = mod_rctn_form.staff_psychology.data
-        rctn.scene_and_background = mod_rctn_form.scene_and_background.data
-        rctn.message_example_from_staff = mod_rctn_form.message_example_from_staff.data
-        rctn.message_example_from_application = mod_rctn_form.message_example_from_application.data
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        rctn.spell_and_header = escape(mod_rctn_form.spell_and_header.data)
+        rctn.mean_and_content = escape(mod_rctn_form.mean_and_content.data)
+        rctn.staff_psychology = escape(mod_rctn_form.staff_psychology.data)
+        rctn.scene_and_background = escape(mod_rctn_form.scene_and_background.data)
+        rctn.message_example_from_staff = escape(mod_rctn_form.message_example_from_staff.data)
+        rctn.message_example_from_application = escape(mod_rctn_form.message_example_from_application.data)
+        rctn.staff_name = escape(mod_rctn_form.staff_name.data)
+        rctn.staff_kana_name = escape(mod_rctn_form.staff_kana_name.data)
         rctn.updated_at = crrnt_dttm
         rctn.is_hidden = (True if mod_rctn_form.is_hidden.data == "yes" else False)
         rctn.is_exclude = (True if mod_rctn_form.is_exclude.data == "yes" else False)
@@ -5137,7 +8192,7 @@ def modify_enter_or_exit():
     if request.method == "GET":
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
-        session["referrer-page"] = "view.admin_dashboard"
+        session["referrer-page"] = "view.modify_enter_or_exit"
 
         # 指定IDの入退レコードをDBから取得する.
         entr_or_exit = (
@@ -5149,7 +8204,8 @@ def modify_enter_or_exit():
         mod_entr_or_exit_form.staff_name.data = entr_or_exit.staff_name
         mod_entr_or_exit_form.staff_kana_name.data = entr_or_exit.staff_kana_name
         mod_entr_or_exit_form.reason.data = entr_or_exit.reason
-        mod_entr_or_exit_form.enter_or_exit_at.data = entr_or_exit.enter_or_exit_at
+        mod_entr_or_exit_form.enter_or_exit_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(entr_or_exit.enter_or_exit_at, True)
+        mod_entr_or_exit_form.enter_or_exit_at_second.data = entr_or_exit.enter_or_exit_at_second
         mod_entr_or_exit_form.is_hidden.data = ("yes" if entr_or_exit.is_hidden == True else "no")
         mod_entr_or_exit_form.is_exclude.data = ("yes" if entr_or_exit.is_exclude == True else "no")
         return render_template("modify_enter_or_exit.html", form=mod_entr_or_exit_form)
@@ -5168,35 +8224,49 @@ def modify_enter_or_exit():
         # 基準を満たさない場合は, 元のフォームと共にテンプレートを返す.
         if mod_entr_or_exit_form.staff_name.data == "":
             flash("職員名が入力されていません.")
-            return render_template("modify_rule.html", form=mod_entr_or_exit_form, happen_error=True)
+            return render_template("modify_enter_or_exit.html", form=mod_entr_or_exit_form, happen_error=True)
         if mod_entr_or_exit_form.staff_kana_name.data == "":
             flash("職員カナ名が入力されていません.")
-            return render_template("modify_rule.html", form=mod_entr_or_exit_form, happen_error=True)
+            return render_template("modify_enter_or_exit.html", form=mod_entr_or_exit_form, happen_error=True)
         if mod_entr_or_exit_form.reason.data == "":
             flash("入退理由が入力されていません.")
-            return render_template("modify_rule.html", form=mod_entr_or_exit_form, happen_error=True)
-        if mod_entr_or_exit_form.enter_or_exit_at.data == "":
+            return render_template("modify_enter_or_exit.html", form=mod_entr_or_exit_form, happen_error=True)
+        if mod_entr_or_exit_form.enter_or_exit_at.data is None:
             flash("入退日時が入力されていません.")
-            return render_template("modify_rule.html", form=mod_entr_or_exit_form, happen_error=True)
+            return render_template("modify_enter_or_exit.html", form=mod_entr_or_exit_form, happen_error=True)
+        if mod_entr_or_exit_form.enter_or_exit_at_second.data is None:
+            flash("入退日時-秒数が入力されていません.")
+            return render_template("modify_enter_or_exit.html", form=mod_entr_or_exit_form, happen_error=True)
+        if ((mod_entr_or_exit_form.enter_or_exit_at_second.data < 0) or (mod_entr_or_exit_form.enter_or_exit_at_second.data > 59)):
+            flash("入退日時-秒数が有効な範囲を超えています.")
+            return render_template("modify_enter_or_exit.html", form=mod_entr_or_exit_form, happen_error=True)
         if mod_entr_or_exit_form.is_hidden.data == "":
             flash("秘匿の是非が選択されていません.")
-            return render_template("modify_rule.html", form=mod_entr_or_exit_form, happen_error=True)
+            return render_template("modify_enter_or_exit.html", form=mod_entr_or_exit_form, happen_error=True)
         if mod_entr_or_exit_form.is_exclude.data == "":
             flash("非処理の是非が選択されていません.")
-            return render_template("modify_rule.html", form=mod_entr_or_exit_form, happen_error=True)
+            return render_template("modify_enter_or_exit.html", form=mod_entr_or_exit_form, happen_error=True)
 
         # 指定IDの入退レコードを取得し, その内容を上書きしてから, DBセッションを閉じる.
         entr_or_exit = (
         db_session.query(EnterOrExit).filter(EnterOrExit.id == int(session["hidden-modify-item-id"])).first()
         )
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-        entr_or_exit.staff_name = mod_entr_or_exit_form.staff_name.data
-        entr_or_exit.staff_kana_name = mod_entr_or_exit_form.staff_kana_name.data
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        if mod_entr_or_exit_form.enter_or_exit_at_second.data == "":
+            crrnt_dttm_scnd = "00"
+        elif ((int(mod_entr_or_exit_form.enter_or_exit_at_second.data) < 10) and
+               (len(str(mod_entr_or_exit_form.enter_or_exit_at_second.data)) == 1)):
+            crrnt_dttm_scnd = "0" + str(mod_entr_or_exit_form.enter_or_exit_at_second.data)
+        else:
+            crrnt_dttm_scnd = str(mod_entr_or_exit_form.enter_or_exit_at_second.data)
+        entr_or_exit.staff_name = escape(mod_entr_or_exit_form.staff_name.data)
+        entr_or_exit.staff_kana_name = escape(mod_entr_or_exit_form.staff_kana_name.data)
         entr_or_exit.reason = mod_entr_or_exit_form.reason.data
-        entr_or_exit.enter_or_exit_at = mod_entr_or_exit_form.enter_or_exit_at.data
+        entr_or_exit.enter_or_exit_at = se.etc.convert_datetime_object_to_string_for_timestamp(mod_entr_or_exit_form.enter_or_exit_at.data, True)
+        entr_or_exit.enter_or_exit_at_second = crrnt_dttm_scnd
         entr_or_exit.updated_at = crrnt_dttm
-        entr_or_exit.is_hidden = mod_entr_or_exit_form.is_hidden.data = (True if mod_entr_or_exit_form.is_hidden.data == "yes" else False)
-        entr_or_exit.is_exclude = mod_entr_or_exit_form.is_exclude.data = (True if mod_entr_or_exit_form.is_exclude.data == "yes" else False)
+        entr_or_exit.is_hidden = (True if mod_entr_or_exit_form.is_hidden.data == "yes" else False)
+        entr_or_exit.is_exclude = (True if mod_entr_or_exit_form.is_exclude.data == "yes" else False)
         db_session.commit()
         db_session.close()
 
@@ -5249,7 +8319,7 @@ def modify_staff():
         # フォームにレコードの内容を複写して, フォームと共にテンプレートを返す.
         mod_stff_form.name.data = stff.name
         mod_stff_form.kana_name.data = stff.kana_name
-        mod_stff_form.pass_word.data = stff.pass_word
+        mod_stff_form.password.data = stff.hashed_password
         mod_stff_form.sex.data = stff.sex
         mod_stff_form.blood_type.data = stff.blood_type
         mod_stff_form.birth_date.data = datetime.datetime.strptime(stff.birth_date, "%Y-%m-%d")
@@ -5275,7 +8345,7 @@ def modify_staff():
         if mod_stff_form.kana_name.data == "":
             flash("職員カナ名が入力されていません.")
             return render_template("modify_stafff.html", form=mod_stff_form, happen_error=True)
-        if mod_stff_form.pass_word.data == "":
+        if mod_stff_form.password.data == "":
             flash("パスワードが入力されていません.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
         if mod_stff_form.sex.data == "":
@@ -5296,11 +8366,8 @@ def modify_staff():
         if not se.reg.check_katakana_uppercase_in_ja(mod_stff_form.kana_name.data):
             flash("職員カナ名は, カタカナのみにしてください.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
-        if len(mod_stff_form.pass_word.data) > consts.PASSWORD_LENGTH:
+        if len(mod_stff_form.password.data) > consts.PASSWORD_LENGTH:
             flash("パスワードは, " + str(consts.PASSWORD_LENGTH) + "文字以内にしてください.")
-            return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
-        if not se.reg.check_alphabetic_numeric_and_symbol_with_space_in_en(mod_stff_form.pass_word.data):
-            flash("パスワードは, 半角英数字と半角記号の組合せにしてください.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
         if ((" " in mod_stff_form.name.data) or ("　" in mod_stff_form.name.data)):
             flash("職員名の一部として, 半角スペースと全角スペースは使用できません.")
@@ -5308,8 +8375,8 @@ def modify_staff():
         if ((" " in mod_stff_form.kana_name.data) or ("　" in mod_stff_form.kana_name.data)):
             flash("職員カナ名の一部として, 半角スペースと全角スペースは使用できません.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
-        if ((" " in mod_stff_form.pass_word.data) or ("　" in mod_stff_form.pass_word.data)):
-            flash("パスワードの一部として, 半角スペースと全角スペースは使用できません.")
+        if " " in mod_stff_form.password.data:
+            flash("パスワードの一部として, 半角スペースは使用できません.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
 
         drtn_in_dys__crit1 = se.etc.retrieve_timedelta_from_years(consts.STAFF_AGE_TOP)
@@ -5333,14 +8400,13 @@ def modify_staff():
         stff = (
         db_session.query(Staff).filter(Staff.id == int(session["hidden-modify-item-id"])).first()
         )
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-        stff.name = mod_stff_form.name.data
-        stff.kana_name = mod_stff_form.kana_name.data
-        stff.pass_word = mod_stff_form.pass_word.data
+        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        stff.name = escape(mod_stff_form.name.data)
+        stff.kana_name = escape(mod_stff_form.kana_name.data)
+        stff.hashed_password = generate_password_hash(mod_stff_form.password.data)
         stff.sex = mod_stff_form.sex.data
         stff.blood_type = mod_stff_form.blood_type.data
         stff.birth_date = mod_stff_form.birth_date.data
-        stff.created_at = crrnt_dttm
         stff.updated_at = crrnt_dttm
         stff.is_hidden = (True if mod_stff_form.is_hidden.data == "yes" else False)
         stff.is_exclude = (True if mod_stff_form.is_exclude.data == "yes" else False)
@@ -5394,15 +8460,17 @@ def detail_word():
         dtl_wrd_form.id.data = wrd.id
         dtl_wrd_form.spell_and_header.data = wrd.spell_and_header
         dtl_wrd_form.mean_and_content.data = wrd.mean_and_content
-        dtl_wrd_form.concept_and_notion = wrd.concept_and_notion
+        dtl_wrd_form.concept_and_notion.data = wrd.concept_and_notion
+        dtl_wrd_form.theme_tag.data = wrd.theme_tag
         dtl_wrd_form.intent.data = wrd.intent
         dtl_wrd_form.sentiment.data = wrd.sentiment
+        dtl_wrd_form.sentiment_support.data = wrd.sentiment_support
         dtl_wrd_form.strength.data = wrd.strength
         dtl_wrd_form.part_of_speech.data = wrd.part_of_speech
         dtl_wrd_form.staff_name.data = wrd.staff_name
         dtl_wrd_form.staff_kana_name.data = wrd.staff_kana_name
-        dtl_wrd_form.created_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(wrd.created_at)
-        dtl_wrd_form.updated_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(wrd.updated_at)
+        dtl_wrd_form.created_at.data = wrd.created_at
+        dtl_wrd_form.updated_at.data = wrd.updated_at
         dtl_wrd_form.is_hidden.data = ("yes" if wrd.is_hidden == True else "no")
         dtl_wrd_form.is_exclude.data = ("yes" if wrd.is_exclude == True else "no")
         return render_template("detail_word.html", form=dtl_wrd_form)
@@ -5451,11 +8519,11 @@ def detail_theme():
         dtl_thm_form.spell_and_header.data = thm.spell_and_header
         dtl_thm_form.mean_and_content.data = thm.mean_and_content
         dtl_thm_form.concept_and_notion = thm.concept_and_notion
-        dtl_thm_form.category_tags.data = thm.category_tags
+        dtl_thm_form.category_tag.data = thm.category_tag
         dtl_thm_form.staff_name.data = thm.staff_name
         dtl_thm_form.staff_kana_name.data = thm.staff_kana_name
-        dtl_thm_form.created_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(thm.created_at)
-        dtl_thm_form.updated_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(thm.updated_at)
+        dtl_thm_form.created_at.data = thm.created_at
+        dtl_thm_form.updated_at.data = thm.updated_at
         dtl_thm_form.is_hidden.data = ("yes" if thm.is_hidden == True else "no")
         dtl_thm_form.is_exclude.data = ("yes" if thm.is_exclude == True else "no")
         return render_template("detail_theme.html", form=dtl_thm_form)
@@ -5504,13 +8572,13 @@ def detail_category():
         dtl_ctgr_form.spell_and_header.data = ctgr.spell_and_header
         dtl_ctgr_form.mean_and_content.data = ctgr.mean_and_content
         dtl_ctgr_form.concept_and_notion = ctgr.concept_and_notion
-        dtl_ctgr_form.parent_category_tags.data = ctgr.parent_category_tags
-        dtl_ctgr_form.sibling_category_tags.data = ctgr.sibling_category_tags
-        dtl_ctgr_form.child_category_tags.data = ctgr.child_category_tags
+        dtl_ctgr_form.parent_category_tag.data = ctgr.parent_category_tag
+        dtl_ctgr_form.sibling_category_tag.data = ctgr.sibling_category_tag
+        dtl_ctgr_form.child_category_tag.data = ctgr.child_category_tag
         dtl_ctgr_form.staff_name.data = ctgr.staff_name
         dtl_ctgr_form.staff_kana_name.data = ctgr.staff_kana_name
-        dtl_ctgr_form.created_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(ctgr.created_at)
-        dtl_ctgr_form.updated_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(ctgr.updated_at)
+        dtl_ctgr_form.created_at.data = ctgr.created_at
+        dtl_ctgr_form.updated_at.data = ctgr.updated_at
         dtl_ctgr_form.is_hidden.data = ("yes" if ctgr.is_hidden == True else "no")
         dtl_ctgr_form.is_exclude.data = ("yes" if ctgr.is_exclude == True else "no")
         return render_template("detail_category.html", form=dtl_ctgr_form)
@@ -5559,14 +8627,14 @@ def detail_knowledge():
         dtl_knwldg_form.spell_and_header.data = knwldg.spell_and_header
         dtl_knwldg_form.mean_and_content.data = knwldg.mean_and_content
         dtl_knwldg_form.concept_and_notion = knwldg.concept_and_notion
-        dtl_knwldg_form.category_tags.data = knwldg.category_tags
+        dtl_knwldg_form.category_tag.data = knwldg.category_tag
         dtl_knwldg_form.archived_image_file_path.data = knwldg.archived_image_file_path
         dtl_knwldg_form.archived_sound_file_path.data = knwldg.archived_sound_file_path
         dtl_knwldg_form.archived_video_file_path.data = knwldg.archived_video_file_path
         dtl_knwldg_form.staff_name.data = knwldg.staff_name
         dtl_knwldg_form.staff_kana_name.data = knwldg.staff_kana_name
-        dtl_knwldg_form.created_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(knwldg.created_at)
-        dtl_knwldg_form.updated_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(knwldg.updated_at)
+        dtl_knwldg_form.created_at.data = knwldg.created_at
+        dtl_knwldg_form.updated_at.data = knwldg.updated_at
         dtl_knwldg_form.is_hidden.data = ("yes" if knwldg.is_hidden == True else "no")
         dtl_knwldg_form.is_exclude.data = ("yes" if knwldg.is_exclude == True else "no")
         return render_template("detail_knowledge.html", form=dtl_knwldg_form,
@@ -5619,13 +8687,13 @@ def detail_rule():
         dtl_rl_form.spell_and_header.data = rl.spell_and_header
         dtl_rl_form.mean_and_content.data = rl.mean_and_content
         dtl_rl_form.concept_and_notion = rl.concept_and_notion
-        dtl_rl_form.category_tags.data = rl.category_tags
-        dtl_rl_form.inference_condition.data = rl.inference_condition
-        dtl_rl_form.inference_result.data = rl.inference_result
+        dtl_rl_form.category_tag.data = rl.category_tag
+        dtl_rl_form.inference_and_speculation_condition.data = rl.inference_and_speculation_condition
+        dtl_rl_form.inference_and_speculation_result.data = rl.inference_and_speculation_result
         dtl_rl_form.staff_name.data = rl.staff_name
         dtl_rl_form.staff_kana_name.data = rl.staff_kana_name
-        dtl_rl_form.created_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(rl.created_at)
-        dtl_rl_form.updated_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(rl.updated_at)
+        dtl_rl_form.created_at.data = rl.created_at
+        dtl_rl_form.updated_at.data = rl.updated_at
         dtl_rl_form.is_hidden.data = ("yes" if rl.is_hidden == True else "no")
         dtl_rl_form.is_exclude.data = ("yes" if rl.is_exclude == True else "no")
         return render_template("detail_rule.html", form=dtl_rl_form)
@@ -5680,8 +8748,8 @@ def detail_reaction():
         dtl_rl_form.message_example_from_application.data = rctn.message_example_from_application
         dtl_rl_form.staff_name.data = rctn.staff_name
         dtl_rl_form.staff_kana_name.data = rctn.staff_kana_name
-        dtl_rl_form.created_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(rctn.created_at)
-        dtl_rl_form.updated_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(rctn.updated_at)
+        dtl_rl_form.created_at.data = rctn.created_at
+        dtl_rl_form.updated_at.data = rctn.updated_at
         dtl_rl_form.is_hidden.data = ("yes" if rctn.is_hidden == True else "no")
         dtl_rl_form.is_exclude.data = ("yes" if rctn.is_exclude == True else "no")
         return render_template("detail_reaction.html", form=dtl_rl_form)
@@ -5732,8 +8800,8 @@ def detail_generate():
         dtl_gen_form.generated_file_path.data = gen.generated_file_path
         dtl_gen_form.staff_name.data = gen.staff_name
         dtl_gen_form.staff_kana_name.data = gen.staff_kana_name
-        dtl_gen_form.created_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(gen.created_at)
-        dtl_gen_form.updated_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(gen.updated_at)
+        dtl_gen_form.created_at.data = gen.created_at
+        dtl_gen_form.updated_at.data = gen.updated_at
         dtl_gen_form.is_hidden.data = ("yes" if gen.is_hidden == True else "no")
         dtl_gen_form.is_exclude.data = ("yes" if gen.is_exclude == True else "no")
         return render_template("detail_generate.html", form=dtl_gen_form,
@@ -5784,8 +8852,8 @@ def detail_history():
         dtl_hist_form.application_message.data = hist.application_message
         dtl_hist_form.staff_name.data = hist.staff_name
         dtl_hist_form.staff_kana_name.data = hist.staff_kana_name
-        dtl_hist_form.created_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(hist.created_at)
-        dtl_hist_form.updated_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(hist.updated_at)
+        dtl_hist_form.created_at.data = hist.created_at
+        dtl_hist_form.updated_at.data = hist.updated_at
         dtl_hist_form.is_hidden.data = ("yes" if hist.is_hidden == True else "no")
         dtl_hist_form.is_exclude.data = ("yes" if hist.is_exclude == True else "no")
         return render_template("detail_history.html", form=dtl_hist_form)
@@ -5835,8 +8903,9 @@ def detail_enter_or_exit():
         dtl_entr_or_exit_form.staff_kana_name.data = entr_or_exit.staff_kana_name
         dtl_entr_or_exit_form.reason.data = entr_or_exit.reason
         dtl_entr_or_exit_form.enter_or_exit_at.data = entr_or_exit.enter_or_exit_at
-        dtl_entr_or_exit_form.created_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(entr_or_exit.created_at)
-        dtl_entr_or_exit_form.updated_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(entr_or_exit.updated_at)
+        dtl_entr_or_exit_form.enter_or_exit_at_second.data = entr_or_exit.enter_or_exit_at_second
+        dtl_entr_or_exit_form.created_at.data = entr_or_exit.created_at
+        dtl_entr_or_exit_form.updated_at.data = entr_or_exit.updated_at
         dtl_entr_or_exit_form.is_hidden.data = ("yes" if entr_or_exit.is_hidden == True else "no")
         dtl_entr_or_exit_form.is_exclude.data = ("yes" if entr_or_exit.is_exclude == True else "no")
         return render_template("detail_enter_or_exit.html", form=dtl_entr_or_exit_form)
@@ -5884,12 +8953,12 @@ def detail_staff():
         dtl_stff_form.id.data = stff.id
         dtl_stff_form.name.data = stff.name
         dtl_stff_form.kana_name.data = stff.kana_name
-        dtl_stff_form.pass_word.data = stff.pass_word
+        dtl_stff_form.password.data = stff.hashed_password
         dtl_stff_form.sex.data = stff.sex
         dtl_stff_form.blood_type.data = stff.blood_type
-        dtl_stff_form.birth_date.data = se.etc.convert_string_to_datetime_object_for_eventday(stff.birth_date)
-        dtl_stff_form.created_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(stff.created_at)
-        dtl_stff_form.updated_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(stff.updated_at)
+        dtl_stff_form.birth_date.data = stff.birth_date
+        dtl_stff_form.created_at.data = stff.created_at
+        dtl_stff_form.updated_at.data = stff.updated_at
         dtl_stff_form.is_hidden.data = ("yes" if stff.is_hidden == True else "no")
         dtl_stff_form.is_exclude.data = ("yes" if stff.is_exclude == True else "no")
         return render_template("detail_staff.html", form=dtl_stff_form)
@@ -5959,17 +9028,25 @@ def import_words():
                 pass_cnt += 1
                 continue
             try:
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-                   db_session.add(Word(spell_and_header=child.find("spell-and-header").text,
-                                       mean_and_content=child.find("mean-and-content").text,
+                   #@ ここで, 語句情報を学習するための各種の高度な計算を行う.
+                   cncpt_n_ntn = se.learn_word(escape(child.find("spell-and-header").text),
+                                               escape(child.find("mean-and-content").text))
+                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   db_session.add(Word(spell_and_header=escape(child.find("spell-and-header").text),
+                                       mean_and_content=escape(child.find("mean-and-content").text),
+                                       concept_and_notion=cncpt_n_ntn,
+                                       theme_tag=escape(child.find("theme-tag").text),
                                        intent=child.find("intent").text,
                                        sentiment=child.find("sentiment").text,
+                                       sentiment_support=child.find("sentiment-support").text,
                                        strength=child.find("strength").text,
                                        first_character=child.find("spell-and-header").text[0],
                                        characters_count=len(child.find("spell-and-header").text),
-                                       staff_name=child.find("staff-name").text,
-                                       staff_kana_name=child.find("staff-kana-name").text,
-                                       created_at=child.find("created-at").text,
+                                       staff_name=escape(child.find("staff-name").text),
+                                       staff_kana_name=escape(child.find("staff-kana-name").text),
+                                       created_at=(
+                                       se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
+                                       ),
                                        updated_at=crrnt_dttm,
                                        is_hidden=child.find("is-hidden").text,
                                        is_exclude="no"
@@ -6055,14 +9132,20 @@ def import_themes():
                 pass_cnt += 1
                 continue
             try:
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-                   db_session.add(Theme(spell_and_header=child.find("spell-and-header").text,
-                                        mean_and_content=child.find("mean-and-content").text,
+                   #@ ここで, 主題情報を学習するための各種の高度な計算を行う.
+                   cncpt_n_ntn = se.learn_theme(escape(child.find("spell-and-header").text),
+                                                escape(child.find("mean-and-content").text))
+                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   db_session.add(Theme(spell_and_header=escape(child.find("spell-and-header").text),
+                                        mean_and_content=escape(child.find("mean-and-content").text),
+                                        concept_and_notion=cncpt_n_ntn,
                                         intent=child.find("intent").text,
-                                        category_tags=child.find("category-tags").text,
-                                        staff_name=child.find("staff-name").text,
-                                        staff_kana_name=child.find("staff-kana-name").text,
-                                        created_at=child.find("created-at").text,
+                                        category_tag=escape(child.find("category-tags").text),
+                                        staff_name=escape(child.find("staff-name").text),
+                                        staff_kana_name=escape(child.find("staff-kana-name").text),
+                                        created_at=(
+                                        se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
+                                        ),
                                         updated_at=crrnt_dttm,
                                         is_hidden=child.find("is-hidden").text,
                                         is_exclude="no"
@@ -6148,15 +9231,21 @@ def import_categories():
                 pass_cnt += 1
                 continue
             try:
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-                   db_session.add(Category(spell_and_header=child.find("spell-and-header").text,
-                                           mean_and_content=child.find("mean-and-content").text,
-                                           parent_category_tags=child.find("parent-category-tags").text,
-                                           sibling_category_tags=child.find("sibling-category-tags").text,
-                                           child_category_tags=child.find("child-category-tags").text,
-                                           staff_name=child.find("staff-name").text,
-                                           staff_kana_name=child.find("staff-kana-name").text,
-                                           created_at=child.find("created-at").text,
+                   #@ ここで, 分類情報を学習するための各種の高度な計算を行う.
+                   cncpt_n_ntn = se.learn_category(escape(child.find("spell-and-header").text),
+                                                   escape(child.find("mean-and-content").text))
+                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   db_session.add(Category(spell_and_header=escape(child.find("spell-and-header").text),
+                                           mean_and_content=escape(child.find("mean-and-content").text),
+                                           concept_and_notion=cncpt_n_ntn,
+                                           parent_category_tag=escape(child.find("parent-category-tags").text),
+                                           sibling_category_tag=escape(child.find("sibling-category-tags").text),
+                                           child_category_tag=escape(child.find("child-category-tags").text),
+                                           staff_name=escape(child.find("staff-name").text),
+                                           staff_kana_name=escape(child.find("staff-kana-name").text),
+                                           created_at=(
+                                           se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
+                                           ),
                                            updated_at=crrnt_dttm,
                                            is_hidden=child.find("is-hidden").text,
                                            is_exclude="no"
@@ -6242,16 +9331,22 @@ def import_knowledges():
                 pass_cnt += 1
                 continue
             try:
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-                   db_session.add(Knowledge(spell_and_header=child.find("spell-and-header").text,
-                                            mean_and_content=child.find("mean-and-content").text,
-                                            category_tags=child.find("category-tags").text,
+                   #@ ここで, 知識情報を学習するための各種の高度な計算を行う.
+                   cncpt_n_ntn = se.learn_knowledge(escape(child.find("spell-and-header").text),
+                                                    escape(child.find("mean-and-content").text))
+                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   db_session.add(Knowledge(spell_and_header=escape(child.find("spell-and-header").text),
+                                            mean_and_content=escape(child.find("mean-and-content").text),
+                                            concept_and_notion=cncpt_n_ntn, 
+                                            category_tag=escape(child.find("category-tags").text),
                                             archived_image_file_path=child.find("archived-image-file-path").text,
                                             archived_sound_file_path=child.find("archived-sound-file-path").text,
                                             archived_video_file_path=child.find("archived-video-file-path").text,
-                                            staff_name=child.find("staff-name").text,
-                                            staff_kana_name=child.find("staff-kana-name").text,
-                                            created_at=child.find("created-at").text,
+                                            staff_name=escape(child.find("staff-name").text),
+                                            staff_kana_name=escape(child.find("staff-kana-name").text),
+                                            created_at=(
+                                            se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
+                                            ),
                                             updated_at=crrnt_dttm,
                                             is_hidden=child.find("is-hidden").text,
                                             is_exclude="no"
@@ -6337,16 +9432,21 @@ def import_rules():
                 pass_cnt += 1
                 continue
             try:
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-                   db_session.add(Rule(spell_and_header=child.find("spell-and-header").text,
-                                       mean_and_content=child.find("mean-and-content").text,
-                                       intent=child.find("intent").text,
-                                       category_tags=child.find("category-tags").text,
-                                       inference_condition=child.find("inference-condition").text,
-                                       inference_result=child.find("inference-result").text,
-                                       staff_name=child.find("staff-name").text,
-                                       staff_kana_name=child.find("staff-kana-name").text,
-                                       created_at=child.find("created-at").text,
+                   #@ ここで, 規則情報を学習するための各種の高度な計算を行う.
+                   cncpt_n_ntn = se.learn_rule(escape(child.find("spell-and-header").text),
+                                               escape(child.find("mean-and-content").text))
+                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   db_session.add(Rule(spell_and_header=escape(child.find("spell-and-header").text),
+                                       mean_and_content=escape(child.find("mean-and-content").text),
+                                       concept_and_notion=cncpt_n_ntn,
+                                       category_tag=escape(child.find("category-tags").text),
+                                       inference_and_speculation_condition=escape(child.find("inference-and-speculation-condition").text),
+                                       inference_and_speculation_result=escape(child.find("inference-and-speculation-result").text),
+                                       staff_name=escape(child.find("staff-name").text),
+                                       staff_kana_name=escape(child.find("staff-kana-name").text),
+                                       created_at=(
+                                       se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
+                                       ),
                                        updated_at=crrnt_dttm,
                                        is_hidden=child.find("is-hidden").text,
                                        is_exclude="no"
@@ -6432,16 +9532,22 @@ def import_reactions():
                 pass_cnt += 1
                 continue
             try:
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-                   db_session.add(Reaction(spell_and_header=child.find("spell-and-header").text,
-                                           mean_and_content=child.find("mean-and-content").text,
-                                           staff_psychology=child.find("staff-psychology").text,
-                                           scene_and_background=child.find("scene-and-background").text,
-                                           message_example_from_staff=child.find("message-example-from-staff").text,
-                                           message_example_from_application=child.find("message-example-from-application").text,
-                                           staff_name=child.find("staff-name").text,
-                                           staff_kana_name=child.find("staff-kana-name").text,
-                                           created_at=child.find("created-at").text,
+                   #@ ここで, 反応情報を学習するための各種の高度な計算を行う.
+                   cncpt_n_ntn = se.learn_reaction(escape(child.find("spell-and-header").text),
+                                                   escape(child.find("mean-and-content").text))
+                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   db_session.add(Reaction(spell_and_header=escape(child.find("spell-and-header").text),
+                                           mean_and_content=escape(child.find("mean-and-content").text),
+                                           concept_and_notion=cncpt_n_ntn,
+                                           staff_psychology=escape(child.find("staff-psychology").text),
+                                           scene_and_background=escape(child.find("scene-and-background").text),
+                                           message_example_from_staff=escape(child.find("message-example-from-staff").text),
+                                           message_example_from_application=escape(child.find("message-example-from-application").text),
+                                           staff_name=escape(child.find("staff-name").text),
+                                           staff_kana_name=escape(child.find("staff-kana-name").text),
+                                           created_at=(
+                                           se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
+                                           ),
                                            updated_at=crrnt_dttm,
                                            is_hidden=child.find("is-hidden").text,
                                            is_exclude="no"
@@ -6527,13 +9633,15 @@ def import_generates():
                 pass_cnt += 1
                 continue
             try:
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
-                   db_session.add(Generate(spell_and_header=child.find("spell-and-header").text,
-                                           mean_and_content=child.find("mean-and-content").text,
+                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   db_session.add(Generate(spell_and_header=escape(child.find("spell-and-header").text),
+                                           mean_and_content=escape(child.find("mean-and-content").text),
                                            generated_file_path=child.find("generated-file-path").text,
-                                           staff_name=child.find("staff-name").text,
-                                           staff_kana_name=child.find("staff-kana-name").text,
-                                           created_at=child.find("created-at").text,
+                                           staff_name=escape(child.find("staff-name").text),
+                                           staff_kana_name=escape(child.find("staff-kana-name").text),
+                                           created_at=(
+                                           se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
+                                           ),
                                            updated_at=crrnt_dttm,
                                            is_hidden=child.find("is-hidden").text,
                                            is_exclude="no"
@@ -6665,17 +9773,17 @@ def import_enters_or_exits():
                 rsn = "application-termination"
             else:
                 rsn = "unknown"
-            dttm1 = se.etc.convert_datetime_string_to_iso_style(rcd[3])
-            dttm2 = se.etc.convert_datetime_string_to_iso_style(rcd[4])
-            crrnt_dttm = se.etc.retrieve_current_datetime_as_string("JST", True)
+            dttm1 = se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(rcd[3], True))
+            dttm2 = se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(rcd[4], True))
             is_hddn = True if rcd[6] == "はい" else False
             is_excld = True if rcd[7] == "はい" else False
+            crrnt_dttm3 = se.etc.retrieve_current_datetime_as_datetime_object("JST")
             db_session.add(EnterOrExit(staff_name=stff_nm,
                                        staff_kana_name=stff_kn_nm,
                                        reason=rsn,
                                        enter_or_exit_at=dttm1,
                                        created_at=dttm2,
-                                       updated_at=crrnt_dttm,
+                                       updated_at=crrnt_dttm3,
                                        is_hidden=is_hddn,
                                        is_exclude=is_excld
                                       ))
@@ -6730,7 +9838,7 @@ def export_words():
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 全ての語句レコードをDBから取得する.
-        wrds = db_session.query(Word).filter(Word.is_exclude==False).order_by(Word.id.asc()).all()
+        wrds = db_session.query(Word).filter(Word.is_exclude == False).order_by(Word.id.asc()).all()
         db_session.close()
 
         # DBから取得した語句レコードの内容をXMLファイルに書き込むための準備をする.
@@ -6739,14 +9847,16 @@ def export_words():
             wrd_elm = ET.SubElement(root, "Word-Entry")
             ET.SubElement(wrd_elm, "spell-and-header").text = wrd.spell_and_header
             ET.SubElement(wrd_elm, "mean-and-content").text = wrd.mean_and_content
+            ET.SubElement(wrd_elm, "theme-tag").text = wrd.theme_tag
             ET.SubElement(wrd_elm, "intent").text = wrd.intent
             ET.SubElement(wrd_elm, "sentiment").text = wrd.sentiment
+            ET.SubElement(wrd_elm, "sentiment-support").text = wrd.sentiment_support
             ET.SubElement(wrd_elm, "strength").text = wrd.strength
             ET.SubElement(wrd_elm, "part-of-speech").text = wrd.part_of_speech
             ET.SubElement(wrd_elm, "staff-name").text = wrd.staff_name
             ET.SubElement(wrd_elm, "staff-kana-name").text = wrd.staff_kana_name
-            ET.SubElement(wrd_elm, "created-at").text = se.etc.convert_datetime_string_to_display_style(wrd.created_at)
-            ET.SubElement(wrd_elm, "renew-date-time").text = se.etc.convert_datetime_string_to_display_style(wrd.updated_at)
+            ET.SubElement(wrd_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(wrd.created_at), False)
+            ET.SubElement(wrd_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(wrd.updated_at), False)
             ET.SubElement(wrd_elm, "is-hidden").text = "はい" if wrd.is_hidden == "yes" else "いいえ"
             ET.SubElement(wrd_elm, "is-exclude").text = "いいえ"
 
@@ -6807,7 +9917,7 @@ def export_themes():
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 全ての主題レコードをDBから取得する.
-        thms = db_session.query(Theme).filter(Theme.is_exclude==False).order_by(Theme.id.asc()).all()
+        thms = db_session.query(Theme).filter(Theme.is_exclude == False).order_by(Theme.id.asc()).all()
         db_session.close()
 
         # DBから取得した主題レコードの内容をXMLファイルに書き込むための準備をする.
@@ -6816,11 +9926,11 @@ def export_themes():
             thm_elm = ET.SubElement(root, "Theme-Entry")
             ET.SubElement(thm_elm, "spell-and-header").text = thm.spell_and_header
             ET.SubElement(thm_elm, "mean-and-content").text = thm.mean_and_content
-            ET.SubElement(thm_elm, "category-tags").text = thm.category_tags
+            ET.SubElement(thm_elm, "category-tags").text = thm.category_tag
             ET.SubElement(thm_elm, "staff-name").text = thm.staff_name
             ET.SubElement(thm_elm, "staff-kana-name").text = thm.staff_kana_name
-            ET.SubElement(thm_elm, "created-at").text = se.etc.convert_datetime_string_to_display_style(thm.created_at)
-            ET.SubElement(thm_elm, "renew-date-time").text = se.etc.convert_datetime_string_to_display_style(thm.updated_at)
+            ET.SubElement(thm_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(thm.created_at), False)
+            ET.SubElement(thm_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(thm.updated_at), False)
             ET.SubElement(thm_elm, "is-hidden").text = "はい" if thm.is_hidden == "yes" else "いいえ"
             ET.SubElement(thm_elm, "is-exclude").text = "いいえ"
 
@@ -6881,7 +9991,7 @@ def export_categories():
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 全ての分類レコードをDBから取得する.
-        ctgrs = db_session.query(Category).filter(Category.is_exclude==False).order_by(Category.id.asc()).all()
+        ctgrs = db_session.query(Category).filter(Category.is_exclude == False).order_by(Category.id.asc()).all()
         db_session.close()
 
         # DBから取得した分類レコードの内容をXMLファイルに書き込むための準備をする.
@@ -6890,12 +10000,13 @@ def export_categories():
             ctgr_elm = ET.SubElement(root, "Category-Entry")
             ET.SubElement(ctgr_elm, "spell-and-header").text = ctgr.spell_and_header
             ET.SubElement(ctgr_elm, "mean-and-content").text = ctgr.mean_and_content
-            ET.SubElement(ctgr_elm, "intent").text = ctgr.parent_category_tags
-            ET.SubElement(ctgr_elm, "sentiment").text = ctgr.child_category_tags
+            ET.SubElement(ctgr_elm, "parent-category-tags").text = ctgr.parent_category_tag
+            ET.SubElement(ctgr_elm, "sibling-category-tags").text = ctgr.sibling_category_tag
+            ET.SubElement(ctgr_elm, "child-category-tags").text = ctgr.child_category_tag
             ET.SubElement(ctgr_elm, "staff-name").text = ctgr.staff_name
             ET.SubElement(ctgr_elm, "staff-kana-name").text = ctgr.staff_kana_name
-            ET.SubElement(ctgr_elm, "created-at").text = se.etc.convert_datetime_string_to_display_style(ctgr.created_at)
-            ET.SubElement(ctgr_elm, "renew-date-time").text = se.etc.convert_datetime_string_to_display_style(ctgr.updated_at)
+            ET.SubElement(ctgr_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ctgr.created_at), False)
+            ET.SubElement(ctgr_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ctgr.updated_at), False)
             ET.SubElement(ctgr_elm, "is-hidden").text = "はい" if ctgr.is_hidden == "yes" else "いいえ"
             ET.SubElement(ctgr_elm, "is-exclude").text = "いいえ"
 
@@ -6956,7 +10067,7 @@ def export_knowledges():
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 全ての知識レコードをDBから取得する.
-        knwldgs = db_session.query(Knowledge).filter(Knowledge.is_exclude==False).order_by(Knowledge.id.asc()).all()
+        knwldgs = db_session.query(Knowledge).filter(Knowledge.is_exclude == False).order_by(Knowledge.id.asc()).all()
         db_session.close()
 
         # DBから取得した知識レコードの内容をXMLファイルに書き込むための準備をする.
@@ -6965,14 +10076,14 @@ def export_knowledges():
             knwldg_elm = ET.SubElement(root, "Knowledge-Entry")
             ET.SubElement(knwldg_elm, "spell-and-header").text = knwldg.spell_and_header
             ET.SubElement(knwldg_elm, "mean-and-content").text = knwldg.mean_and_content
-            ET.SubElement(knwldg_elm, "category-tags").text = knwldg.category_tags
+            ET.SubElement(knwldg_elm, "category-tags").text = knwldg.category_tag
             ET.SubElement(knwldg_elm, "archived-image-file-path").text = knwldg.archived_image_file_path
             ET.SubElement(knwldg_elm, "archived-sound-file-path").text = knwldg.archived_sound_file_path
             ET.SubElement(knwldg_elm, "archived-video-file-path").text = knwldg.archived_video_file_path
             ET.SubElement(knwldg_elm, "staff-name").text = knwldg.staff_name
             ET.SubElement(knwldg_elm, "staff-kana-name").text = knwldg.staff_kana_name
-            ET.SubElement(knwldg_elm, "created-at").text = se.etc.convert_datetime_string_to_display_style(knwldg.created_at)
-            ET.SubElement(knwldg_elm, "renew-date-time").text = se.etc.convert_datetime_string_to_display_style(knwldg.updated_at)
+            ET.SubElement(knwldg_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(knwldg.created_at), False)
+            ET.SubElement(knwldg_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(knwldg.updated_at), False)
             ET.SubElement(knwldg_elm, "is-hidden").text = "はい" if knwldg.is_hidden == "yes" else "いいえ"
             ET.SubElement(knwldg_elm, "is-exclude").text = "いいえ"
 
@@ -7033,7 +10144,7 @@ def export_rules():
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 全ての知識レコードをDBから取得する.
-        rls = db_session.query(Rule).filter(Rule.is_exclude==False).order_by(Rule.id.asc()).all()
+        rls = db_session.query(Rule).filter(Rule.is_exclude == False).order_by(Rule.id.asc()).all()
         db_session.close()
 
         # DBから取得した知識レコードの内容をXMLファイルに書き込むための準備をする.
@@ -7042,13 +10153,13 @@ def export_rules():
             rl_elm = ET.SubElement(root, "Rule-Entry")
             ET.SubElement(rl_elm, "spell-and-header").text = rl.spell_and_header
             ET.SubElement(rl_elm, "mean-and-content").text = rl.mean_and_content
-            ET.SubElement(rl_elm, "category-tags").text = rl.category_tags
-            ET.SubElement(rl_elm, "inference-condition").text = rl.inference_condition
-            ET.SubElement(rl_elm, "inference-result").text = rl.inference_result
+            ET.SubElement(rl_elm, "category-tags").text = rl.category_tag
+            ET.SubElement(rl_elm, "inference-condition").text = rl.inference_and_speculation_condition
+            ET.SubElement(rl_elm, "inference-result").text = rl.inference_and_speculation_result
             ET.SubElement(rl_elm, "staff-name").text = rl.staff_name
             ET.SubElement(rl_elm, "staff-kana-name").text = rl.staff_kana_name
-            ET.SubElement(rl_elm, "created-at").text = se.etc.convert_datetime_string_to_display_style(rl.created_at)
-            ET.SubElement(rl_elm, "renew-date-time").text = se.etc.convert_datetime_string_to_display_style(rl.updated_at)
+            ET.SubElement(rl_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(rl.created_at), False)
+            ET.SubElement(rl_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(rl.updated_at), False)
             ET.SubElement(rl_elm, "is-hidden").text = "はい" if rl.is_hidden == "yes" else "いいえ"
             ET.SubElement(rl_elm, "is-exclude").text = "いいえ"
 
@@ -7109,7 +10220,7 @@ def export_reactions():
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 全ての知識レコードをDBから取得する.
-        rctns = db_session.query(Reaction).filter(Reaction.is_exclude==False).order_by(Reaction.id.asc()).all()
+        rctns = db_session.query(Reaction).filter(Reaction.is_exclude == False).order_by(Reaction.id.asc()).all()
         db_session.close()
 
         # DBから取得した知識レコードの内容をXMLファイルに書き込むための準備をする.
@@ -7124,8 +10235,8 @@ def export_reactions():
             ET.SubElement(rctn_elm, "message-example-from-application").text = rctn.message_example_from_application
             ET.SubElement(rctn_elm, "staff-name").text = rctn.staff_name
             ET.SubElement(rctn_elm, "staff-kana-name").text = rctn.staff_kana_name
-            ET.SubElement(rctn_elm, "created-at").text = se.etc.convert_datetime_string_to_display_style(rctn.created_at)
-            ET.SubElement(rctn_elm, "renew-date-time").text = se.etc.convert_datetime_string_to_display_style(rctn.updated_at)
+            ET.SubElement(rctn_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(rctn.created_at), False)
+            ET.SubElement(rctn_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(rctn.updated_at), False)
             ET.SubElement(rctn_elm, "is-hidden").text = "はい" if rctn.is_hidden == "yes" else "いいえ"
             ET.SubElement(rctn_elm, "is-exclude").text = "いいえ"
 
@@ -7186,7 +10297,7 @@ def export_generates():
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 全ての生成レコードをDBから取得する.
-        gens = db_session.query(Generate).filter(Generate.is_exclude==False).order_by(Generate.id.asc()).all()
+        gens = db_session.query(Generate).filter(Generate.is_exclude == False).order_by(Generate.id.asc()).all()
         db_session.close()
 
         # DBから取得した生成レコードの内容をXMLファイルに書き込むための準備をする.
@@ -7198,8 +10309,8 @@ def export_generates():
             ET.SubElement(gen_elm, "generated-file-path").text = gen.generated_file_path
             ET.SubElement(gen_elm, "staff-name").text = gen.staff_name
             ET.SubElement(gen_elm, "staff-kana-name").text = gen.staff_kana_name
-            ET.SubElement(gen_elm, "created-at").text = se.etc.convert_datetime_string_to_display_style(gen.created_at)
-            ET.SubElement(gen_elm, "renew-date-time").text = se.etc.convert_datetime_string_to_display_style(gen.updated_at)
+            ET.SubElement(gen_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(gen.created_at), False)
+            ET.SubElement(gen_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(gen.updated_at), False)
             ET.SubElement(gen_elm, "is-hidden").text = "はい" if gen.is_hidden == "yes" else "いいえ"
             ET.SubElement(gen_elm, "is-exclude").text = "いいえ"
 
@@ -7260,7 +10371,7 @@ def export_histories():
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 全ての履歴レコードをDBから取得する.
-        hists = db_session.query(History).filter(History.is_exclude==False).order_by(History.id.asc()).all()
+        hists = db_session.query(History).filter(History.is_exclude == False).order_by(History.id.asc()).all()
         db_session.close()
 
         # DBから取得した履歴レコードの内容をXMLファイルに書き込むための準備をする.
@@ -7271,8 +10382,8 @@ def export_histories():
             ET.SubElement(hist_elm, "characters-count").text = hist.application_message
             ET.SubElement(hist_elm, "staff-name").text = hist.staff_name
             ET.SubElement(hist_elm, "staff-kana-name").text = hist.staff_kana_name
-            ET.SubElement(hist_elm, "created-at").text = se.etc.convert_datetime_string_to_display_style(hist.created_at)
-            ET.SubElement(hist_elm, "renew-date-time").text = se.etc.convert_datetime_string_to_display_style(hist.updated_at)
+            ET.SubElement(hist_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(hist.created_at), False)
+            ET.SubElement(hist_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(hist.updated_at), False)
             ET.SubElement(hist_elm, "is-hidden").text = "はい" if hist.is_hidden == "yes" else "いいえ"
             ET.SubElement(hist_elm, "is-exclude").text = "いいえ"
 
@@ -7334,7 +10445,7 @@ def export_enters_or_exits():
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 全ての入退レコードをDBから取得する.
-        ents_or_exts = db_session.query(EnterOrExit).filter(EnterOrExit.is_exclude==False).order_by(EnterOrExit.id.asc()).all()
+        ents_or_exts = db_session.query(EnterOrExit).filter(EnterOrExit.is_exclude == False).order_by(EnterOrExit.id.asc()).all()
         db_session.close()
 
         # DBから取得した入退レコードの内容を変換・整形して配列に格納する.
@@ -7359,9 +10470,18 @@ def export_enters_or_exits():
                 rsn = "アプリ終了"
             else:
                 rsn = "その他(分類不明)"
-            dttm1 = se.etc.convert_datetime_string_to_display_style(ent_or_ext.enter_or_exit_at)
-            dttm2 = se.etc.convert_datetime_string_to_display_style(ent_or_ext.created_at)
-            dttm3 = se.etc.convert_datetime_string_to_display_style(ent_or_ext.updated_at)
+            if str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[1].split(":")[2] == "00":
+                dt_tmp = str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[0] + " "
+                tm_tmp = (
+                str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[1].split(":")[0] + ":" +
+                str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[1].split(":")[1] + ":" +
+                str(ent_or_ext.enter_or_exit_at_second)
+                )
+                dttm1 = se.etc.modify_style_for_datetime_string(dt_tmp + tm_tmp, False)
+            else:
+                dttm1 = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at), False)
+            dttm2 = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.created_at), False)
+            dttm3 = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.updated_at), False)
             is_hddn = "はい" if ent_or_ext.is_hidden == "yes" else "いいえ"
             is_excld = "いいえ"
             fl_rcd = (stff_nm + "," + stff_kn_nm + "," + rsn + ","
@@ -7555,15 +10675,15 @@ def reset_database():
         return render_template("reset_database.html", form=rst_db_form)
 
 
-# 「settings」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
-@view.route("/settings", methods=["GET", "POST"])
-def settings():
+# 「environment_settings」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
+@view.route("/environment_settings", methods=["GET", "POST"])
+def environment_settings():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     config = configparser.ConfigParser()
-    sttng_form = SettingForm()
+    env_sttng_form = EnvironmentSettingForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /settings")
+    rslt = se.etc.logging__info("view at /environment_settings")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7584,10 +10704,10 @@ def settings():
     if request.method == "GET":
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
-        session["referrer-page"] = "view.settings"
+        session["referrer-page"] = "view.environment_settings"
 
         # もしも, 設定ファイルが存在しなければ, すべての項目がデフォルト値のファイルを作成する.
-        if not os.path.exists(consts.SETTING_PATH):
+        if not os.path.exists(consts.ENVIRONMENT_SETTING_PATH):
             config["memory-size"] = {"short-term-memory-size" : consts.SHORT_TERM_MEMORY_SIZE_DEFAULT,
                                      "long-term-memory-size" : consts.LONG_TERM_MEMORY_SIZE_DEFAULT}
             config["cpu-or-gpu-power"] = {"learn-depth" : consts.LEARN_DEPTH_DEFAULT,
@@ -7598,64 +10718,156 @@ def settings():
                                   "background-processing" : consts.BACKGROUND_PROCESSING_DEFAULT}
             config["others"] = {"policy-based-decisions" : consts.POLICY_BASED_DECISIONS_DEFAULT,
                                 "personalized-conversations" : consts.PERSONALIZED_CONVERSATIONS_DEFAULT}
-            with open(consts.SETTING_PATH, "w") as configfile:
+            with open(consts.ENVIRONMENT_SETTING_PATH, "w") as configfile:
                  config.write(configfile)
 
         # 設定ファイルの内容をflaskフォームに読み込んで, フォームと共にテンプレートを返す.
-        # ※設定項目が消えていた場合, デフォルト値で各項目を復元する.
-        config.read(consts.SETTING_PATH, encoding="utf-8")
-        sttng_form.short_term_memory_size.data = config.get("memory-size", "short-term-memory-size", fallback=consts.SHORT_TERM_MEMORY_SIZE_DEFAULT)
-        sttng_form.long_term_memory_size.data = config.get("memory-size", "long-term-memory-size", fallback=consts.LONG_TERM_MEMORY_SIZE_DEFAULT)
-        sttng_form.learn_depth.data = config.get("cpu-or-gpu-power", "learn-depth", fallback=consts.LEARN_DEPTH_DEFAULT)
-        sttng_form.inference_and_speculation_depth.data = config.get("cpu-or-gpu-power", "inference-and-speculation-depth", fallback=consts.INFERENCE_AND_SPECULATION_DEPTH_DEFAULT)
-        sttng_form.in_memorize.data = config.getboolean("faster-processing", "in-memorize", fallback=consts.IN_MEMORIZE_DEFAULT)
-        sttng_form.dictionary_entries_integration.data = config.getboolean("faster-processing", "dictionary-entries-integration", fallback=consts.DICTIONARY_ENTRIES_INETEGRATION_DEFAULT)
-        sttng_form.global_Information_sharing.data = config.getboolean("advanced", "global-Information-sharing", fallback=consts.GLOBAL_INFORMATION_SHARING_DEFAULT)
-        sttng_form.background_processing.data = config.getboolean("advanced", "background-processing", fallback=consts.BACKGROUND_PROCESSING_DEFAULT)
-        sttng_form.policy_based_decisions.data = config.getboolean("others", "policy-based-decisions", fallback=consts.POLICY_BASED_DECISIONS_DEFAULT)
-        sttng_form.personalized_conversations.data = config.getboolean("others", "personalized-conversations", fallback=consts.PERSONALIZED_CONVERSATIONS_DEFAULT)
-        return render_template("settings.html", form=sttng_form)
+        # ※各設定項目が消失していた場合, デフォルト値で各項目を復元する.
+        config.read(consts.ENVIRONMENT_SETTING_PATH, encoding="utf-8")
+        env_sttng_form.short_term_memory_size.data = config.get("memory-size", "short-term-memory-size", fallback=consts.SHORT_TERM_MEMORY_SIZE_DEFAULT)
+        env_sttng_form.long_term_memory_size.data = config.get("memory-size", "long-term-memory-size", fallback=consts.LONG_TERM_MEMORY_SIZE_DEFAULT)
+        env_sttng_form.learn_depth.data = config.get("cpu-or-gpu-power", "learn-depth", fallback=consts.LEARN_DEPTH_DEFAULT)
+        env_sttng_form.inference_and_speculation_depth.data = config.get("cpu-or-gpu-power", "inference-and-speculation-depth", fallback=consts.INFERENCE_AND_SPECULATION_DEPTH_DEFAULT)
+        env_sttng_form.in_memorize.data = config.getboolean("faster-processing", "in-memorize", fallback=consts.IN_MEMORIZE_DEFAULT)
+        env_sttng_form.dictionary_entries_integration.data = config.getboolean("faster-processing", "dictionary-entries-integration", fallback=consts.DICTIONARY_ENTRIES_INETEGRATION_DEFAULT)
+        env_sttng_form.global_Information_sharing.data = config.getboolean("advanced", "global-Information-sharing", fallback=consts.GLOBAL_INFORMATION_SHARING_DEFAULT)
+        env_sttng_form.background_processing.data = config.getboolean("advanced", "background-processing", fallback=consts.BACKGROUND_PROCESSING_DEFAULT)
+        env_sttng_form.policy_based_decisions.data = config.getboolean("others", "policy-based-decisions", fallback=consts.POLICY_BASED_DECISIONS_DEFAULT)
+        env_sttng_form.personalized_conversations.data = config.getboolean("others", "personalized-conversations", fallback=consts.PERSONALIZED_CONVERSATIONS_DEFAULT)
+        return render_template("environment_settings.html", form=env_sttng_form)
 
     if request.method == "POST":
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
-        if session["referrer-page"] != "view.settings":
-            return redirect(url_for("view.settings"))
+        if session["referrer-page"] != "view.environment_settings":
+            return redirect(url_for("view.environment_settings"))
 
         # フォームの取消ボタンが押下されたら, 現在の設定内容を読み込んだフォームと共にテンプレートを返す.
-        # ※各定項目が消えていた場合, デフォルト値で各項目を復元する.
-        if sttng_form.cancel.data == True:
-            config.read(consts.SETTING_PATH, encoding="utf-8")
-            sttng_form.short_term_memory_size.data = config.get("memory-size", "short-term-memory-size", fallback=consts.SHORT_TERM_MEMORY_SIZE_DEFAULT)
-            sttng_form.long_term_memory_size.data = config.get("memory-size", "long-term-memory-size", fallback=consts.LONG_TERM_MEMORY_SIZE_DEFAULT)
-            sttng_form.learn_depth.data = config.get("cpu-or-gpu-power", "learn-depth", fallback=consts.LEARN_DEPTH_DEFAULT)
-            sttng_form.inference_and_speculation_depth.data = config.get("cpu-or-gpu-power", "inference-and-speculation-depth", fallback=consts.INFERENCE_AND_SPECULATION_DEPTH_DEFAULT)
-            sttng_form.in_memorize.data = config.getboolean("faster-processing", "in-memorize", fallback=consts.IN_MEMORIZE_DEFAULT)
-            sttng_form.dictionary_entries_integration.data = config.getboolean("faster-processing", "dictionary-entries-integration", fallback=consts.DICTIONARY_ENTRIES_INETEGRATION_DEFAULT)
-            sttng_form.global_Information_sharing.data = config.getboolean("advanced", "global-Information-sharing", fallback=consts.GLOBAL_INFORMATION_SHARING_DEFAULT)
-            sttng_form.background_processing.data = config.getboolean("advanced", "background-processing", fallback=consts.BACKGROUND_PROCESSING_DEFAULT)
-            sttng_form.policy_based_decisions.data = config.getboolean("others", "policy-based-decisions", fallback=consts.POLICY_BASED_DECISIONS_DEFAULT)
-            sttng_form.personalized_conversations.data = config.getboolean("others", "personalized-conversations", fallback=consts.PERSONALIZED_CONVERSATIONS_DEFAULT)
-            return render_template("settings.html", form=sttng_form)
+        # ※各設定項目が消失していた場合, デフォルト値で各項目を復元する.
+        if env_sttng_form.cancel.data == True:
+            config.read(consts.ENVIRONMENT_SETTING_PATH, encoding="utf-8")
+            env_sttng_form.short_term_memory_size.data = config.get("memory-size", "short-term-memory-size", fallback=consts.SHORT_TERM_MEMORY_SIZE_DEFAULT)
+            env_sttng_form.long_term_memory_size.data = config.get("memory-size", "long-term-memory-size", fallback=consts.LONG_TERM_MEMORY_SIZE_DEFAULT)
+            env_sttng_form.learn_depth.data = config.get("cpu-or-gpu-power", "learn-depth", fallback=consts.LEARN_DEPTH_DEFAULT)
+            env_sttng_form.inference_and_speculation_depth.data = config.get("cpu-or-gpu-power", "inference-and-speculation-depth", fallback=consts.INFERENCE_AND_SPECULATION_DEPTH_DEFAULT)
+            env_sttng_form.in_memorize.data = config.getboolean("faster-processing", "in-memorize", fallback=consts.IN_MEMORIZE_DEFAULT)
+            env_sttng_form.dictionary_entries_integration.data = config.getboolean("faster-processing", "dictionary-entries-integration", fallback=consts.DICTIONARY_ENTRIES_INETEGRATION_DEFAULT)
+            env_sttng_form.global_Information_sharing.data = config.getboolean("advanced", "global-Information-sharing", fallback=consts.GLOBAL_INFORMATION_SHARING_DEFAULT)
+            env_sttng_form.background_processing.data = config.getboolean("advanced", "background-processing", fallback=consts.BACKGROUND_PROCESSING_DEFAULT)
+            env_sttng_form.policy_based_decisions.data = config.getboolean("others", "policy-based-decisions", fallback=consts.POLICY_BASED_DECISIONS_DEFAULT)
+            env_sttng_form.personalized_conversations.data = config.getboolean("others", "personalized-conversations", fallback=consts.PERSONALIZED_CONVERSATIONS_DEFAULT)
+            return render_template("environment_settings.html", form=env_sttng_form)
+
+        # flaskフォームに入力・記憶されている内容をバリデーションする.
+        # 基準を満たさない場合は, 元のフォームと共にテンプレートを返す.
+        if ((int(env_sttng_form.short_term_memory_size.data) < consts.SHORT_TERM_MEMORY_SIZE_BOTTOM) or (int(env_sttng_form.short_term_memory_size.data) > consts.SHORT_TERM_MEMORY_SIZE_TOP)):
+            flash("短期記憶の値が無効です, " + "[" + str(consts.SHORT_TERM_MEMORY_SIZE_BOTTOM) + "~" + str(consts.SHORT_TERM_MEMORY_SIZE_TOP) + "]" + "の範囲内で指定してください.")
+            return render_template("environment_settings.html", form=env_sttng_form, happen_error=True)
+        if ((int(env_sttng_form.long_term_memory_size.data) < consts.LONG_TERM_MEMORY_SIZE_BOTTOM) or (int(env_sttng_form.long_term_memory_size.data) > consts.LONG_TERM_MEMORY_SIZE_TOP)):
+            flash("長期記憶の値が無効です, " + "[" + str(consts.LONG_TERM_MEMORY_SIZE_BOTTOM) + "~" + str(consts.LONG_TERM_MEMORY_SIZE_TOP) + "]" + "の範囲内で指定してください.")
+            return render_template("environment_settings.html", form=env_sttng_form, happen_error=True)
+        if ((int(env_sttng_form.learn_depth.data) < consts.LEARN_DEPTH_BOTTOM) or (int(env_sttng_form.learn_depth.data) > consts.LEARN_DEPTH_TOP)):
+            flash("学習の深さの値が無効です, " + "[" + str(consts.LEARN_DEPTH_BOTTOM) + "~" + str(consts.LEARN_DEPTH_TOP) + "]" + "の範囲内で指定してください.")
+            return render_template("environment_settings.html", form=env_sttng_form, happen_error=True)
+        if ((int(env_sttng_form.inference_and_speculation_depth.data) < consts.INFERENCE_AND_SPECULATION_DEPTH_BOTTOM) or (int(env_sttng_form.inference_and_speculation_depth.data) > consts.INFERENCE_AND_SPECULATION_DEPTH_TOP)):
+            flash("推論の深さの値が無効です, " + "[" + str(consts.INFERENCE_AND_SPECULATION_DEPTH_BOTTOM) + "~" + str(consts.INFERENCE_AND_SPECULATION_DEPTH_TOP) + "]" + "の範囲内で指定してください.")
+            return render_template("environment_settings.html", form=env_sttng_form, happen_error=True)
 
         # flaskフォームの内容を読み込んで, 設定ファイルを上書きする.
-        config.read(consts.SETTING_PATH, encoding="utf-8")
-        config.set("memory-size", "short-term-memory-size", sttng_form.short_term_memory_size.data)
-        config.set("memory-size", "long-term-memory-size", sttng_form.long_term_memory_size.data)
-        config.set("cpu-or-gpu-power", "learn-depth", sttng_form.learn_depth.data)
-        config.set("cpu-or-gpu-power", "inference-and-speculation-depth", sttng_form.inference_and_speculation_depth.data)
-        config.set("faster-processing", "in-memorize", str(sttng_form.in_memorize.data))
-        config.set("faster-processing", "dictionary-entries-integration", str(sttng_form.dictionary_entries_integration.data))
-        config.set("advanced", "global-Information-sharing", str(sttng_form.global_Information_sharing.data))
-        config.set("advanced", "background-processing", str(sttng_form.background_processing.data))
-        config.set("others", "policy-based-decisions", str(sttng_form.policy_based_decisions.data))
-        config.set("others", "personalized-conversations", str(sttng_form.personalized_conversations.data))
-        with open(consts.SETTING_PATH, 'w') as configfile:
+        config.read(consts.ENVIRONMENT_SETTING_PATH, encoding="utf-8")
+        config.set("memory-size", "short-term-memory-size", str(env_sttng_form.short_term_memory_size.data))
+        config.set("memory-size", "long-term-memory-size", str(env_sttng_form.long_term_memory_size.data))
+        config.set("cpu-or-gpu-power", "learn-depth", str(env_sttng_form.learn_depth.data))
+        config.set("cpu-or-gpu-power", "inference-and-speculation-depth", str(env_sttng_form.inference_and_speculation_depth.data))
+        config.set("faster-processing", "in-memorize", str(env_sttng_form.in_memorize.data))
+        config.set("faster-processing", "dictionary-entries-integration", str(env_sttng_form.dictionary_entries_integration.data))
+        config.set("advanced", "global-Information-sharing", str(env_sttng_form.global_Information_sharing.data))
+        config.set("advanced", "background-processing", str(env_sttng_form.background_processing.data))
+        config.set("others", "policy-based-decisions", str(env_sttng_form.policy_based_decisions.data))
+        config.set("others", "personalized-conversations", str(env_sttng_form.personalized_conversations.data))
+        with open(consts.ENVIRONMENT_SETTING_PATH, 'w') as configfile:
              config.write(configfile)
 
         # 完了メッセージを設定してテンプレートを返す.
-        flash("設定値を上書きしました.")
-        return render_template("settings.html", form=sttng_form)
+        flash("環境設定値を上書きしました.")
+        return render_template("environment_settings.html", form=env_sttng_form)
+
+
+# 「security_settings」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
+@view.route("/security_settings", methods=["GET", "POST"])
+def security_settings():
+    # 関数内で使用する変数・オブジェクトを宣言・定義する.
+    config = configparser.ConfigParser()
+    sec_sttng_form = SecuritySettingForm()
+
+    # 該当のURLエンドポイントに入ったことをロギングする.
+    rslt = se.etc.logging__info("view at /security_settings")
+
+    # ロギングに失敗したら, 例外を発生させる.
+    if rslt == "NG":
+        raise InternalServerError
+
+    # セッション未作成ならば, ホーム画面のページヘリダイレクトする.
+    if not session:
+        return redirect(url_for("view.home"))
+
+    # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
+    if "is-admin-enter" not in session:
+        return redirect(url_for("view.home"))
+
+    # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
+    if session["is-admin-enter"] == False:
+        return redirect(url_for("view.home"))
+
+    if request.method == "GET":
+        # セッションに現在ページの情報を設定して,
+        # Flaskフォームと共にテンプレートを返す.
+        session["referrer-page"] = "view.security_settings"
+
+        # もしも, 設定ファイルが存在しなければ, すべての項目がデフォルト値のファイルを作成する.
+        if not os.path.exists(consts.SECURITY_SETTING_PATH):
+            config["security"] = {"hashed-password" : generate_password_hash(consts.ADMIN_INITIAL_PASSWORD)}
+            with open(consts.SECURITY_SETTING_PATH, "w") as configfile:
+                 config.write(configfile)
+
+        # 設定ファイルの内容をflaskフォームに読み込んで, フォームと共にテンプレートを返す.
+        # ※各設定項目が消失していた場合, デフォルト値で各項目を復元する.
+        config.read(consts.SECURITY_SETTING_PATH, encoding="utf-8")
+        sec_sttng_form.new_password.data = config.get("security", "hashed-password", fallback=generate_password_hash(consts.ADMIN_INITIAL_PASSWORD))
+        return render_template("security_settings.html", form=sec_sttng_form)
+
+    if request.method == "POST":
+        # 直前に, GETメソッドで該当ページを取得しているかを調べる.
+        # 取得していなければ, 強制的に現在ページへリダイレクトする.
+        if session["referrer-page"] != "view.security_settings":
+            return redirect(url_for("view.security_settings"))
+
+        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if sec_sttng_form.cancel.data:
+            sec_sttng_form.new_password.data = ""
+            return render_template("security_settings.html", form=sec_sttng_form)
+
+        # flaskフォームに入力・記憶されている内容をバリデーションする.
+        # 基準を満たさない場合は, 元のフォームと共にテンプレートを返す.
+        if sec_sttng_form.new_password.data == "":
+            flash("パスワードが入力されていません.")
+            return render_template("security_settings.html", form=sec_sttng_form, happen_error=True)
+        if len(sec_sttng_form.new_password.data) > consts.PASSWORD_LENGTH:
+            flash("パスワードは, " + str(consts.PASSWORD_LENGTH) + "文字以内にしてください.")
+            return render_template("security_settings.html", form=sec_sttng_form, happen_error=True)
+        if " " in sec_sttng_form.new_password.data:
+            flash("パスワードの一部として, 半角スペースは使用できません.")
+            return render_template("security_settings.html", form=sec_sttng_form, happen_error=True)
+
+        # flaskフォームの内容を読み込んで, 設定ファイルを上書きする.
+        config.read(consts.SECURITY_SETTING_PATH, encoding="utf-8")
+        config.set("security", "hashed-password", generate_password_hash(sec_sttng_form.new_password.data))
+        with open(consts.SECURITY_SETTING_PATH, 'w') as configfile:
+             config.write(configfile)
+
+        # 完了メッセージを設定してテンプレートを返す.
+        flash("機密設定値を上書きしました.")
+        return render_template("security_settings.html", form=sec_sttng_form)
 
 
 # エラー処理のためのカスタム関数を宣言・定義する.
