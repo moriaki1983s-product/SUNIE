@@ -179,17 +179,20 @@ class EtcUnit:
     def retrieve_timedelta_from_date_string(self, dt_str):
         return utils_time.retrieve_timedelta_from_date_string(dt_str)
 
-    def convert_datetime_string_to_iso_style(self, dttm_str):
-        return utils_time.convert_datetime_string_to_iso_style(dttm_str)
+    def modify_style_for_datetime_string(self, dttm_str, is_iso):
+        return utils_time.modify_style_for_datetime_string(dttm_str, is_iso)
 
-    def convert_datetime_string_to_display_style(self, dttm_str):
-        return utils_time.convert_datetime_string_to_display_style(dttm_str)
+    def convert_datetime_object_to_string_for_eventday(self, dt_obj):
+        return utils_time.convert_datetime_object_to_string_for_eventday(dt_obj)
+
+    def convert_datetime_object_to_string_for_timestamp(self, dttm_obj, is_iso):
+        return utils_time.convert_datetime_object_to_string_for_timestamp(dttm_obj, is_iso)
 
     def convert_string_to_datetime_object_for_eventday(self, dt_str):
         return utils_time.convert_string_to_datetime_object_for_eventday(dt_str)
 
-    def convert_string_to_datetime_object_for_timestamp(self, dttm_str):
-        return utils_time.convert_string_to_datetime_object_for_timestamp(dttm_str)
+    def convert_string_to_datetime_object_for_timestamp(self, dttm_str, is_iso):
+        return utils_time.convert_string_to_datetime_object_for_timestamp(dttm_str, is_iso)
 
     def check_timestamp_by_iso_style(self, txt):
         return utils_time.check_timestamp_by_iso_style(txt)

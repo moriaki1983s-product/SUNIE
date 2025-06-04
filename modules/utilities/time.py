@@ -810,23 +810,34 @@ def retrieve_timedelta_from_date_string(dt_str):
 
 # 日時情報を表す文字列をISO形式(=内部表現)に変換する.
 # ※ISO形式とは, Web標準のカレンダーのための形式.
-def convert_datetime_string_to_iso_style(dttm_str):
-    return dttm_str.replace("/", "-").replace(" ", "T")
+def modify_style_for_datetime_string(dttm_str, is_iso):
+    if is_iso:
+        return str(dttm_str).replace("/", "-").replace(" ", "T")
+    return str(dttm_str).replace("-", "/").replace("T", " ")
 
 
-# 日時情報を表す文字列を見たままの表示形式に変換する.
-def convert_datetime_string_to_display_style(dttm_str):
-    return dttm_str.replace("-", "/").replace("T", " ")
+# [datetime]型の日付情報を[str]型に変換する.
+def convert_datetime_object_to_string_for_eventday(dt_obj):
+    return datetime.datetime.strftime(dt_obj, "%Y-%m-%d")
 
 
-# [str]型の日付情報を[datetime]型に変換する.
+# [datetime]型の日時情報を[str]型に変換する.
+def convert_datetime_object_to_string_for_timestamp(dttm_obj, is_iso):
+    if is_iso:
+        return datetime.datetime.strftime(dttm_obj, "%Y-%m-%dT%H:%M:%S")
+    return datetime.datetime.strftime(dttm_obj, "%Y-%m-%d %H:%M:%S")
+
+
+# [str]型の日付情報(=イベントデイ)を[datetime]型に変換する.
 def convert_string_to_datetime_object_for_eventday(dt_str):
     return datetime.datetime.strptime(dt_str, "%Y-%m-%d")
 
 
-# [str]型の日時情報を[datetime]型に変換する.
-def convert_string_to_datetime_object_for_timestamp(dttm_str):
-    return datetime.datetime.strptime(dttm_str, "%Y-%m-%dT%H:%M:%S")
+# [str]型の日時情報(=タイムスタンプ)を[datetime]型に変換する.
+def convert_string_to_datetime_object_for_timestamp(dttm_str, is_iso):
+    if is_iso:
+        return datetime.datetime.strptime(dttm_str, "%Y-%m-%dT%H:%M:%S")
+    return datetime.datetime.strptime(dttm_str, "%Y-%m-%d %H:%M:%S")
 
 
 # 対象の文字列がISO形式のタイムスタンプ(=日時情報)かを判定する.
