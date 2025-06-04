@@ -47,6 +47,13 @@
 <table class="table">
 <tr>
 <td>
+{{ form.sentiment_support.label }}{{ form.sentiment_support(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
 {{ form.strength.label }}{{ form.strength(class_="form-control") }}
 </td>
 </tr>
@@ -75,14 +82,14 @@
 <table class="table">
 <tr>
 <td>
-{{ form.created_at.label }}{{ form.created_at(class_="form-control") }}
+{{ form.created_at.label }}{{ form.created_at(class_="form-control", type="datetime-local") }}
 </td>
 </tr>
 </table>
 <table class="table">
 <tr>
 <td>
-{{ form.updated_at.label }}{{ form.updated_at(class_="form-control") }}
+{{ form.updated_at.label }}{{ form.updated_at(class_="form-control", type="datetime-local") }}
 </td>
 </tr>
 </table>

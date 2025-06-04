@@ -1,0 +1,47 @@
+{% extends "after_admin_enter__base.html" %}
+{% block inner_main %}
+<section>
+<form method="post">
+{{ form.hidden_tag() }}
+<table class="table">
+<tr>
+<td>
+{{ form.new_password.label }}{{ form.new_password(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>
+{{ form.decide(class_="btn btn-primary btn-block") }}
+</td>
+<td></td>
+<td></td>
+<td>
+{{ form.cancel(class_="btn btn-primary btn-block") }}
+</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</table>
+</form>
+</section>
+{% endblock %}

@@ -6,11 +6,10 @@
 <thead class="items-header">
 <tr>
 <th scope="col1">ID</th>
-<th scope="col1">綴り&見出し</th>
-<th scope="col1">意味&内容</th>
+<th scope="col1">職員発話</th>
+<th scope="col1">アプリ発話</th>
 <th scope="col1">職員名</th>
-<th scope="col1">項目操作1</th>
-<th scope="col1">項目操作2</th>
+<th scope="col1">項目操作</th>
 </tr>
 </thead>
 <tbody>
@@ -21,18 +20,12 @@
 <td>{{item[2]}}</td>
 <td>{{item[3]}}</td>
 <td>
-<input id="erasure-item-id" name="erasure-item-id"
-type="submit" class="btn btn-primary btn-block" value="抹消"
-onclick="document.getElementById('hidden-erasure-item-id').value='{{item[0]}}';"/>
-</td>
-<td>
 <input id="detail-item-id" name="detail-item-id"
 type="submit" class="btn btn-primary btn-block" value="詳細"
 onclick="document.getElementById('hidden-detail-item-id').value='{{item[0]}}';"/>
 </td>
 </tr>
 {% endfor %}
-<input id="hidden-erasure-item-id" name="hidden-erasure-item-id" type="hidden" value=""></input>
 <input id="hidden-detail-item-id" name="hidden-detail-item-id" type="hidden" value=""></input>
 </tbody>
 </table>
