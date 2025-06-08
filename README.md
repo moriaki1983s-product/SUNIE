@@ -54,10 +54,11 @@
 
 
 ## 製作者
-moriaki1983
+森下哲博(moriaki1983)
 
 
 
 
 ## 連絡先
 moriaki1983@outlook.jp
+moriaki.circle@gmail.com
