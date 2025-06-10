@@ -70,6 +70,7 @@
 `app.bat` アプリを間接的に呼び出して実行するためのファイルです。   
 `.env` dot-envが参照するファイルです。  
 `.gitignore` Github-CLIが参照するファイルです。  
+`README.md` このファイル自身です。  
 `templates` HTMLテンプレートを収めたフォルダーです。  
 `resources` JS・CSS・ファビコン・テンプレート背景画像等を収めたフォルダーです。  
 `temporaries` アプリが実行時に使用する一時ファイルを収めたフォルダーです。  
