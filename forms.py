@@ -552,7 +552,7 @@ class ModifyStaffForm(FlaskForm):
       menu_choices3 = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       name = StringField("職員名 :", default="", render_kw={"autocomplete": "off"})
       kana_name = StringField("職員カナ名 :", default="", render_kw={"autocomplete": "off"})
-      password = PasswordField("パスワード :", default="", render_kw={"autocomplete": "off"})
+      # password = PasswordField("パスワード :", default="", render_kw={"autocomplete": "off"})
       sex = SelectField("性別 :", default="", choices=menu_choices1)
       blood_type = SelectField("血液型 :", default="", choices=menu_choices2)
       birth_date = DateField("生年月日 :", default="", format=consts.BIRTH_DATE_FORMAT)

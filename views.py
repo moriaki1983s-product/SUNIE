@@ -2536,7 +2536,6 @@ def show_histories(id=None):
         session["referrer-page"] = "view.show_histories"
 
         # 該当ページ内のボタンから遷移するためのセッション項目を削除する.
-        session.pop("hidden-modify-item-id", None)
         session.pop("hidden-detail-item-id", None)
 
         # DBから履歴レコードを取得してテンプレートと共に返す.
@@ -2628,9 +2627,6 @@ def show_histories(id=None):
             return redirect(url_for("view.show_histories"))
 
         # フォームボタン群の中から, 押下されたボタンに応じたページへリダイレクトする.
-        if request.form["hidden-modify-item-id"] != "":
-            session["hidden-modify-item-id"] = request.form["hidden-modify-item-id"]
-            return redirect(url_for("view.modify_history"))
         if request.form["hidden-detail-item-id"] != "":
             session["hidden-detail-item-id"] = request.form["hidden-detail-item-id"]
             return redirect(url_for("view.detail_history"))
@@ -2719,17 +2715,17 @@ def show_enters_or_exits(id=None):
                     rsn_tmp = "アプリ終了"
                 else:
                     rsn_tmp = "その他(分類不明)"
-                if str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[1].split(":")[2] == "00":
-                    dt_tmp = str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[0] + " "
+                if str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[2] == "00":
+                    dt_tmp = str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[0] + " "
                     tm_tmp = (
-                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[1].split(":")[0] + ":" +
-                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[1].split(":")[1] + ":" +
+                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[0] + ":" +
+                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[1] + ":" +
                     str(ent_or_ext_tmp.enter_or_exit_at_second)
                     )
                     dttm_tmp = se.etc.modify_style_for_datetime_string(dt_tmp + tm_tmp, False)
                 else:
                     dttm_tmp = (
-                    se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at), False)
+                    se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False), False)
                     )
                 ents_or_exts_fnl.append([id_tmp,
                                          stff_nm_tmp,
@@ -2786,32 +2782,32 @@ def show_enters_or_exits(id=None):
                     rsn_tmp = "アプリ終了"
                 else:
                     rsn_tmp = "その他(分類不明)"
-                if str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[1].split(":")[2] == "00":
-                    dt_tmp = str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[0] + " "
+                if str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[2] == "00":
+                    dt_tmp = str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[0] + " "
                     tm_tmp = (
-                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[1].split(":")[0] + ":" +
-                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at)).split("T")[1].split(":")[1] + ":" +
+                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[0] + ":" +
+                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[1] + ":" +
                     str(ent_or_ext_tmp.enter_or_exit_at_second)
                     )
                     dttm_tmp = se.etc.modify_style_for_datetime_string(dt_tmp + tm_tmp, False)
                 else:
                     dttm_tmp = (
-                    se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at), False)
+                    se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False), False)
                     )
                 ents_or_exts_fnl.append([id_tmp,
                                          stff_nm_tmp,
                                          rsn_tmp,
                                          dttm_tmp
                                         ])
-                per_pg = consts.ENTER_OR_EXIT_ITEM_PER_PAGE
-                pg = request.args.get(get_page_parameter(), type=int, default=1)
-                pg_dat = ents_or_exts_fnl[(pg - 1) * per_pg : pg * per_pg]
-                pgntn = Pagination(page=pg,
-                                   total=len(ents_or_exts_fnl),
-                                   per_page=per_pg,
-                                   css_framework=consts.PAGINATION_CSS
-                                  )
-                return render_template("show_enters_or_exits.html", page_data=pg_dat, pagination=pgntn)
+            per_pg = consts.ENTER_OR_EXIT_ITEM_PER_PAGE
+            pg = request.args.get(get_page_parameter(), type=int, default=1)
+            pg_dat = ents_or_exts_fnl[(pg - 1) * per_pg : pg * per_pg]
+            pgntn = Pagination(page=pg,
+                               total=len(ents_or_exts_fnl),
+                               per_page=per_pg,
+                               css_framework=consts.PAGINATION_CSS
+                              )
+            return render_template("show_enters_or_exits.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
@@ -8204,7 +8200,7 @@ def modify_enter_or_exit():
         mod_entr_or_exit_form.staff_name.data = entr_or_exit.staff_name
         mod_entr_or_exit_form.staff_kana_name.data = entr_or_exit.staff_kana_name
         mod_entr_or_exit_form.reason.data = entr_or_exit.reason
-        mod_entr_or_exit_form.enter_or_exit_at.data = se.etc.convert_string_to_datetime_object_for_timestamp(entr_or_exit.enter_or_exit_at, True)
+        mod_entr_or_exit_form.enter_or_exit_at.data = entr_or_exit.enter_or_exit_at
         mod_entr_or_exit_form.enter_or_exit_at_second.data = entr_or_exit.enter_or_exit_at_second
         mod_entr_or_exit_form.is_hidden.data = ("yes" if entr_or_exit.is_hidden == True else "no")
         mod_entr_or_exit_form.is_exclude.data = ("yes" if entr_or_exit.is_exclude == True else "no")
@@ -8315,14 +8311,14 @@ def modify_staff():
         db_session.query(Staff).filter(Staff.id == int(session["hidden-modify-item-id"])).first()
         )
         db_session.close()
-    
+        print(stff.hashed_password)
         # フォームにレコードの内容を複写して, フォームと共にテンプレートを返す.
         mod_stff_form.name.data = stff.name
         mod_stff_form.kana_name.data = stff.kana_name
-        mod_stff_form.password.data = stff.hashed_password
+        # mod_stff_form.password.data = stff.hashed_password
         mod_stff_form.sex.data = stff.sex
         mod_stff_form.blood_type.data = stff.blood_type
-        mod_stff_form.birth_date.data = datetime.datetime.strptime(stff.birth_date, "%Y-%m-%d")
+        mod_stff_form.birth_date.data = stff.birth_date
         mod_stff_form.is_hidden.data = ("yes" if stff.is_hidden == True else "no")
         mod_stff_form.is_exclude.data = ("yes" if stff.is_exclude == True else "no")
         return render_template("modify_staff.html", form=mod_stff_form)
@@ -8345,9 +8341,9 @@ def modify_staff():
         if mod_stff_form.kana_name.data == "":
             flash("職員カナ名が入力されていません.")
             return render_template("modify_stafff.html", form=mod_stff_form, happen_error=True)
-        if mod_stff_form.password.data == "":
-            flash("パスワードが入力されていません.")
-            return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
+        # if mod_stff_form.password.data == "":
+        #     flash("パスワードが入力されていません.")
+        #     return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
         if mod_stff_form.sex.data == "":
             flash("性別が選択されていません.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
@@ -8366,18 +8362,18 @@ def modify_staff():
         if not se.reg.check_katakana_uppercase_in_ja(mod_stff_form.kana_name.data):
             flash("職員カナ名は, カタカナのみにしてください.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
-        if len(mod_stff_form.password.data) > consts.PASSWORD_LENGTH:
-            flash("パスワードは, " + str(consts.PASSWORD_LENGTH) + "文字以内にしてください.")
-            return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
+        # if len(mod_stff_form.password.data) > consts.PASSWORD_LENGTH:
+        #     flash("パスワードは, " + str(consts.PASSWORD_LENGTH) + "文字以内にしてください.")
+        #     return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
         if ((" " in mod_stff_form.name.data) or ("　" in mod_stff_form.name.data)):
             flash("職員名の一部として, 半角スペースと全角スペースは使用できません.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
         if ((" " in mod_stff_form.kana_name.data) or ("　" in mod_stff_form.kana_name.data)):
             flash("職員カナ名の一部として, 半角スペースと全角スペースは使用できません.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
-        if " " in mod_stff_form.password.data:
-            flash("パスワードの一部として, 半角スペースは使用できません.")
-            return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
+        # if " " in mod_stff_form.password.data:
+        #     flash("パスワードの一部として, 半角スペースは使用できません.")
+        #     return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
 
         drtn_in_dys__crit1 = se.etc.retrieve_timedelta_from_years(consts.STAFF_AGE_TOP)
         drtn_in_dys__crit2 = se.etc.retrieve_timedelta_from_years(consts.STAFF_AGE_BOTTOM)
@@ -8403,7 +8399,7 @@ def modify_staff():
         crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
         stff.name = escape(mod_stff_form.name.data)
         stff.kana_name = escape(mod_stff_form.kana_name.data)
-        stff.hashed_password = generate_password_hash(mod_stff_form.password.data)
+        # stff.hashed_password = generate_password_hash(mod_stff_form.password.data)
         stff.sex = mod_stff_form.sex.data
         stff.blood_type = mod_stff_form.blood_type.data
         stff.birth_date = mod_stff_form.birth_date.data

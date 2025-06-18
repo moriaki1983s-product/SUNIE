@@ -12,42 +12,14 @@
 <table class="table">
 <tr>
 <td>
-{{ form.spell_and_header.label }}{{ form.spell_and_header(class_="form-control", style_="resize: none;") }}
+{{ form.staff_message.label }}{{ form.staff_message(class_="form-control", style_="resize: none;") }}
 </td>
 </tr>
 </table>
 <table class="table">
 <tr>
 <td>
-{{ form.mean_and_content.label }}{{ form.mean_and_content(class_="form-control", style_="resize: none;") }}
-</td>
-</tr>
-</table>
-<table class="table">
-<tr>
-<td>
-{{ form.category_tags.label }}{{ form.category_tags(class_="form-control") }}
-</td>
-</tr>
-</table>
-<table class="table">
-<tr>
-<td>
-{{ form.has_image.label }}{{ form.has_image(class_="form-control") }}
-</td>
-</tr>
-</table>
-<table class="table">
-<tr>
-<td>
-{{ form.has_sound.label }}{{ form.has_sound(class_="form-control") }}
-</td>
-</tr>
-</table>
-<table class="table">
-<tr>
-<td>
-{{ form.has_video.label }}{{ form.has_video(class_="form-control") }}
+{{ form.application_message.label }}{{ form.application_message(class_="form-control", style_="resize: none;") }}
 </td>
 </tr>
 </table>
@@ -98,7 +70,7 @@
 <br>
 <a class="btn btn-primary" href="{{url_for('view.show_histories')}}">履歴一覧</a>
 <a class="btn btn-primary" href="{{url_for('view.search_histories')}}">履歴検索</a>
-<a class="btn btn-primary" href="{{url_for('view.import_histories')}}">履歴取込</a>
+<a class="btn btn-primary" href="{{url_for('view.export_histories')}}">履歴書出</a>
 <br>
 <br>
 </section>
