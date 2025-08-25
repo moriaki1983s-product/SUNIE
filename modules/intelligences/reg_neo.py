@@ -50,16 +50,32 @@ class RegUnit:
         gnrtd_dat = self.dat
         return gnrtd_dat
 
-    # 自然テキストを解析するためのメソッド1を定義する.
+
+    # 「modules.utilities.text」への委譲メソッドを定義する.
+    # ※詳細なコメントについては, 該当モジュールを参照すること.
     def perform_morphological_analysis_on_natural_text(self, txt):
         chars = utils_text.characterize_and_tagging(txt)
         tkns_mrg = utils_text.tokenize_and_tagging(chars)
 
         return tkns_mrg
 
+    def split_text_message_on_delimiter(self, txt_msg):
+        return utils_text.split_text_message_on_delimiter(txt_msg)
 
-    # 「modules.utilities.text」への委譲メソッドを定義する.
-    # ※詳細なコメントについては, 該当モジュールを参照すること.
+    def split_text_message_character_type(self, txt_msg):
+        return utils_text.split_text_message_character_type(txt_msg)
+
+    def analyze_words_in_texts(self, stff_wrds_in_txts):
+        return utils_text.analyze_words_in_texts(stff_wrds_in_txts)
+
+    def generate_words_in_texts(self, stff_fct, stff_intnt, stff_sntmnt):
+        return utils_text.generate_words_in_texts(self, stff_fct, stff_intnt, stff_sntmnt)
+
+    # def asemble_text_message(self, app_wrds_in_txts):
+    #     return utils_text.asemble_text_message(app_wrds_in_txts)
+    def asemble_text_message(self):
+        return utils_text.asemble_text_message()
+
     def check_numeric_in_en(self, txt):
         return utils_text.check_numeric_in_en(txt)
 
@@ -68,6 +84,3 @@ class RegUnit:
 
     def check_katakana_uppercase_in_ja(self, txt):
         return utils_text.check_katakana_uppercase_in_ja(txt)
-
-    def check_timestamp_by_iso_style(self, txt):
-        return utils_text.check_timestamp_by_iso_style(txt)

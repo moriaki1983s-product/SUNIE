@@ -104,8 +104,8 @@ class EtcUnit:
     def check_under_folder(self, pth, fldr):
         return utils_data.check_under_folder(pth, fldr)
 
-    def archive_file(self, fl, fl_pth, fl_lbl):
-        return utils_data.archive_file(fl, fl_pth, fl_lbl)
+    def save_file(self, fl, fl_pth, fl_lbl):
+        return utils_data.save_file(fl, fl_pth, fl_lbl)
 
 
     # 「modules.utilities.time」への委譲メソッドを定義する.
@@ -164,8 +164,8 @@ class EtcUnit:
     def retrieve_current_weekday_as_string(self, tz, lng):
         return utils_time.retrieve_current_weekday_as_string(tz, lng)
 
-    def retrieve_current_datetime_as_file_label(self):
-        return utils_time.retrieve_current_datetime_as_file_label()
+    def retrieve_current_time_as_file_label(self):
+        return utils_time.retrieve_current_time_as_file_label()
 
     def retrieve_timedelta_from_days(self, dys):
         return utils_time.retrieve_timedelta_from_days(dys)
