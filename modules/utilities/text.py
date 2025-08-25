@@ -10,6 +10,7 @@ import re
 import regex
 import emoji
 import calendar
+import random
 
 
 # 日本語の常用漢字を宣言する.
@@ -594,8 +595,8 @@ def check_pure_japanese_charcter(char):
         (r'\u31F0', r'\u31FF'), # カタカナ拡張
         (r'\uFF10', r'\uFF19'), # 全角数字
         (r'\uFF21', r'\uFF3A'), # 全角英大文字
-        (r'\uFF41', r'\uFF5A')  # 全角英小文字
-        # (r'\uFF01', r'\uFF5E'),  # 全角記号
+        (r'\uFF41', r'\uFF5A'), # 全角英小文字
+        (r'\uFF01', r'\uFF5E')  # 全角記号
     ]
 
     for trgt_strt, trgt_end in char_rngs:
@@ -1007,3 +1008,130 @@ def tokenize_and_tagging(chars):
 
 
     return tkns_mrg
+
+
+#テキストが指定の文字列で開始するかを判定する
+def check_text_start_string(txt, pttrn_str):
+    is_strt = txt.startswith(pttrn_str)
+
+    return is_strt
+
+
+#テキストが指定の文字列で終結するかを判定する(改行コードを終端とする)
+def check_text_terminate_string(txt, pttrn_str):
+    is_trmnt = txt.endswith(pttrn_str)
+
+    return is_trmnt
+
+
+# 文字の種類(=文字種)を取得するための関数を宣言・定義する.
+def get_character_type(char):
+    pttrn_kanji = r"[\u4E00-\u9FFF]"
+    pttrn_hiragana = r"[\u3040-\u309F]"
+    pttrn_katakana = r"[\u30A0-\u30FF]"
+    pttrn_katakana_hankaku = r"[\uFF66-\uFF9F]"
+    pttrn_katakana_kakutyou = r"[\u31F0-\u31FF]"
+    pttrn_suuji_zenkaku = r"[\uFF10-\uFF19]"
+    pttrn_alphabet_komoji_zenkaku = r"[\uFF21-\uFF3A]"
+    pttrn_alphabet_oomoji_zenkaku = r"[\uFF41-\uFF5A]"
+
+    if regex.match(pttrn_kanji, char):
+        return "kanji"
+    if regex.match(pttrn_hiragana, char):
+        return "hiragana"
+    elif regex.match(pttrn_katakana, char):
+        return "katakana"
+    elif regex.match(pttrn_katakana_hankaku, char):
+        return "katakana-hankaku"
+    elif regex.match(pttrn_katakana_kakutyou, char):
+        return "katakana-kakutyou"
+    elif regex.match(pttrn_suuji_zenkaku, char):
+        return "suuji-zenkaku"
+    elif regex.match(pttrn_alphabet_komoji_zenkaku, char):
+        return "alphabet-komoji-zenkaku"
+    elif regex.match(pttrn_alphabet_oomoji_zenkaku, char):
+        return "alphabet-oomoji-zenkaku"
+    else:
+        return "others"
+
+
+# テキストメッセージを改行コードなどの区切り文字を基準に分割するための関数を宣言・定義する.
+def split_text_message_on_delimiter(txt_msg):
+    spltd_ln_txts_tmp = re.split(r"[\r\n.。,、 \u3000]", txt_msg)
+    spltd_ln_txts_fnl = [spltd_ln_txt_tmp for spltd_ln_txt_tmp in spltd_ln_txts_tmp if spltd_ln_txt_tmp]
+
+    return spltd_ln_txts_fnl
+
+
+# 行メッセージを文字種を基準に分割するための関数を宣言・定義する.
+def split_text_message_character_type(txt_msg):
+    spltd_typ_wrds_tmp = []
+    spltd_typ_wrds_fnl = []
+    crrnt_chnk = ""
+    crrnt_typ = ""
+
+    for char in txt_msg:
+        char_typ = get_character_type(char)
+        if char_typ == crrnt_typ:
+            crrnt_chnk += char
+            crrnt_typ = char_typ
+            continue
+        else:
+            if crrnt_chnk == "":
+               crrnt_chnk += char
+               crrnt_typ = char_typ
+               continue
+            else:
+               spltd_typ_wrds_tmp.append(crrnt_chnk)
+               crrnt_chnk = char
+               crrnt_typ = char_typ
+               continue
+    else:
+        if crrnt_chnk:
+            spltd_typ_wrds_tmp.append(crrnt_chnk)
+
+    spltd_typ_wrds_fnl = [spltd_typ_wrd_tmp for spltd_typ_wrd_tmp in spltd_typ_wrds_tmp if spltd_typ_wrd_tmp]
+    return spltd_typ_wrds_fnl
+
+
+# 
+def analyze_words_in_texts(stff_wrds_in_txts):
+    pass
+
+
+# 
+def generate_words_in_texts(self, stff_fct, stff_intnt, stff_sntmnt):
+    pass
+
+
+# 返信メッセージを生成するためのメソッドを宣言・定義する.
+# def asemble_text_message(app_wrds_in_txts):
+def asemble_text_message():
+    sntmnt_cnddt = ["JOY", "ANGER", "PITY", "COMFORT", "MIXED", "NEUTRAL"]
+    dcid_sntmnt = random.choice(sntmnt_cnddt)
+
+    if dcid_sntmnt == "JOY":
+         msg_cnddt = ["お世話になってます♪", "またまた～♪"]
+         gnrtd_msg = random.choice(msg_cnddt)
+
+    elif dcid_sntmnt == "ANGER":
+         msg_cnddt = ["それで？", "何が言いたいの？"]
+         gnrtd_msg = random.choice(msg_cnddt)
+
+    elif dcid_sntmnt == "PITY":
+         msg_cnddt = ["ええと・・・", "・・・"]
+         gnrtd_msg = random.choice(msg_cnddt)
+
+    elif dcid_sntmnt == "COMFORT":
+         msg_cnddt = ["くつろいでね", "元気でね"]
+         gnrtd_msg = random.choice(msg_cnddt)
+
+    elif dcid_sntmnt == "MIXED":
+         msg_cnddt = ["どうしたらいいですか？", "オロオロ 汗"]
+         gnrtd_msg = random.choice(msg_cnddt)
+
+    else:
+         msg_cnddt = ["どうしました？", "お元気そうで"]
+         gnrtd_msg = random.choice(msg_cnddt)
+
+    return gnrtd_msg

@@ -779,8 +779,8 @@ def retrieve_current_weekday_as_string(tz, lng):
 
 
 # ファイルラベルとしての現在の日時を取得する.
-def retrieve_current_datetime_as_file_label():
-    return datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
+def retrieve_current_time_as_file_label():
+    return datetime.datetime.now().strftime("%H%M%S%f")
 
 
 # 指定の期間(=日数)を[timedelta]型で取得する.

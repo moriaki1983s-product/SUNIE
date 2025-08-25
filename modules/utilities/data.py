@@ -7,6 +7,7 @@
 import os
 import sys
 import mimetypes
+from datetime import datetime
 
 
 
@@ -81,14 +82,23 @@ def check_under_folder(pth, fldr):
     return (os.path.commonpath([abs_pth, abs_fldr]) == abs_fldr)
 
 
-# ファイルをアーカイブするための関数を宣言・定義する.
-def archive_file(fl, fl_pth, fl_lbl):
+# ファイルを所定の場所に保存するための関数を宣言・定義する.
+# ※現在日付を名前とするフォルダーを作成して, そこにファイルを保存する.
+def save_file(fl, fl_pth, fl_lbl):
+    fldr_nm = datetime.now().strftime("%Y-%m-%d")
     fl_pth_tmp = ""
 
     if fl.filename == "":
         return fl_pth_tmp
     else:
-        fl_ext = fl.filename.split(".")[-1]
-        fl_pth_tmp = fl_pth + fl_lbl + "." + fl_ext
-        fl.save(fl_pth_tmp)
-        return fl_pth_tmp
+        try:
+          os.makedirs(fl_pth + fldr_nm)
+          fl_ext = fl.filename.split(".")[-1]
+          fl_pth_tmp = fl_pth + fldr_nm + "/" + fl_lbl + "." + fl_ext
+          fl.save(fl_pth_tmp)
+          return fl_pth_tmp
+        except FileExistsError:
+          fl_ext = fl.filename.split(".")[-1]
+          fl_pth_tmp = fl_pth + fldr_nm + "/" + fl_lbl + "." + fl_ext
+          fl.save(fl_pth_tmp)
+          return fl_pth_tmp
