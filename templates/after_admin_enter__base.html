@@ -40,7 +40,7 @@
 <a class="nav-link" href="{{url_for('view.show_categories')}}">分類</a>
 </li>
 <li class="nav-item">
-<a class="nav-link" href="{{url_for('view.show_knowledges')}}">知識</a>
+<a class="nav-link" href="{{url_for('view.show_facts')}}">事実</a>
 </li>
 <li class="nav-item">
 <a class="nav-link" href="{{url_for('view.show_rules')}}">規則</a>
@@ -77,6 +77,9 @@
 </nav>
 </header>
 <div class="display-depend-on-viewport">
+<noscript>
+<p class="unavailable-message">このブラウザでは, JavaScriptが無効化されているため, 当該アプリを利用できません.</p>
+</noscript>
 <main>
 {% block inner_main %}
 {% endblock %}

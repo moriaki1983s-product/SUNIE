@@ -1,7 +1,7 @@
 {% extends "after_admin_enter__base.html" %}
 {% block inner_main %}
 <section>
-<form method="post">
+<form method="post" enctype="multipart/form-data">
 {{ form.hidden_tag() }}
 <table class="table">
 <tr>
@@ -20,35 +20,49 @@
 <table class="table">
 <tr>
 <td>
-{{ form.intent.label }}{{ form.intent(class_="form-control") }}
+{{ form.category_tag.label }}{{ form.category_tag(class_="form-control", style_="resize: none;") }}
 </td>
 </tr>
 </table>
 <table class="table">
 <tr>
 <td>
-{{ form.sentiment.label }}{{ form.sentiment(class_="form-control") }}
+{{ form.attached_image_file.label }}
+<br>
+{% if archived_image_file_path == '' %}
+<p class="attention-message">現時点でイメージファイルは登録されていません.</p>
+{% else %}
+<a href="{{archived_image_file_path}}" target="_blank">イメージファイルを新しいタブで開く</a>
+{% endif %}
+{{ form.attached_image_file(class_="form-control") }}
 </td>
 </tr>
 </table>
 <table class="table">
 <tr>
 <td>
-{{ form.sentiment_support.label }}{{ form.sentiment_support(class_="form-control") }}
+{{ form.attached_sound_file.label }}
+<br>
+{% if archived_sound_file_path == '' %}
+<p class="attention-message">現時点でサウンドファイルは登録されていません.</p>
+{% else %}
+<a href="{{archived_sound_file_path}}" target="_blank">サウンドファイルを新しいタブで開く</a>
+{% endif %}
+{{ form.attached_sound_file(class_="form-control") }}
 </td>
 </tr>
 </table>
 <table class="table">
 <tr>
 <td>
-{{ form.strength.label }}{{ form.strength(class_="form-control") }}
-</td>
-</tr>
-</table>
-<table class="table">
-<tr>
-<td>
-{{ form.part_of_speech.label }}{{ form.part_of_speech(class_="form-control") }}
+{{ form.attached_video_file.label }}
+<br>
+{% if archived_video_file_path == '' %}
+<p class="attention-message">現時点でビデオファイルは登録されていません.</p>
+{% else %}
+<a href="{{archived_video_file_path}}" target="_blank">ビデオファイルを新しいタブで開く</a>
+{% endif %}
+{{ form.attached_video_file(class_="form-control") }}
 </td>
 </tr>
 </table>
@@ -117,10 +131,10 @@
 <section>
 <br>
 <br>
-<a class="btn btn-primary" href="{{url_for('view.show_words')}}">語句一覧</a>
-<a class="btn btn-primary" href="{{url_for('view.search_words')}}">語句検索</a>
-<a class="btn btn-primary" href="{{url_for('view.import_words')}}">語句取込</a>
-<a class="btn btn-primary" href="{{url_for('view.export_words')}}">語句書出</a>
+<a class="btn btn-primary" href="{{url_for('view.show_knowledges')}}">知識一覧</a>
+<a class="btn btn-primary" href="{{url_for('view.search_knowledges')}}">知識検索</a>
+<a class="btn btn-primary" href="{{url_for('view.import_knowledges')}}">知識取込</a>
+<a class="btn btn-primary" href="{{url_for('view.export_knowledges')}}">知識書出</a>
 <br>
 <br>
 </section>

@@ -2,33 +2,33 @@
 {% block inner_main %}
 <section>
 <table class="table">
-{% if text_from_staff %}
+{% if staff_text_message %}
 <tr>
 <td>
-<label for="text-from-staff">職員からのメッセージ : </label>
-<textarea id="text-from-staff" name="text-from-staff" class="form-control" style="resize: none;" rows="8" readonly>{{text_from_staff}}</textarea>
+<label for="staff-text-message">職員からのメッセージ : </label>
+<textarea id="staff-text-message" name="staff-text-message" class="form-control" style="resize: none;" rows="8" readonly>{{staff_text_message}}</textarea>
 </td>
 </tr>
 {% else %}
 <tr>
 <td>
-<label for="text-from-staff">職員からのメッセージ : </label>
-<textarea id="text-from-staff" name="text-from-staff" class="form-control" style="resize: none;" rows="8" readonly>送信していません.</textarea>
+<label for="staff-text-message">職員からのメッセージ : </label>
+<textarea id="staff-text-message" name="staff-text-message" class="form-control" style="color: salmon; resize: none;" rows="8" readonly>送信していません.</textarea>
 </td>
 </tr>
 {% endif %}
-{% if text_from_application %}
+{% if application_text_message %}
 <tr>
 <td>
-<label for="text-from-application">アプリからのメッセージ : </label>
-<textarea id="text-from-application" name="text-from-application" class="form-control" style="resize: none;" rows="8" readonly>{{text_from_application}}</textarea>
+<label for="application-text-message">アプリからのメッセージ : </label>
+<textarea id="application-text-message" name="application-text-message" class="form-control" style="resize: none;" rows="8" readonly>{{application_text_message}}</textarea>
 </td>
 </tr>
 {% else %}
 <tr>
 <td>
-<label for="text-from-application">アプリからのメッセージ : </label>
-<textarea id="text-from-application" name="text-from-application" class="form-control" style="resize: none;" rows="8" readonly>返信はありません.</textarea>
+<label for="application-text-message">アプリからのメッセージ : </label>
+<textarea id="application-text-message" name="application-text-message" class="form-control" style="color: salmon; resize: none;" rows="8" readonly>返信はありません.</textarea>
 </td>
 </tr>
 {% endif %}

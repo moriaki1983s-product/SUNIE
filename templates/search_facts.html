@@ -27,28 +27,28 @@
 <table class="table">
 <tr>
 <td>
-{{ form.intent.label }}{{ form.intent(class_="form-control") }}
+{{ form.category_tags.label }}{{ form.category_tags(class_="form-control", style_="resize: none;") }}
 </td>
 </tr>
 </table>
 <table class="table">
 <tr>
 <td>
-{{ form.sentiment.label }}{{ form.sentiment(class_="form-control") }}
+{{ form.has_image.label }}{{ form.has_image(class_="form-control") }}
 </td>
 </tr>
 </table>
 <table class="table">
 <tr>
 <td>
-{{ form.strength.label }}{{ form.strength(class_="form-control") }}
+{{ form.has_sound.label }}{{ form.has_sound(class_="form-control") }}
 </td>
 </tr>
 </table>
 <table class="table">
 <tr>
 <td>
-{{ form.part_of_speech.label }}{{ form.part_of_speech(class_="form-control") }}
+{{ form.has_video.label }}{{ form.has_video(class_="form-control") }}
 </td>
 </tr>
 </table>
@@ -149,10 +149,10 @@
 <section>
 <br>
 <br>
-<a class="btn btn-primary" href="{{url_for('view.show_words')}}">語句一覧</a>
-<a class="btn btn-primary" href="{{url_for('view.search_words')}}">語句検索</a>
-<a class="btn btn-primary" href="{{url_for('view.import_words')}}">語句取込</a>
-<a class="btn btn-primary" href="{{url_for('view.export_words')}}">語句書出</a>
+<a class="btn btn-primary" href="{{url_for('view.show_knowledges')}}">知識一覧</a>
+<a class="btn btn-primary" href="{{url_for('view.search_knowledges')}}">知識検索</a>
+<a class="btn btn-primary" href="{{url_for('view.import_knowledges')}}">知識取込</a>
+<a class="btn btn-primary" href="{{url_for('view.export_knowledges')}}">知識書出</a>
 <br>
 <br>
 </section>

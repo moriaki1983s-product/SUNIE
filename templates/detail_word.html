@@ -19,7 +19,7 @@
 <table class="table">
 <tr>
 <td>
-{{ form.mean_and_content.label }}{{ form.mean_and_content(class_="form-control", style_="resize: none;") }}
+{{ form.mean_and_body.label }}{{ form.mean_and_body(class_="form-control", style_="resize: none;") }}
 </td>
 </tr>
 </table>
@@ -62,6 +62,27 @@
 <tr>
 <td>
 {{ form.part_of_speech.label }}{{ form.part_of_speech(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.first_character.label }}{{ form.first_character(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.last_character.label }}{{ form.last_character(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.characters_count.label }}{{ form.characters_count(class_="form-control") }}
 </td>
 </tr>
 </table>

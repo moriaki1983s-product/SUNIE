@@ -33,28 +33,49 @@
 <table class="table">
 <tr>
 <td>
-{{ form.staff_psychology.label }}{{ form.staff_psychology(class_="form-control", style_="resize: none;") }}
+{{ form.category_tag.label }}{{ form.category_tag(class_="form-control", style_="resize: none;") }}
 </td>
 </tr>
 </table>
 <table class="table">
 <tr>
 <td>
-{{ form.scene_and_background.label }}{{ form.scene_and_background(class_="form-control", style_="resize: none;") }}
+{{ form.archived_image_file_path.label }}
+<br>
+{% if archived_image_file_path == '' %}
+<p class="attention-message">現時点でイメージファイルは登録されていません.</p>
+{% else %}
+<a href="{{archived_image_file_path}}" target="_blank">イメージファイルを新しいタブで開く</a>
+{% endif %}
+{{ form.archived_image_file_path(class_="form-control") }}
 </td>
 </tr>
 </table>
 <table class="table">
 <tr>
 <td>
-{{ form.message_example_from_staff.label }}{{ form.message_example_from_staff(class_="form-control", style_="resize: none;") }}
+{{ form.archived_sound_file_path.label }}
+<br>
+{% if archived_sound_file_path == '' %}
+<p class="attention-message">現時点でサウンドファイルは登録されていません.</p>
+{% else %}
+<a href="{{archived_sound_file_path}}" target="_blank">サウンドファイルを新しいタブで開く</a>
+{% endif %}
+{{ form.archived_sound_file_path(class_="form-control") }}
 </td>
 </tr>
 </table>
 <table class="table">
 <tr>
 <td>
-{{ form.message_example_from_application.label }}{{ form.message_example_from_application(class_="form-control", style_="resize: none;") }}
+{{ form.archived_video_file_path.label }}
+<br>
+{% if archived_video_file_path == '' %}
+<p class="attention-message">現時点でビデオファイルは登録されていません.</p>
+{% else %}
+<a href="{{archived_video_file_path}}" target="_blank">ビデオファイルを新しいタブで開く</a>
+{% endif %}
+{{ form.archived_video_file_path(class_="form-control") }}
 </td>
 </tr>
 </table>
@@ -103,10 +124,10 @@
 <section>
 <br>
 <br>
-<a class="btn btn-primary" href="{{url_for('view.show_rules')}}">規則一覧</a>
-<a class="btn btn-primary" href="{{url_for('view.search_rules')}}">規則検索</a>
-<a class="btn btn-primary" href="{{url_for('view.import_rules')}}">規則取込</a>
-<a class="btn btn-primary" href="{{url_for('view.export_rules')}}">規則書出</a>
+<a class="btn btn-primary" href="{{url_for('view.show_knowledges')}}">知識一覧</a>
+<a class="btn btn-primary" href="{{url_for('view.search_knowledges')}}">知識検索</a>
+<a class="btn btn-primary" href="{{url_for('view.import_knowledges')}}">知識取込</a>
+<a class="btn btn-primary" href="{{url_for('view.export_knowledges')}}">知識書出</a>
 <br>
 <br>
 </section>
