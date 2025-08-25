@@ -37,7 +37,7 @@ class Word(Base):
       __tablename__ = "words"
       id = Column(Integer, primary_key=True, autoincrement=True)
       spell_and_header = Column(Text, nullable=False)
-      mean_and_content = Column(Text, nullable=False)
+      mean_and_body = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
       theme_tag = Column(Text, nullable=False)
       intent = Column(String(consts.INTENT_LENGTH), nullable=False)
@@ -46,6 +46,7 @@ class Word(Base):
       strength = Column(String(consts.STRENGTH_LENGTH), nullable=False)
       part_of_speech = Column(String(consts.PART_OF_SPEECH_LENGTH), nullable=False)
       first_character = Column(String(consts.FIRST_CHARACTER_LENGTH), nullable=False)
+      last_character = Column(String(consts.LAST_CHARACTER_LENGTH), nullable=False)
       characters_count = Column(String(consts.CHARACTERS_COUNT_LENGTH), nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
@@ -56,7 +57,7 @@ class Word(Base):
 
       def __init__(self,
                    spell_and_header,
-                   mean_and_content,
+                   mean_and_body,
                    concept_and_notion,
                    theme_tag,
                    intent,
@@ -65,6 +66,7 @@ class Word(Base):
                    strength,
                    part_of_speech,
                    first_character,
+                   last_character,
                    characters_count,
                    staff_name,
                    staff_kana_name,
@@ -74,7 +76,7 @@ class Word(Base):
                    is_exclude
                   ):
           self.spell_and_header = spell_and_header
-          self.mean_and_content = mean_and_content
+          self.mean_and_body = mean_and_body
           self.concept_and_notion = concept_and_notion
           self.theme_tag = theme_tag
           self.intent = intent
@@ -83,6 +85,7 @@ class Word(Base):
           self.strength = strength
           self.part_of_speech = part_of_speech
           self.first_character = first_character
+          self.last_character = last_character
           self.characters_count = characters_count
           self.staff_name = staff_name
           self.staff_kana_name = staff_kana_name
@@ -97,7 +100,7 @@ class Theme(Base):
       __tablename__ = "themes"
       id = Column(Integer, primary_key=True, autoincrement=True)
       spell_and_header = Column(Text, nullable=False)
-      mean_and_content = Column(Text, nullable=False)
+      mean_and_body = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
       category_tag = Column(Text, nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
@@ -109,7 +112,7 @@ class Theme(Base):
 
       def __init__(self,
                    spell_and_header,
-                   mean_and_content,
+                   mean_and_body,
                    concept_and_notion,
                    category_tag,
                    staff_name,
@@ -120,7 +123,7 @@ class Theme(Base):
                    is_exclude
                    ):
           self.spell_and_header = spell_and_header
-          self.mean_and_content = mean_and_content
+          self.mean_and_body = mean_and_body
           self.concept_and_notion = concept_and_notion
           self.category_tag = category_tag
           self.staff_name = staff_name
@@ -136,7 +139,7 @@ class Category(Base):
       __tablename__ = "categories"
       id = Column(Integer, primary_key=True, autoincrement=True)
       spell_and_header = Column(Text, nullable=False)
-      mean_and_content = Column(Text, nullable=False)
+      mean_and_body = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
       parent_category_tag = Column(Text, nullable=False)
       sibling_category_tag = Column(Text, nullable=False)
@@ -150,7 +153,7 @@ class Category(Base):
 
       def __init__(self,
                    spell_and_header,
-                   mean_and_content,
+                   mean_and_body,
                    concept_and_notion,
                    parent_category_tag,
                    sibling_category_tag,
@@ -163,7 +166,7 @@ class Category(Base):
                    is_exclude                   
                    ):
           self.spell_and_header = spell_and_header
-          self.mean_and_content = mean_and_content
+          self.mean_and_body = mean_and_body
           self.concept_and_notion = concept_and_notion
           self.parent_category_tag = parent_category_tag
           self.sibling_category_tag = sibling_category_tag
@@ -176,12 +179,12 @@ class Category(Base):
           self.is_exclude = is_exclude
 
 
-# 知識テーブル(=SQLAlchemyクラス)を宣言・定義する.
-class Knowledge(Base):
-      __tablename__ = "knowledges"
+# 事実テーブル(=SQLAlchemyクラス)を宣言・定義する.
+class Fact(Base):
+      __tablename__ = "facts"
       id = Column(Integer, primary_key=True, autoincrement=True)
       spell_and_header = Column(Text, nullable=False)
-      mean_and_content = Column(Text, nullable=False)
+      mean_and_body = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
       category_tag = Column(Text, nullable=False)
       archived_image_file_path = Column(String(consts.ARCHIVED_IMAGE_FILE_NAME_LENGTH), nullable=False)
@@ -196,7 +199,7 @@ class Knowledge(Base):
 
       def __init__(self,
                    spell_and_header,
-                   mean_and_content,
+                   mean_and_body,
                    concept_and_notion,
                    category_tag,
                    archived_image_file_path,
@@ -210,7 +213,7 @@ class Knowledge(Base):
                    is_exclude                   
                    ):
           self.spell_and_header = spell_and_header
-          self.mean_and_content = mean_and_content
+          self.mean_and_body = mean_and_body
           self.concept_and_notion = concept_and_notion
           self.category_tag = category_tag
           self.archived_image_file_path = archived_image_file_path
@@ -229,7 +232,7 @@ class Rule(Base):
       __tablename__ = "rules"
       id = Column(Integer, primary_key=True, autoincrement=True)
       spell_and_header = Column(Text, nullable=False)
-      mean_and_content = Column(Text, nullable=False)
+      mean_and_body = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
       category_tag = Column(Text, nullable=False)
       inference_and_speculation_condition = Column(Text, nullable=False)
@@ -243,7 +246,7 @@ class Rule(Base):
 
       def __init__(self,
                    spell_and_header,
-                   mean_and_content,
+                   mean_and_body,
                    concept_and_notion,
                    category_tag,
                    inference_and_speculation_condition,
@@ -256,7 +259,7 @@ class Rule(Base):
                    is_exclude
                    ):
           self.spell_and_header = spell_and_header
-          self.mean_and_content = mean_and_content
+          self.mean_and_body = mean_and_body
           self.concept_and_notion = concept_and_notion
           self.category_tag = category_tag
           self.inference_and_speculation_condition = inference_and_speculation_condition
@@ -274,12 +277,12 @@ class Reaction(Base):
       __tablename__ = "reactions"
       id = Column(Integer, primary_key=True, autoincrement=True)
       spell_and_header = Column(Text, nullable=False)
-      mean_and_content = Column(Text, nullable=False)
+      mean_and_body = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
       staff_psychology = Column(Text, nullable=False)
       scene_and_background = Column(Text, nullable=False)
-      message_example_from_staff = Column(Text, nullable=False)
-      message_example_from_application = Column(Text, nullable=False)
+      staff_example_message = Column(Text, nullable=False)
+      application_example_message = Column(Text, nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
       created_at = Column(DateTime, default=datetime.now(timezone.utc))
@@ -289,12 +292,12 @@ class Reaction(Base):
 
       def __init__(self,
                    spell_and_header,
-                   mean_and_content,
+                   mean_and_body,
                    concept_and_notion,
                    staff_psychology,
                    scene_and_background,
-                   message_example_from_staff,
-                   message_example_from_application,
+                   staff_example_message,
+                   application_example_message,
                    staff_name,
                    staff_kana_name,
                    created_at,
@@ -303,12 +306,12 @@ class Reaction(Base):
                    is_exclude                   
                    ):
           self.spell_and_header = spell_and_header
-          self.mean_and_content = mean_and_content
+          self.mean_and_body = mean_and_body
           self.concept_and_notion = concept_and_notion
           self.staff_psychology = staff_psychology
           self.scene_and_background = scene_and_background
-          self.msessage_example_from_staff = message_example_from_staff
-          self.msessage_example_from_application = message_example_from_application
+          self.staff_example_message = staff_example_message
+          self.application_example_message = application_example_message
           self.staff_name = staff_name
           self.staff_kana_name = staff_kana_name
           self.created_at = created_at
@@ -322,7 +325,7 @@ class Generate(Base):
       __tablename__ = "generates"
       id = Column(Integer, primary_key=True, autoincrement=True)
       spell_and_header = Column(Text, nullable=False)
-      mean_and_content = Column(Text, nullable=False)
+      mean_and_body = Column(Text, nullable=False)
       generated_file_path = Column(String(consts.GENERATED_FILE_NAME_LENGTH), nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
@@ -333,7 +336,7 @@ class Generate(Base):
 
       def __init__(self,
                    spell_and_header,
-                   mean_and_content,
+                   mean_and_body,
                    generated_file_path,
                    staff_name,
                    staff_kana_name,
@@ -343,7 +346,7 @@ class Generate(Base):
                    is_exclude
                    ):
           self.spell_and_header = spell_and_header
-          self.mean_and_content = mean_and_content
+          self.mean_and_body = mean_and_body
           self.generated_file_path = generated_file_path
           self.staff_name = staff_name
           self.staff_kana_name = staff_kana_name
@@ -357,8 +360,8 @@ class Generate(Base):
 class History(Base):
       __tablename__ = "histories"
       id = Column(Integer, primary_key=True, autoincrement=True)
-      staff_message = Column(Text, nullable=False)
-      application_message = Column(Text, nullable=False)
+      staff_text_message = Column(Text, nullable=False)
+      application_text_message = Column(Text, nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
       created_at = Column(DateTime, default=datetime.now(timezone.utc))
@@ -367,8 +370,8 @@ class History(Base):
       is_exclude = Column(Boolean, nullable=False)
 
       def __init__(self,
-                   staff_message,
-                   application_message,
+                   staff_text_message,
+                   application_text_message,
                    staff_name,
                    staff_kana_name,
                    created_at,
@@ -376,8 +379,8 @@ class History(Base):
                    is_hidden,
                    is_exclude                   
                    ):
-          self.staff_message = staff_message
-          self.application_message = application_message
+          self.staff_text_message = staff_text_message
+          self.application_text_message = application_text_message
           self.staff_name = staff_name
           self.staff_kana_name = staff_kana_name
           self.created_at = created_at

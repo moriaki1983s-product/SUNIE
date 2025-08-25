@@ -6,7 +6,6 @@
 # 既成のモジュールをインポートする.
 import os
 import sys
-import random
 
 # 独自のモジュールをインポートする.
 import modules.intelligences.reg_neo as reg_neo
@@ -60,61 +59,31 @@ class SunieEngine:
         gnrtd_dat = self.dat
         return gnrtd_dat
 
-    # 返信メッセージを生成するためのメソッドを宣言・定義する.
-    def generate_message(self, msg):
-        sntmnt_cnddt = ["JOY", "ANGER", "PITY", "COMFORT", "MIXED", "NEUTRAL"]
-        dcid_sntmnt = random.choice(sntmnt_cnddt)
-
-        if dcid_sntmnt == "JOY":
-            msg_cnddt = ["お世話になってます♪", "またまた～♪"]
-            gnrtd_msg = random.choice(msg_cnddt)
-
-        elif dcid_sntmnt == "ANGER":
-            msg_cnddt = ["それで？", "何が言いたいの？"]
-            gnrtd_msg = random.choice(msg_cnddt)
-
-        elif dcid_sntmnt == "PITY":
-            msg_cnddt = ["ええと・・・", "・・・"]
-            gnrtd_msg = random.choice(msg_cnddt)
-
-        elif dcid_sntmnt == "COMFORT":
-            msg_cnddt = ["くつろいでね", "元気でね"]
-            gnrtd_msg = random.choice(msg_cnddt)
-
-        elif dcid_sntmnt == "MIXED":
-            msg_cnddt = ["どうしたらいいですか？", "オロオロ 汗"]
-            gnrtd_msg = random.choice(msg_cnddt)
-
-        else:
-            msg_cnddt = ["どうしました？", "お元気そうで"]
-            gnrtd_msg = random.choice(msg_cnddt)
-
-        return gnrtd_msg
 
     # 語句情報を学習するためのメソッドを宣言・定義する.
-    def learn_word(self, spll_n_hdr, mn_n_cntnt):
+    def learn_word(self, spll_n_hdr, mn_n_bdy):
         return ""
 
     # 主題情報を学習するためのメソッドを宣言・定義する.
-    def learn_theme(self, spll_n_hdr, mn_n_cntnt):
+    def learn_theme(self, spll_n_hdr, mn_n_bdy):
         return ""
 
     # 分類情報を学習するためのメソッドを宣言・定義する.
-    def learn_category(self, spll_n_hdr, mn_n_cntnt):
+    def learn_category(self, spll_n_hdr, mn_n_bdy):
         return ""
 
-    # 知識情報を学習するためのメソッドを宣言・定義する.
-    def learn_knowledge(self, spll_n_hdr, mn_n_cntnt):
+    # 事実情報を学習するためのメソッドを宣言・定義する.
+    def learn_fact(self, spll_n_hdr, mn_n_bdy):
         return ""
 
     # 規則情報を学習するためのメソッドを宣言・定義する.
-    def learn_rule(self, spll_n_hdr, mn_n_cntnt):
+    def learn_rule(self, spll_n_hdr, mn_n_bdy):
         return ""
 
     # 反応情報を学習するためのメソッドを宣言・定義する.
-    def learn_reaction(self, spll_n_hdr, mn_n_cntnt):
+    def learn_reaction(self, spll_n_hdr, mn_n_bdy):
         return ""
 
     # 各種のデータファイルを生成するためのメソッドを宣言・定義する.
-    def generate_data_file(self, spll_n_hdr, mn_n_cntnt):
+    def generate_data_file(self, spll_n_hdr, mn_n_bdy):
         return ""

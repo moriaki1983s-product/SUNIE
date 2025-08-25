@@ -32,7 +32,7 @@ STAFF_AGE_BOTTOM = 18
 GENERAL_FILE_NAME_LENGTH = 32
 
 # 知識ファイルの名前の長さを宣言・定義する.
-KNOWLEDGE_FILE_NAME_LENGTH = GENERAL_FILE_NAME_LENGTH
+FACT_FILE_NAME_LENGTH = GENERAL_FILE_NAME_LENGTH
 
 # 語句ファイルの名前の長さを宣言・定義する.
 WORD_FILE_NAME_LENGTH = GENERAL_FILE_NAME_LENGTH
@@ -69,6 +69,9 @@ PART_OF_SPEECH_LENGTH = GENERAL_ITEM_LENGTH
 
 # 第一文字の長さを宣言・定義する.
 FIRST_CHARACTER_LENGTH = GENERAL_ITEM_LENGTH
+
+# 第一文字の長さを宣言・定義する.
+LAST_CHARACTER_LENGTH = GENERAL_ITEM_LENGTH
 
 # 文字数の長さを宣言・定義する.
 CHARACTERS_COUNT_LENGTH = GENERAL_ITEM_LENGTH
@@ -125,7 +128,7 @@ THEME_ITEM_PER_PAGE = GENERAL_ITEM_PER_PAGE
 CATEGORY_ITEM_PER_PAGE = GENERAL_ITEM_PER_PAGE
 
 # 一画面ごとに表示する知識情報の数を宣言・定義する.
-KNOWLEDGE_ITEM_PER_PAGE = GENERAL_ITEM_PER_PAGE
+FACT_ITEM_PER_PAGE = GENERAL_ITEM_PER_PAGE
 
 # 一画面ごとに表示する規則情報の数を宣言・定義する.
 RULE_ITEM_PER_PAGE = GENERAL_ITEM_PER_PAGE
@@ -209,7 +212,7 @@ THEME_EXPORT_PATH = TEMPORARY_PATH + "themes__export.xml"
 CATEGORY_EXPORT_PATH = TEMPORARY_PATH + "categories__export.xml"
 
 # アプリが一時的に使用する知識エクスポートファイルのパスを宣言・定義する.
-KNOWLEDGE_EXPORT_PATH = TEMPORARY_PATH + "knowledges__export.xml"
+FACT_EXPORT_PATH = TEMPORARY_PATH + "knowledges__export.xml"
 
 # アプリが一時的に使用する規則エクスポートファイルのパスを宣言・定義する.
 RULE_EXPORT_PATH = TEMPORARY_PATH + "rules__export.xml"
@@ -443,7 +446,7 @@ MENU_CHOICE_FOR_LEARN_RULE_FORM = [
 ]
 
 # 知識学習フォーム内の知識メニューを宣言・定義する.
-MENU_CHOICE_1_FOR_LEARN_KNOWLEDGE_FORM = [
+MENU_CHOICE_1_FOR_LEARN_FACT_FORM = [
     ("", ""),
     ("god", "神"),
     ("human", "人間"),

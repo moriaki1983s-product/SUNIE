@@ -60,7 +60,7 @@ class AdminExitForm(FlaskForm):
 
 # 送信フォーム(=FlaskFormクラス)を宣言・定義する.
 class SendForm(FlaskForm):
-      message = TextAreaField("メッセージ本文 :", default="", render_kw={"autocomplete": "off", "rows": "8"})
+      text_message = TextAreaField("テキストメッセージ :", default="", render_kw={"autocomplete": "off", "rows": "8"})
       decide = SubmitField("決定")
       cancel = SubmitField("取消")
 
@@ -74,7 +74,7 @@ class LearnWordForm(FlaskForm):
       menu_choices5 = consts.MENU_CHOICE_5_FOR_LEARN_WORD_FORM
       menu_choices6 = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       theme_tag = TextAreaField("主題タグ :", render_kw={"autocomplete": "off", "rows": "4"})
       intent = SelectField("意図 :", default="", choices=menu_choices1)
       sentiment = SelectField("感情 :", default="", choices=menu_choices2)
@@ -91,7 +91,7 @@ class LearnWordForm(FlaskForm):
 class LearnThemeForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       category_tag = TextAreaField("分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices)
@@ -103,7 +103,7 @@ class LearnThemeForm(FlaskForm):
 class LearnCategoryForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       parent_category_tag = TextAreaField("親分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       sibling_category_tag = TextAreaField("兄弟分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       child_category_tag = TextAreaField("子分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
@@ -114,10 +114,10 @@ class LearnCategoryForm(FlaskForm):
 
 
 # 知識学習フォーム(=FlaskFormクラス)を宣言・定義する.
-class LearnKnowledgeForm(FlaskForm):
+class LearnFactForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       category_tag = TextAreaField("分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       attached_image_file = FileField("添付イメージ(省略可) :", default="", render_kw=consts.IMAGE_FILE_FORMAT)
       attached_sound_file = FileField("添付サウンド(省略可) :", default="", render_kw=consts.SOUND_FILE_FORMAT)
@@ -132,7 +132,7 @@ class LearnKnowledgeForm(FlaskForm):
 class LearnRuleForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       category_tag = TextAreaField("分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       inference_and_speculation_condition = TextAreaField("推論条件 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       inference_and_speculation_result = TextAreaField("推論結果 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
@@ -146,7 +146,7 @@ class LearnRuleForm(FlaskForm):
 class LearnReactionForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       staff_psychology = TextAreaField("職員心理 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       scene_and_background = TextAreaField("情景&背景 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       message_example_from_staff = TextAreaField("職員メッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
@@ -161,7 +161,7 @@ class LearnReactionForm(FlaskForm):
 class GenerateForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       attached_image_file = FileField("添付イメージ :", default="", render_kw=consts.IMAGE_FILE_FORMAT)
       attached_sound_file = FileField("添付サウンド :", default="", render_kw=consts.SOUND_FILE_FORMAT)
       attached_video_file = FileField("添付ビデオ :", default="", render_kw=consts.VIDEO_FILE_FORMAT)
@@ -214,7 +214,7 @@ class SearchWordForm(FlaskForm):
       menu_choices7 = consts.MENU_CHOICE_2_FOR_SEARCH_FORM
       id = StringField("ID :", default="", render_kw={"autocomplete": "off"})
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       theme_tag = TextAreaField("主題タグ :", render_kw={"autocomplete": "off", "rows": "4"})
       intent = SelectField("意図 :", default="", choices=menu_choices1)
       sentiment = SelectField("感情 :", default="", choices=menu_choices2)
@@ -239,7 +239,7 @@ class SearchThemeForm(FlaskForm):
       menu_choices2 = consts.MENU_CHOICE_2_FOR_SEARCH_FORM
       id = StringField("ID :", default="", render_kw={"autocomplete": "off"})
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       category_tag = TextAreaField("分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       staff_name = StringField("職員名 :", default="", render_kw={"autocomplete": "off"})
       staff_kana_name = StringField("職員カナ名 :", default="", render_kw={"autocomplete": "off"})
@@ -259,7 +259,7 @@ class SearchCategoryForm(FlaskForm):
       menu_choices2 = consts.MENU_CHOICE_2_FOR_SEARCH_FORM
       id = StringField("ID :", default="", render_kw={"autocomplete": "off"})
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       parent_category_tag = TextAreaField("親分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       sibling_category_tag = TextAreaField("兄弟分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       child_category_tag = TextAreaField("子分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
@@ -276,13 +276,13 @@ class SearchCategoryForm(FlaskForm):
 
 
 # 知識検索フォーム(=FlaskFormクラス)を宣言・定義する.
-class SearchKnowledgeForm(FlaskForm):
+class SearchFactForm(FlaskForm):
       menu_choices1 = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       menu_choices2 = consts.MENU_CHOICE_1_FOR_SEARCH_FORM
       menu_choices3 = consts.MENU_CHOICE_2_FOR_SEARCH_FORM
       id = StringField("ID :", default="", render_kw={"autocomplete": "off"})
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       category_tag = TextAreaField("分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       has_image = SelectField("添付イメージの有無 :", default="", choices=menu_choices1)
       has_sound = SelectField("添付サウンドの有無 :", default="", choices=menu_choices1)
@@ -305,7 +305,7 @@ class SearchRuleForm(FlaskForm):
       menu_choices2 = consts.MENU_CHOICE_2_FOR_SEARCH_FORM
       id = StringField("ID :", default="", render_kw={"autocomplete": "off"})
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       category_tag = TextAreaField("分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       inference_and_speculation_condition = TextAreaField("推論条件 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       inference_and_speculation_result = TextAreaField("推論結果 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
@@ -327,7 +327,7 @@ class SearchReactionForm(FlaskForm):
       menu_choices2 = consts.MENU_CHOICE_2_FOR_SEARCH_FORM
       id = StringField("ID :", default="", render_kw={"autocomplete": "off"})
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       staff_psychology = TextAreaField("職員心理 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       scene_and_background = TextAreaField("情景&背景 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       message_example_from_staff = TextAreaField("職員メッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
@@ -350,7 +350,7 @@ class SearchGenerateForm(FlaskForm):
       menu_choices2 = consts.MENU_CHOICE_2_FOR_SEARCH_FORM
       id = StringField("ID :", default="", render_kw={"autocomplete": "off"})
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       staff_name = StringField("職員名 :", default="", render_kw={"autocomplete": "off"})
       staff_kana_name = StringField("職員カナ名 :", default="", render_kw={"autocomplete": "off"})
       created_at_begin = DateTimeField("作成日時(検索区間の始め) :", default="", format=consts.GENERAL_DATE_FORMAT)
@@ -435,7 +435,7 @@ class ModifyWordForm(FlaskForm):
       menu_choices5 = consts.MENU_CHOICE_5_FOR_SEARCH_WORD_FORM
       menu_choices6 = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       spell_and_header = TextAreaField("綴り&見出し :", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", render_kw={"autocomplete": "off", "rows": "4"})
       theme_tag = TextAreaField("主題タグ :", render_kw={"autocomplete": "off", "rows": "4"})
       intent = SelectField("意図 :", choices=menu_choices1)
       sentiment = SelectField("感情 :", choices=menu_choices2)
@@ -454,7 +454,7 @@ class ModifyWordForm(FlaskForm):
 class ModifyThemeForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       spell_and_header = TextAreaField("綴り&見出し :", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", render_kw={"autocomplete": "off", "rows": "4"})
       category_tag = TextAreaField("分類タグ :", render_kw={"autocomplete": "off", "rows": "4"})
       staff_name = StringField("職員名 :", render_kw={"autocomplete": "off"})
       staff_kana_name = StringField("職員カナ名 :", render_kw={"autocomplete": "off"})
@@ -468,7 +468,7 @@ class ModifyThemeForm(FlaskForm):
 class ModifyCategoryForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       parent_category_tag = TextAreaField("親分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       sibling_category_tag = TextAreaField("兄弟分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       child_category_tag = TextAreaField("子分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
@@ -481,10 +481,10 @@ class ModifyCategoryForm(FlaskForm):
 
 
 # 知識変更フォーム(=FlaskFormクラス)を宣言・定義する.
-class ModifyKnowledgeForm(FlaskForm):
+class ModifyFactForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       category_tag = TextAreaField("分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       attached_image_file = FileField("添付イメージ(省略可) :", default="", render_kw=consts.IMAGE_FILE_FORMAT)
       attached_sound_file = FileField("添付サウンド(省略可) :", default="", render_kw=consts.SOUND_FILE_FORMAT)
@@ -501,7 +501,7 @@ class ModifyKnowledgeForm(FlaskForm):
 class ModifyRuleForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       category_tag = TextAreaField("分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       inference_and_speculation_condition = TextAreaField("推論条件 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       inference_and_speculation_result = TextAreaField("推論結果 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
@@ -517,7 +517,7 @@ class ModifyRuleForm(FlaskForm):
 class ModifyReactionForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       staff_psychology = TextAreaField("職員心理 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       scene_and_background = TextAreaField("情景&背景 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       message_example_from_staff = TextAreaField("職員メッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
@@ -552,7 +552,6 @@ class ModifyStaffForm(FlaskForm):
       menu_choices3 = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       name = StringField("職員名 :", default="", render_kw={"autocomplete": "off"})
       kana_name = StringField("職員カナ名 :", default="", render_kw={"autocomplete": "off"})
-      # password = PasswordField("パスワード :", default="", render_kw={"autocomplete": "off"})
       sex = SelectField("性別 :", default="", choices=menu_choices1)
       blood_type = SelectField("血液型 :", default="", choices=menu_choices2)
       birth_date = DateField("生年月日 :", default="", format=consts.BIRTH_DATE_FORMAT)
@@ -572,7 +571,7 @@ class DetailWordForm(FlaskForm):
       menu_choices6 = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       id = StringField("ID :", default="", render_kw={"disabled": True})
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"rows": "4", "disabled": True})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"rows": "4", "disabled": True})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"rows": "4", "disabled": True})
       concept_and_notion = TextAreaField("概念&観念 :", default="", render_kw={"rows": "4", "disabled": True})
       theme_tag = TextAreaField("主題タグ :", render_kw={"autocomplete": "off", "rows": "4", "disabled": True})
       intent = SelectField("意図 :", default="", choices=menu_choices1, render_kw={"disabled": True})
@@ -580,6 +579,9 @@ class DetailWordForm(FlaskForm):
       sentiment_support = SelectField("感情補助 :", default="", choices=menu_choices3, render_kw={"disabled": True})
       strength = SelectField("強度 :", default="", choices=menu_choices4, render_kw={"disabled": True})
       part_of_speech = SelectField("品詞分類 :", default="", choices=menu_choices5, render_kw={"disabled": True})
+      first_character = StringField("先頭の文字 :", default="", render_kw={"disabled": True})
+      last_character = StringField("末尾の文字 :", default="", render_kw={"disabled": True})
+      characters_count = StringField("文字数 :", default="", render_kw={"disabled": True})
       staff_name = StringField("職員名 :", default="", render_kw={"disabled": True})
       staff_kana_name = StringField("職員カナ名 :", default="", render_kw={"disabled": True})
       created_at = DateTimeField("作成日時 :", default="", format=consts.GENERAL_DATE_FORMAT, render_kw={"disabled": True})
@@ -593,7 +595,7 @@ class DetailThemeForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       id = StringField("ID :", default="", render_kw={"disabled": True})
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"rows": "4", "disabled": True})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"rows": "4", "disabled": True})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"rows": "4", "disabled": True})
       concept_and_notion = TextAreaField("概念&観念 :", default="", render_kw={"rows": "4", "disabled": True})
       category_tag = TextAreaField("分類タグ :", default="", render_kw={"rows": "4", "disabled": True})
       staff_name = StringField("職員名 :", default="", render_kw={"disabled": True})
@@ -609,7 +611,7 @@ class DetailCategoryForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       id = StringField("ID :", default="", render_kw={"disabled": True})
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"rows": "4", "disabled": True})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"rows": "4", "disabled": True})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"rows": "4", "disabled": True})
       concept_and_notion = TextAreaField("概念&観念 :", default="", render_kw={"rows": "4", "disabled": True})
       parent_category_tag = TextAreaField("親分類タグ :", default="", render_kw={"rows": "4", "disabled": True})
       sibling_category_tag = TextAreaField("兄弟分類タグ :", default="", render_kw={"rows": "4", "disabled": True})
@@ -623,11 +625,11 @@ class DetailCategoryForm(FlaskForm):
 
 
 # 知識詳細フォーム(=FlaskFormクラス)を宣言・定義する.
-class DetailKnowledgeForm(FlaskForm):
+class DetailFactForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       id = StringField("ID :", default="", render_kw={"disabled": True})
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"rows": "4", "disabled": True})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"rows": "4", "disabled": True})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"rows": "4", "disabled": True})
       concept_and_notion = TextAreaField("概念&観念 :", default="", render_kw={"rows": "4", "disabled": True})
       category_tag = TextAreaField("分類タグ :", default="", render_kw={"rows": "4", "disabled": True})
       archived_image_file_path = StringField("アーカイブ済イメージのパス :", default="", render_kw={"disabled": True})
@@ -646,7 +648,7 @@ class DetailRuleForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       id = StringField("ID :", default="", render_kw={"disabled": True})
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"rows": "4", "disabled": True})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"rows": "4", "disabled": True})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"rows": "4", "disabled": True})
       concept_and_notion = TextAreaField("概念&観念 :", default="", render_kw={"rows": "4", "disabled": True})
       category_tag = TextAreaField("分類タグ :", default="", render_kw={"rows": "4", "disabled": True})
       inference_and_speculation_condition = TextAreaField("推論条件 :", default="", render_kw={"rows": "4", "disabled": True})
@@ -664,7 +666,7 @@ class DetailReactionForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       id = StringField("ID :", default="", render_kw={"disabled": True})
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"rows": "4", "disabled": True})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"rows": "4", "disabled": True})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"rows": "4", "disabled": True})
       concept_and_notion = TextAreaField("概念&観念 :", default="", render_kw={"rows": "4", "disabled": True})
       staff_psychology = TextAreaField("職員心理 :", default="", render_kw={"rows": "4", "disabled": True})
       scene_and_background = TextAreaField("情景&背景 :", default="", render_kw={"rows": "4", "disabled": True})
@@ -685,7 +687,7 @@ class DetailGenerateForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       id = StringField("ID :", default="", render_kw={"disabled": True})
       spell_and_header = TextAreaField("綴り&見出し :", default="", render_kw={"rows": "4", "disabled": True})
-      mean_and_content = TextAreaField("意味&内容 :", default="", render_kw={"rows": "4", "disabled": True})
+      mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"rows": "4", "disabled": True})
       concept_and_notion = TextAreaField("概念&観念 :", default="", render_kw={"rows": "4", "disabled": True})
       generated_file_path = StringField("生成ファイルのパス :", default="", render_kw={"disabled": True})
       staff_name = StringField("職員名 :", default="", render_kw={"disabled": True})
@@ -766,7 +768,7 @@ class ImportCategoryForm(FlaskForm):
 
 
 # 知識取込フォーム(=FlaskFormクラス)を宣言・定義する.
-class ImportKnowledgeForm(FlaskForm):
+class ImportFactForm(FlaskForm):
       imported_file = FileField("取込ファイル :", default="", render_kw=consts.DOCUMENT_FILE_FORMAT)
       decide = SubmitField("決定")
       cancel = SubmitField("取消")
@@ -819,7 +821,7 @@ class ExportCategoryForm(FlaskForm):
 
 
 # 知識書出フォーム(=FlaskFormクラス)を宣言・定義する.
-class ExportKnowledgeForm(FlaskForm):
+class ExportFactForm(FlaskForm):
       decide = SubmitField("決定")
       cancel = SubmitField("取消")
 
@@ -879,6 +881,7 @@ class EnvironmentSettingForm(FlaskForm):
 # 機密設定フォーム(=FlaskFormクラス)を宣言・定義する.
 class SecuritySettingForm(FlaskForm):
       new_password = PasswordField("新しいパスワード :", default="", render_kw={"autocomplete": "off"})
+      confirm_password = PasswordField("新しいパスワード(確認) :", default="", render_kw={"autocomplete": "off"})
       decide = SubmitField("決定")
       cancel = SubmitField("取消")
 
@@ -888,7 +891,7 @@ class ResetDatabaseForm(FlaskForm):
       words = BooleanField("語句 :")
       themes = BooleanField("主題 :")
       categories = BooleanField("分類 :")
-      knowledges = BooleanField("知識 :")
+      facts = BooleanField("事実 :")
       rules = BooleanField("規則 :")
       reactions = BooleanField("反応 :")
       generates = BooleanField("生成 :")
