@@ -4,6 +4,15 @@
 
 
 
+## 本件アプリの構成コンポーネント
+①. SUNIE-Core-Engine(=SUNIE-Interpreter + SUNIE-Tagnet-Builder + SUNIE-Tagnet-Clowler + SUNIE-Task-Resolver)。
+②. SUNIE-Visual-Engine(=SUNIE-Image + SUNIE-Graphic)。
+③. SUNIE-Audio-Engine(=SUNIE-Sound + SUNIE-Voice)。
+上記①～③の総体が「SUNIE-System」です。
+
+
+
+
 ## 本件アプリの構成アイデア・技術的構成要件
 ①. AIシステム内部の表現形式である普遍概念シミュレーション言語の定義(=sunie-language)。  
 ②. マルチモーダルなパターンの概念コード化(=数式化と命令化)。  
