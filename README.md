@@ -5,18 +5,21 @@
 
 
 ## 本件アプリのコンポーネント構成(=SUNIE-System)
-SUNIE-Core-Engine ----  
+SUNIE-Core-Engine  
  ・SUNIE-Interpreter  
  ・SUNIE-Tagnet-Builder  
  ・SUNIE-Tagnet-Clowler  
- ・SUNIE-Task-Resolver)  
-SUNIE-Visual-Engine ----  
+ ・SUNIE-Task-Resolver  
+
+SUNIE-Visual-Engine  
  ・SUNIE-Image  
  ・SUNIE-Graphic    
-SUNIE-Audio-Engine ----  
+
+SUNIE-Audio-Engine  
  ・SUNIE-Sound  
  ・SUNIE-Voice  
-SUNIE-Video-Engine ----  
+
+SUNIE-Video-Engine  
  ・SUNIE-Clip  
  ・SUNIE-Transition  
 
