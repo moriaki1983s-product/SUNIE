@@ -8843,8 +8843,8 @@ def detail_reaction():
         dtl_rl_form.concept_and_notion.data = rctn.concept_and_notion
         dtl_rl_form.staff_psychology.data = rctn.staff_psychology
         dtl_rl_form.scene_and_background.data = rctn.scene_and_background
-        dtl_rl_form.message_example_from_staff.data = rctn.staff_example_text_message
-        dtl_rl_form.message_example_from_application.data = rctn.application_example_text_message
+        dtl_rl_form.staff_example_text_message.data = rctn.staff_example_text_message
+        dtl_rl_form.application_example_text_message.data = rctn.application_example_text_message
         dtl_rl_form.staff_name.data = rctn.staff_name
         dtl_rl_form.staff_kana_name.data = rctn.staff_kana_name
         dtl_rl_form.created_at.data = rctn.created_at
