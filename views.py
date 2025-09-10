@@ -125,11 +125,14 @@ view = Blueprint("view", __name__)
 # Flaskの初回起動時処理を実行するためのフラッグ変数を宣言する.
 is_frst_rqst = True
 
-# Sunie独自のエンジンを生成する.
-se = appcore.SunieEngine()
+# Sunie独自の各種エンジンを生成する.
+cr_engn = appcore.CoreEngine()
+vis_engn = appcore.VisualEngine()
+aud_engn = appcore.AudioEngine()
+vid_engne = appcore.VideoEngine()
 
 # アプリのログ(=動作記録)の保存を開始する.
-se.etc.logging__start(consts.LOGGING_PATH)
+cr_engn.etc.logging__start(consts.LOGGING_PATH)
 
 
 
@@ -150,8 +153,8 @@ def home():
     session["is-admin-enter"] = False
     session["referrer-page"] = "view.home"
     hm_back_cnddt = ["PATTERN-A", "PATTERN-B"]
-    dcid_pttrn = se.etc.random_select(hm_back_cnddt)
-    crrnt_hr = se.etc.retrieve_current_hour_as_integer("JST")
+    dcid_pttrn = cr_engn.etc.random_select(hm_back_cnddt)
+    crrnt_hr = cr_engn.etc.retrieve_current_hour_as_integer("JST")
     match crrnt_hr:
           case crrnt_hr if 0 <= crrnt_hr < 6:
                tm_ped = "midnight"
@@ -163,7 +166,7 @@ def home():
                tm_ped = "evening/night"
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /home")
+    rslt = cr_engn.etc.logging__info("view at /home")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -185,7 +188,7 @@ def home():
                if (ent_or_ext.reason == "clock-in" or
                    ent_or_ext.reason == "return-to-out" or
                    ent_or_ext.reason == "after-break"):
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
                    db_session.add(EnterOrExit(staff_name=stff.name,
                                               staff_kana_name=stff.kana_name,
                                               reason="application-termination",
@@ -221,7 +224,7 @@ def usage():
     session["referrer-page"] = "view.usage"
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /usage")
+    rslt = cr_engn.etc.logging__info("view at /usage")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -245,7 +248,7 @@ def guide():
     session["referrer-page"] = "view.guide"
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /guide")
+    rslt = cr_engn.etc.logging__info("view at /guide")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -266,7 +269,7 @@ def staff_enter():
     stff_entr_form = StaffEnterForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /staff_enter")
+    rslt = cr_engn.etc.logging__info("view at /staff_enter")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -351,7 +354,7 @@ def staff_enter():
             if (ent_or_ext.reason == "clock-in" or
                 ent_or_ext.reason == "return-to-out" or
                 ent_or_ext.reason == "after-break"):
-                crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
                 db_session.add(EnterOrExit(staff_name=stff.name,
                                            staff_kana_name=stff.kana_name,
                                            reason="forget-or-revocation",
@@ -366,7 +369,7 @@ def staff_enter():
                 db_session.close()
 
         # 現在のタイムスタンプを取得して, 入室記録をDBに登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(EnterOrExit(staff_name=stff.name,
                                    staff_kana_name=stff.kana_name,
                                    reason=rsn,
@@ -399,7 +402,7 @@ def staff_exit():
     stff_exit_form = StaffExitForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /staff_exit")
+    rslt = cr_engn.etc.logging__info("view at /staff_exit")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -441,7 +444,7 @@ def staff_exit():
             return render_template("staff_exit.html", form=stff_exit_form, happen_error=True)
 
         # 現在のタイムスタンプを取得して, 退室記録をDBに登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(EnterOrExit(staff_name=session["enter-name"],
                                    staff_kana_name=session["enter-kana-name"],
                                    reason=stff_exit_form.reason.data,
@@ -470,7 +473,7 @@ def admin_enter():
     admn_entr_form = AdminEnterForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /admin_enter")
+    rslt = cr_engn.etc.logging__info("view at /admin_enter")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -547,7 +550,7 @@ def admin_exit():
     admn_exit_form = AdminExitForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /admin_exit")
+    rslt = cr_engn.etc.logging__info("view at /admin_exit")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -591,7 +594,7 @@ def admin_exit():
 @view.route("/staff_dashboard", methods=["GET"])
 def staff_dashboard():
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /staff_dashboard")
+    rslt = cr_engn.etc.logging__info("view at /staff_dashboard")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -620,7 +623,7 @@ def staff_dashboard():
 @view.route("/admin_dashboard", methods=["GET"])
 def admin_dashboard():
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /admin_dashboard")
+    rslt = cr_engn.etc.logging__info("view at /admin_dashboard")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -650,10 +653,12 @@ def admin_dashboard():
 def send():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     stff_wrds = []
+    stff_fcts = []
+    stff_rls = []
     send_form = SendForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /send")
+    rslt = cr_engn.etc.logging__info("view at /send")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -693,7 +698,7 @@ def send():
         if send_form.text_message.data == "":
             flash("メッセージ本文が入力されていません.")
             return render_template("send.html", form=send_form, happen_error=True)
-        spltd_ln_txts = se.reg.split_text_message_on_delimiter(send_form.text_message.data)
+        spltd_ln_txts = cr_engn.reg.split_text_message_on_delimiter(send_form.text_message.data)
         if len(spltd_ln_txts) == 0:
             flash("改行コードのみの入力は無効です.")
             return render_template("send.html", form=send_form, happen_error=True)
@@ -714,7 +719,7 @@ def send():
             if wrd_in_txt is not None:
                 stff_wrds.append(wrd_in_txt)
                 continue
-            spltd_typ_txt = se.reg.split_text_message_character_type(spltd_ln_txt)
+            spltd_typ_txt = cr_engn.reg.split_text_message_character_type(spltd_ln_txt)
             for spltd_typ_wrd in spltd_typ_txt:
                 wrd_in_txt = (
                 db_session.query(Word)
@@ -760,15 +765,41 @@ def send():
                 else:
                     break
 
+        for stff_wrd in stff_wrds:
+            fct_in_txt = (
+            db_session.query(Fact.spell_and_header == stff_wrd.spell_and_header)
+            .filter()
+            .order_by(Fact.id.desc())
+            .first()
+            )
+            if fct_in_txt is not None:
+                stff_fcts.append(fct_in_txt)
+                continue
+
+        for stff_wrd in stff_wrds:
+            rl_in_txt = (
+            db_session.query(Rule.spell_and_header == stff_wrd.spell_and_header)
+            .filter()
+            .order_by(Rule.id.desc())
+            .first()
+            )
+            if rl_in_txt is not None:
+                stff_rls.append(rl_in_txt)
+                continue
+
+        print(stff_wrds)
+        print(stff_fcts)
+        print(stff_rls)
+
         # sunieエンジンに職員への返信テキスト(=メッセージ)を生成させる.
-        # stff_fct, stff_intnt, stff_sntmnt = se.reg.analyze_words_in_texts(stff_wrds_in_txts)
-        # app_wrds_in_txts= se.reg.generate_words_in_texts(stff_fct, stff_intnt, stff_sntmnt)
-        # app_txt_msg = se.reg.asemble_text_message(app_wrds_in_txts)
-        app_txt_msg = se.reg.asemble_text_message()
+        # stff_fct, stff_intnt, stff_sntmnt = cr_engn.reg.analyze_words_in_texts(stff_wrds_in_txts)
+        # app_wrds_in_txts= cr_engn.reg.generate_words_in_texts(stff_fct, stff_intnt, stff_sntmnt)
+        # app_txt_msg = cr_engn.reg.asemble_text_message(app_wrds_in_txts)
+        app_txt_msg = cr_engn.reg.asemble_text_message()
 
         # 履歴情報をレコードとして, DBに保存・登録する.
         stff_txt_msg = send_form.text_message.data
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(History(staff_name=session["enter-name"],
                                staff_kana_name=session["enter-kana-name"],
                                staff_text_message=stff_txt_msg,
@@ -792,7 +823,7 @@ def send():
 @view.route("/reply", methods=["GET"])
 def reply():
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /reply")
+    rslt = cr_engn.etc.logging__info("view at /reply")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -832,7 +863,7 @@ def learn_word():
     lrn_wrd_form = LearnWordForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /learn_word")
+    rslt = cr_engn.etc.logging__info("view at /learn_word")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -909,11 +940,11 @@ def learn_word():
             return render_template("learn_word.html", form=lrn_wrd_form, happen_error=True)
 
         #@ ここで, 語句情報を学習するための各種の高度な計算を行う.
-        cncpt_n_ntn = se.learn_word(lrn_wrd_form.spell_and_header.data,
+        cncpt_n_ntn = cr_engn.learn_word(lrn_wrd_form.spell_and_header.data,
                                     lrn_wrd_form.mean_and_body.data)
 
         # 語句情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(Word(spell_and_header=escape(lrn_wrd_form.spell_and_header.data),
                             mean_and_body=escape(lrn_wrd_form.mean_and_body.data),
                             concept_and_notion=cncpt_n_ntn,
@@ -948,7 +979,7 @@ def learn_theme():
     lrn_thm_form = LearnThemeForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /learn_theme")
+    rslt = cr_engn.etc.logging__info("view at /learn_theme")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1006,11 +1037,11 @@ def learn_theme():
             return render_template("learn_word.html", form=lrn_thm_form, happen_error=True)
 
         #@ ここで, 主題情報を学習するための各種の高度な計算を行う.
-        cncpt_n_ntn = se.learn_theme(lrn_thm_form.spell_and_header.data,
+        cncpt_n_ntn = cr_engn.learn_theme(lrn_thm_form.spell_and_header.data,
                                      lrn_thm_form.mean_and_body.data)
 
         # 主題情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(Theme(spell_and_header=escape(lrn_thm_form.spell_and_header.data),
                              mean_and_body=escape(lrn_thm_form.mean_and_body.data),
                              concept_and_notion=cncpt_n_ntn,
@@ -1037,7 +1068,7 @@ def learn_category():
     lrn_ctgr_form = LearnCategoryForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /learn_category")
+    rslt = cr_engn.etc.logging__info("view at /learn_category")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1103,11 +1134,11 @@ def learn_category():
             return render_template("learn_word.html", form=lrn_ctgr_form, happen_error=True)
 
         #@ ここで, 分類情報を学習するための各種の高度な計算を行う.
-        cncpt_n_ntn = se.learn_category(lrn_ctgr_form.spell_and_header.data,
+        cncpt_n_ntn = cr_engn.learn_category(lrn_ctgr_form.spell_and_header.data,
                                         lrn_ctgr_form.mean_and_body.data)
 
         # 分類情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(Category(spell_and_header=escape(lrn_ctgr_form.spell_and_header.data),
                                 mean_and_body=escape(lrn_ctgr_form.mean_and_body.data),
                                 concept_and_notion=cncpt_n_ntn,
@@ -1140,7 +1171,7 @@ def learn_fact():
     lrn_fct_form = LearnFactForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /learn_fact")
+    rslt = cr_engn.etc.logging__info("view at /learn_fact")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1201,15 +1232,15 @@ def learn_fact():
             return render_template("learn_fact.html", form=lrn_fct_form, happen_error=True)
 
         #@ ここで, 事実情報を学習するための各種の高度な計算を行う.
-        cncpt_n_ntn = se.learn_category(lrn_fct_form.spell_and_header.data,
+        cncpt_n_ntn = cr_engn.learn_category(lrn_fct_form.spell_and_header.data,
                                         lrn_fct_form.mean_and_body.data)
 
         # 事実情報をレコードとして, DBに保存・登録する.
-        fl_lbl = se.etc.retrieve_current_time_as_file_label()
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
-        img_sv_pth = se.etc.save_file(lrn_fct_form.attached_image_file.data, consts.ARCHIVE_IMAGE_PATH, fl_lbl)
-        snd_sv_pth = se.etc.save_file(lrn_fct_form.attached_sound_file.data, consts.ARCHIVE_SOUND_PATH, fl_lbl)
-        vdo_sv_pth = se.etc.save_file(lrn_fct_form.attached_video_file.data, consts.ARCHIVE_VIDEO_PATH, fl_lbl)
+        fl_lbl = cr_engn.etc.retrieve_current_time_as_file_label()
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
+        img_sv_pth = cr_engn.etc.save_file(lrn_fct_form.attached_image_file.data, consts.ARCHIVE_IMAGE_PATH, fl_lbl)
+        snd_sv_pth = cr_engn.etc.save_file(lrn_fct_form.attached_sound_file.data, consts.ARCHIVE_SOUND_PATH, fl_lbl)
+        vdo_sv_pth = cr_engn.etc.save_file(lrn_fct_form.attached_video_file.data, consts.ARCHIVE_VIDEO_PATH, fl_lbl)
         db_session.add(Fact(spell_and_header=escape(lrn_fct_form.spell_and_header.data),
                             mean_and_body=escape(lrn_fct_form.mean_and_body.data),
                             concept_and_notion=cncpt_n_ntn,
@@ -1239,7 +1270,7 @@ def learn_rule():
     lrn_rl_form = LearnRuleForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /learn_rule")
+    rslt = cr_engn.etc.logging__info("view at /learn_rule")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1305,11 +1336,11 @@ def learn_rule():
             return render_template("learn_rule.html", form=lrn_rl_form, happen_error=True)
 
         #@ ここで, 規則情報を学習するための各種の高度な計算を行う.
-        cncpt_n_ntn = se.learn_rule(lrn_rl_form.spell_and_header.data,
+        cncpt_n_ntn = cr_engn.learn_rule(lrn_rl_form.spell_and_header.data,
                                     lrn_rl_form.mean_and_body.data)
 
         # 規則情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(Rule(spell_and_header=escape(lrn_rl_form.spell_and_header.data),
                             mean_and_body=escape(lrn_rl_form.mean_and_body.data),
                             concept_and_notion=cncpt_n_ntn,
@@ -1338,7 +1369,7 @@ def learn_reaction():
     lrn_rctn_form = LearnReactionForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /learn_reaction")
+    rslt = cr_engn.etc.logging__info("view at /learn_reaction")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1408,18 +1439,18 @@ def learn_reaction():
             return render_template("learn_reaction.html", form=lrn_rctn_form, happen_error=True)
 
         #@ ここで, 反応情報を学習するための各種の高度な計算を行う.
-        cncpt_n_ntn = se.learn_reaction(lrn_rctn_form.spell_and_header.data,
+        cncpt_n_ntn = cr_engn.learn_reaction(lrn_rctn_form.spell_and_header.data,
                                         lrn_rctn_form.mean_and_body.data)
 
         # 反応情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(Reaction(spell_and_header=escape(lrn_rctn_form.spell_and_header.data),
                                 mean_and_body=escape(lrn_rctn_form.mean_and_body.data),
                                 concept_and_notion=cncpt_n_ntn,
                                 staff_psychology=escape(lrn_rctn_form.staff_psychology.data),
                                 scene_and_background=escape(lrn_rctn_form.scene_and_background.data),
-                                staff_example_message=escape(lrn_rctn_form.message_example_from_staff.data),
-                                application_example_message=escape(lrn_rctn_form.message_example_from_application.data),
+                                staff_example_text_message=escape(lrn_rctn_form.message_example_from_staff.data),
+                                application_example_text_message=escape(lrn_rctn_form.message_example_from_application.data),
                                 staff_name=session["enter-name"],
                                 staff_kana_name=session["enter-kana-name"],
                                 created_at=crrnt_dttm,
@@ -1442,7 +1473,7 @@ def generate():
     gen_form = GenerateForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /generate")
+    rslt = cr_engn.etc.logging__info("view at /generate")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1499,12 +1530,12 @@ def generate():
             return render_template("generate.html", form=gen_form, happen_error=True)
 
         #@ ここで, 各種のデータファイルを生成するための各種の高度な計算を行う.
-        gnrtd_fl_pth = se.generate_data_file(gen_form.spell_and_header.data,
+        gnrtd_fl_pth = cr_engn.generate_data_file(gen_form.spell_and_header.data,
                                              gen_form.mean_and_body.data)
         gnrtd_fl_pth = consts.DUMMY_FILE_PATH # 暫定的にダミーファイルのパスを使用する.
 
         # 生成情報をレコードとして, DBに保存・登録する.
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(Generate(spell_and_header=escape(gen_form.spell_and_header.data),
                                 mean_and_body=escape(gen_form.mean_and_body.data),
                                 generated_file_path=gnrtd_fl_pth,
@@ -1532,7 +1563,7 @@ def show_words(id=None):
     wrds_fnl = []
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /show_words")
+    rslt = cr_engn.etc.logging__info("view at /show_words")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1680,7 +1711,7 @@ def show_themes(id=None):
     thms_fnl = []
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /show_themes")
+    rslt = cr_engn.etc.logging__info("view at /show_themes")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1828,7 +1859,7 @@ def show_categories(id=None):
     ctgrs_fnl = []
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /show_categories")
+    rslt = cr_engn.etc.logging__info("view at /show_categories")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1976,7 +2007,7 @@ def show_facts(id=None):
     fcts_fnl = []
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /show_knowledges")
+    rslt = cr_engn.etc.logging__info("view at /show_knowledges")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2124,7 +2155,7 @@ def show_rules(id=None):
     rls_fnl = []
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /show_rules")
+    rslt = cr_engn.etc.logging__info("view at /show_rules")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2272,7 +2303,7 @@ def show_reactions(id=None):
     rctns_fnl = []
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /show_reactions")
+    rslt = cr_engn.etc.logging__info("view at /show_reactions")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2420,7 +2451,7 @@ def show_generates(id=None):
     gens_fnl = []
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /show_generates")
+    rslt = cr_engn.etc.logging__info("view at /show_generates")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2568,7 +2599,7 @@ def show_histories(id=None):
     hists_fnl = []
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /show_histories")
+    rslt = cr_engn.etc.logging__info("view at /show_histories")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2616,14 +2647,14 @@ def show_histories(id=None):
                     id_tmp = hist_tmp.id[0:6] + "..."
                 else:
                     id_tmp = hist_tmp.id
-                if len(hist_tmp.staff_message) > 6:
-                    stff_msg_tmp = hist_tmp.staff_message[0:6] + "..."
+                if len(hist_tmp.staff_text_message) > 6:
+                    stff_msg_tmp = hist_tmp.staff_text_message[0:6] + "..."
                 else:
-                    stff_msg_tmp = hist_tmp.staff_message
-                if len(hist_tmp.application_message) > 6:
-                    app_msg_tmp = hist_tmp.application_message[0:6] + "..."
+                    stff_msg_tmp = hist_tmp.staff_text_message
+                if len(hist_tmp.application_text_message) > 6:
+                    app_msg_tmp = hist_tmp.application_text_message[0:6] + "..."
                 else:
-                    app_msg_tmp = hist_tmp.application_message
+                    app_msg_tmp = hist_tmp.application_text_message
                 if len(hist_tmp.staff_name) > 6:
                     stff_nm_tmp = hist_tmp.staff_name[0:6] + "..."
                 else:
@@ -2661,14 +2692,14 @@ def show_histories(id=None):
                     id_tmp = hist_tmp.id[0:6] + "..."
                 else:
                     id_tmp = hist_tmp.id
-                if len(hist_tmp.staff_message) > 6:
-                    stff_msg_tmp = hist_tmp.staff_message[0:6] + "..."
+                if len(hist_tmp.staff_text_message) > 6:
+                    stff_msg_tmp = hist_tmp.staff_text_message[0:6] + "..."
                 else:
-                    stff_msg_tmp = hist_tmp.staff_message
-                if len(hist_tmp.application_message) > 6:
-                    app_msg_tmp = hist_tmp.application_message[0:6] + "..."
+                    stff_msg_tmp = hist_tmp.staff_text_message
+                if len(hist_tmp.application_text_message) > 6:
+                    app_msg_tmp = hist_tmp.application_text_message[0:6] + "..."
                 else:
-                    app_msg_tmp = hist_tmp.application_message
+                    app_msg_tmp = hist_tmp.application_text_message
                 if len(hist_tmp.staff_name) > 6:
                     stff_nm_tmp = hist_tmp.staff_name[0:6] + "..."
                 else:
@@ -2712,7 +2743,7 @@ def show_enters_or_exits(id=None):
     ents_or_exts_fnl = []
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /show_enters_or_exits")
+    rslt = cr_engn.etc.logging__info("view at /show_enters_or_exits")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2783,17 +2814,17 @@ def show_enters_or_exits(id=None):
                     rsn_tmp = "アプリ終了"
                 else:
                     rsn_tmp = "その他(分類不明)"
-                if str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[2] == "00":
-                    dt_tmp = str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[0] + " "
+                if str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[2] == "00":
+                    dt_tmp = str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[0] + " "
                     tm_tmp = (
-                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[0] + ":" +
-                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[1] + ":" +
+                    str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[0] + ":" +
+                    str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[1] + ":" +
                     str(ent_or_ext_tmp.enter_or_exit_at_second)
                     )
-                    dttm_tmp = se.etc.modify_style_for_datetime_string(dt_tmp + tm_tmp, False)
+                    dttm_tmp = cr_engn.etc.modify_style_for_datetime_string(dt_tmp + tm_tmp, False)
                 else:
                     dttm_tmp = (
-                    se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False), False)
+                    cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False), False)
                     )
                 ents_or_exts_fnl.append([id_tmp,
                                          stff_nm_tmp,
@@ -2850,17 +2881,17 @@ def show_enters_or_exits(id=None):
                     rsn_tmp = "アプリ終了"
                 else:
                     rsn_tmp = "その他(分類不明)"
-                if str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[2] == "00":
-                    dt_tmp = str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[0] + " "
+                if str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[2] == "00":
+                    dt_tmp = str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[0] + " "
                     tm_tmp = (
-                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[0] + ":" +
-                    str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[1] + ":" +
+                    str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[0] + ":" +
+                    str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[1] + ":" +
                     str(ent_or_ext_tmp.enter_or_exit_at_second)
                     )
-                    dttm_tmp = se.etc.modify_style_for_datetime_string(dt_tmp + tm_tmp, False)
+                    dttm_tmp = cr_engn.etc.modify_style_for_datetime_string(dt_tmp + tm_tmp, False)
                 else:
                     dttm_tmp = (
-                    se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False), False)
+                    cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False), False)
                     )
                 ents_or_exts_fnl.append([id_tmp,
                                          stff_nm_tmp,
@@ -2904,7 +2935,7 @@ def show_staffs(id=None):
     stffs_fnl = []
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /show_staffs")
+    rslt = cr_engn.etc.logging__info("view at /show_staffs")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2974,7 +3005,7 @@ def show_staffs(id=None):
                 else:
                     bld_typ_tmp = "その他(分類不明)"
                 brth_dt_tmp = (
-                se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_eventday(stff_tmp.birth_date), False)
+                cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_eventday(stff_tmp.birth_date), False)
                 )
                 stffs_fnl.append([id_tmp,
                                   nm_tmp,
@@ -3031,7 +3062,7 @@ def show_staffs(id=None):
                  else:
                      bld_typ_tmp = "その他(分類不明)"
                  brth_dt_tmp = (
-                 se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_eventday(stff_tmp.birth_date), False)
+                 cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_eventday(stff_tmp.birth_date), False)
                  )
                  stffs_fnl.append([id_tmp,
                                    nm_tmp,
@@ -3074,7 +3105,7 @@ def search_words():
     srch_wrd_form = SearchWordForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_words")
+    rslt = cr_engn.etc.logging__info("view at /search_words")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3171,7 +3202,7 @@ def search_themes():
     srch_thm_form = SearchThemeForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_words")
+    rslt = cr_engn.etc.logging__info("view at /search_words")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3256,7 +3287,7 @@ def search_categories():
     srch_ctgr_form = SearchCategoryForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_words")
+    rslt = cr_engn.etc.logging__info("view at /search_words")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3347,7 +3378,7 @@ def search_knowledges():
     srch_fct_form = SearchFactForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_knowledges")
+    rslt = cr_engn.etc.logging__info("view at /search_knowledges")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3441,7 +3472,7 @@ def search_rules():
     srch_rl_form = SearchRuleForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_rules")
+    rslt = cr_engn.etc.logging__info("view at /search_rules")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3532,7 +3563,7 @@ def search_reactions():
     srch_rctn_form = SearchReactionForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_rules")
+    rslt = cr_engn.etc.logging__info("view at /search_rules")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3626,7 +3657,7 @@ def search_generates():
     srch_gen_form = SearchGenerateForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_generates")
+    rslt = cr_engn.etc.logging__info("view at /search_generates")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3708,7 +3739,7 @@ def search_histories():
     srch_hist_form = SearchHistoryForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_histories")
+    rslt = cr_engn.etc.logging__info("view at /search_histories")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3754,8 +3785,8 @@ def search_histories():
         # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
         if srch_hist_form.cancel.data:
             srch_hist_form.id.data = ""
-            srch_hist_form.staff_message.data = ""
-            srch_hist_form.application_message.data = ""
+            srch_hist_form.staff_text_message.data = ""
+            srch_hist_form.application_text_message.data = ""
             srch_hist_form.staff_name.data = ""
             srch_hist_form.staff_kana_name.data = ""
             srch_hist_form.created_at_begin.data = ""
@@ -3768,8 +3799,8 @@ def search_histories():
 
         # 検索に係るセッション項目(=検索条件)を作成する.
         session["id"] = srch_hist_form.id.data
-        session["staff-message"] = srch_hist_form.staff_message.data
-        session["application-message"] = srch_hist_form.application_message.data
+        session["staff-message"] = srch_hist_form.staff_text_message.data
+        session["application-message"] = srch_hist_form.application_text_message.data
         session["staff-name"] = srch_hist_form.staff_name.data
         session["staff-kana-name"] = srch_hist_form.staff_kana_name.data
         session["created-at-begin"] = srch_hist_form.created_at_begin.data
@@ -3790,7 +3821,7 @@ def search_enters_or_exits():
     srch_entr_or_exit_form = SearchEnterOrExitForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /enters_or_exits")
+    rslt = cr_engn.etc.logging__info("view at /enters_or_exits")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3874,7 +3905,7 @@ def search_staffs():
     srch_stff_form = SearchStaffForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_staffs")
+    rslt = cr_engn.etc.logging__info("view at /search_staffs")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3961,7 +3992,7 @@ def search_words_results():
     is_srch_done = False
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_words_results")
+    rslt = cr_engn.etc.logging__info("view at /search_words_results")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -4354,7 +4385,7 @@ def search_themes_results():
     is_srch_done = False
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_themes_results")
+    rslt = cr_engn.etc.logging__info("view at /search_themes_results")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -4653,7 +4684,7 @@ def search_categories_results():
     is_srch_done = False
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_categories_results")
+    rslt = cr_engn.etc.logging__info("view at /search_categories_results")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -5008,7 +5039,7 @@ def search_knowledges_results():
     is_srch_done = False
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_knowledges_results")
+    rslt = cr_engn.etc.logging__info("view at /search_knowledges_results")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -5390,7 +5421,7 @@ def search_rules_results():
     is_srch_done = False
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_rules_results")
+    rslt = cr_engn.etc.logging__info("view at /search_rules_results")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -5745,7 +5776,7 @@ def search_reactions_results():
     is_srch_done = False
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_reactions_results")
+    rslt = cr_engn.etc.logging__info("view at /search_reactions_results")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -6127,7 +6158,7 @@ def search_generates_results():
     is_srch_done = False
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_generates_results")
+    rslt = cr_engn.etc.logging__info("view at /search_generates_results")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -6401,7 +6432,7 @@ def search_histories_results():
     is_srch_done = False
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_histories_results")
+    rslt = cr_engn.etc.logging__info("view at /search_histories_results")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -6467,25 +6498,25 @@ def search_histories_results():
             srch_trgt = [stff_msg]
             if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
                   hists_tmp = (
-                  db_session.query(History).filter(History.staff_message.in_(srch_trgt), History.is_hidden == False).order_by(History.id.asc()).all()
+                  db_session.query(History).filter(History.staff_text_message.in_(srch_trgt), History.is_hidden == False).order_by(History.id.asc()).all()
                   )
                   db_session.close()
                   is_srch_done = True
             elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
                   hists_tmp = (
-                  db_session.query(History).filter(History.staff_message.in_(srch_trgt)).order_by(History.id.asc()).all()
+                  db_session.query(History).filter(History.staff_text_message.in_(srch_trgt)).order_by(History.id.asc()).all()
                   )
                   db_session.close()
                   is_srch_done = True
             elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
                   hists_tmp = (
-                  db_session.query(History).filter(History.staff_message.in_(srch_trgt), History.is_hidden == False).order_by(History.id.desc()).all()
+                  db_session.query(History).filter(History.staff_text_message.in_(srch_trgt), History.is_hidden == False).order_by(History.id.desc()).all()
                   )
                   db_session.close()
                   is_srch_done = True
             else:
                   hists_tmp = (
-                  db_session.query(History).filter(History.staff_message.in_(srch_trgt)).order_by(History.id.desc()).all()
+                  db_session.query(History).filter(History.staff_text_message.in_(srch_trgt)).order_by(History.id.desc()).all()
                   )
                   db_session.close()
                   is_srch_done = True
@@ -6493,25 +6524,25 @@ def search_histories_results():
             srch_trgt = [app_msg]
             if ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-1")):
                   hists_tmp = (
-                  db_session.query(History).filter(History.application_message.in_(srch_trgt), History.is_hidden == False).order_by(History.id.asc()).all()
+                  db_session.query(History).filter(History.application_text_message.in_(srch_trgt), History.is_hidden == False).order_by(History.id.asc()).all()
                   )
                   db_session.close()
                   is_srch_done = True
             elif ((srt_cndtn == "condition-1") and (extrct_cndtn == "condition-2")):
                   hists_tmp = (
-                  db_session.query(History).filter(History.application_message.in_(srch_trgt)).order_by(History.id.asc()).all()
+                  db_session.query(History).filter(History.application_text_message.in_(srch_trgt)).order_by(History.id.asc()).all()
                   )
                   db_session.close()
                   is_srch_done = True
             elif ((srt_cndtn == "condition-2") and (extrct_cndtn == "condition-1")):
                   hists_tmp = (
-                  db_session.query(History).filter(History.application_message.in_(srch_trgt), History.is_hidden == False).order_by(History.id.desc()).all()
+                  db_session.query(History).filter(History.application_text_message.in_(srch_trgt), History.is_hidden == False).order_by(History.id.desc()).all()
                   )
                   db_session.close()
                   is_srch_done = True
             else:
                   hists_tmp = (
-                  db_session.query(History).filter(History.application_message.in_(srch_trgt)).order_by(History.id.desc()).all()
+                  db_session.query(History).filter(History.application_text_message.in_(srch_trgt)).order_by(History.id.desc()).all()
                   )
                   db_session.close()
                   is_srch_done = True
@@ -6621,14 +6652,14 @@ def search_histories_results():
                     id_tmp = hist_tmp.id[0:6] + "..."
                 else:
                     id_tmp = hist_tmp.id
-                if len(hist_tmp.staff_message) > 6:
-                    stff_msg_tmp = hist_tmp.staff_message[0:6] + "..."
+                if len(hist_tmp.staff_text_message) > 6:
+                    stff_msg_tmp = hist_tmp.staff_text_message[0:6] + "..."
                 else:
-                    stff_msg_tmp = hist_tmp.staff_message
-                if len(hist_tmp.application_message) > 6:
-                    app_msg_tmp = hist_tmp.application_message[0:6] + "..."
+                    stff_msg_tmp = hist_tmp.staff_text_message
+                if len(hist_tmp.application_text_message) > 6:
+                    app_msg_tmp = hist_tmp.application_text_message[0:6] + "..."
                 else:
-                    app_msg_tmp = hist_tmp.application_message
+                    app_msg_tmp = hist_tmp.application_text_message
                 if len(hist_tmp.staff_name) > 6:
                     stff_nm_tmp = hist_tmp.staff_name[0:6] + "..."
                 else:
@@ -6672,7 +6703,7 @@ def search_enters_or_exits_results():
     is_srch_done = False
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_enters_or_exits_results")
+    rslt = cr_engn.etc.logging__info("view at /search_enters_or_exits_results")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -6971,7 +7002,7 @@ def search_staffs_results():
     is_srch_done = False
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /search_staffs_results")
+    rslt = cr_engn.etc.logging__info("view at /search_staffs_results")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7270,7 +7301,7 @@ def register_enter_or_exit():
     rgstr_entr_or_exit_form = RegisterEnterOrExitForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /register_enter_or_exit")
+    rslt = cr_engn.etc.logging__info("view at /register_enter_or_exit")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7342,7 +7373,7 @@ def register_enter_or_exit():
             crrnt_dttm_scnd = "0" + str(rgstr_entr_or_exit_form.enter_or_exit_at_second.data)
         else:
             crrnt_dttm_scnd = str(rgstr_entr_or_exit_form.enter_or_exit_at_second.data)
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(EnterOrExit(staff_name = rgstr_entr_or_exit_form.staff_name.data,
                                    staff_kana_name = rgstr_entr_or_exit_form.staff_kana_name.data,
                                    reason = rgstr_entr_or_exit_form.reason.data,
@@ -7368,7 +7399,7 @@ def register_staff():
     rgstr_stff_form = RegisterStaffForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /register_staff")
+    rslt = cr_engn.etc.logging__info("view at /register_staff")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7453,7 +7484,7 @@ def register_staff():
         if len(rgstr_stff_form.kana_name.data) > consts.STAFF_KANA_NAME_LENGTH:
             flash("職員カナ名は, " + str(consts.STAFF_KANA_NAME_LENGTH) + "文字以内にしてください.")
             return render_template("register_staff.html", form=rgstr_stff_form, happen_error=True)
-        if not se.reg.check_katakana_uppercase_in_ja(rgstr_stff_form.kana_name.data):
+        if not cr_engn.reg.check_katakana_uppercase_in_ja(rgstr_stff_form.kana_name.data):
             flash("職員カナ名は, カタカナのみにしてください.")
             return render_template("register_staff.html", form=rgstr_stff_form, happen_error=True)
         if len(rgstr_stff_form.password.data) > consts.PASSWORD_LENGTH:
@@ -7469,9 +7500,9 @@ def register_staff():
             flash("パスワードの一部として, 半角スペースは使用できません.")
             return render_template("register_staff.html", form=rgstr_stff_form, happen_error=True)
 
-        drtn_in_dys__crit1 = se.etc.retrieve_timedelta_from_years(consts.STAFF_AGE_TOP)
-        drtn_in_dys__crit2 = se.etc.retrieve_timedelta_from_years(consts.STAFF_AGE_BOTTOM)
-        drtn_in_dys__brth_to_prsnt = se.etc.retrieve_timedelta_from_date_object(rgstr_stff_form.birth_date.data)
+        drtn_in_dys__crit1 = cr_engn.etc.retrieve_timedelta_from_years(consts.STAFF_AGE_TOP)
+        drtn_in_dys__crit2 = cr_engn.etc.retrieve_timedelta_from_years(consts.STAFF_AGE_BOTTOM)
+        drtn_in_dys__brth_to_prsnt = cr_engn.etc.retrieve_timedelta_from_date_object(rgstr_stff_form.birth_date.data)
 
         if drtn_in_dys__brth_to_prsnt > drtn_in_dys__crit1:
             flash("本アプリは, " + str(consts.STAFF_AGE_TOP) + "歳超の方には提供しておりません.")
@@ -7488,7 +7519,7 @@ def register_staff():
 
         # 職員情報をレコードとして, DBに保存・登録する.
         hshd_psswrd = generate_password_hash(rgstr_stff_form.password.data)
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         db_session.add(Staff(name=rgstr_stff_form.name.data,
                              kana_name=rgstr_stff_form.kana_name.data,
                              hashed_password=hshd_psswrd,
@@ -7515,7 +7546,7 @@ def modify_word():
     mod_wrd_form = ModifyWordForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /modify_word")
+    rslt = cr_engn.etc.logging__info("view at /modify_word")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7617,7 +7648,7 @@ def modify_word():
         wrd = (
         db_session.query(Word).filter(Word.id == session["hidden-modify-item-id"]).first()
         )
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         wrd.spell_and_header = escape(mod_wrd_form.spell_and_header.data)
         wrd.mean_and_body = escape(mod_wrd_form.mean_and_body.data)
         wrd.theme_tag = escape(mod_wrd_form.theme_tag.data)
@@ -7649,7 +7680,7 @@ def modify_theme():
     mod_thm_form = ModifyThemeForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /modify_theme")
+    rslt = cr_engn.etc.logging__info("view at /modify_theme")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7731,7 +7762,7 @@ def modify_theme():
         thm = (
         db_session.query(Theme).filter(Theme.id == session["hidden-modify-item-id"]).first()
         )
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         thm.spell_and_header = escape(mod_thm_form.spell_and_header.data)
         thm.mean_and_body = escape(mod_thm_form.mean_and_body.data)
         thm.category_tag = escape(mod_thm_form.category_tag.data)
@@ -7755,7 +7786,7 @@ def modify_category():
     mod_ctgr_form = ModifyCategoryForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /modify_category")
+    rslt = cr_engn.etc.logging__info("view at /modify_category")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7845,7 +7876,7 @@ def modify_category():
         ctgr = (
         db_session.query(Category).filter(Category.id == session["hidden-modify-item-id"]).first()
         )
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         ctgr.spell_and_header = escape(mod_ctgr_form.spell_and_header.data)
         ctgr.mean_and_body = escape(mod_ctgr_form.mean_and_body.data)
         ctgr.parent_category_tag = escape(mod_ctgr_form.parent_category_tag.data)
@@ -7871,7 +7902,7 @@ def modify_fact():
     mod_fct_form = ModifyFactForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /modify_fact")
+    rslt = cr_engn.etc.logging__info("view at /modify_fact")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7959,11 +7990,11 @@ def modify_fact():
         )
 
         # 指定IDの事実レコードを取得し, その内容を上書きしてから, DBセッションを閉じる.
-        fl_lbl = se.etc.retrieve_current_time_as_file_label()
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
-        archvd_img_fl_pth = se.etc.save_file(mod_fct_form.attached_image_file.data, consts.ARCHIVE_IMAGE_PATH, fl_lbl)
-        archvd_snd_fl_pth = se.etc.save_file(mod_fct_form.attached_sound_file.data, consts.ARCHIVE_SOUND_PATH, fl_lbl)
-        archvd_vdo_fl_pth = se.etc.save_file(mod_fct_form.attached_video_file.data, consts.ARCHIVE_VIDEO_PATH, fl_lbl)
+        fl_lbl = cr_engn.etc.retrieve_current_time_as_file_label()
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
+        archvd_img_fl_pth = cr_engn.etc.save_file(mod_fct_form.attached_image_file.data, consts.ARCHIVE_IMAGE_PATH, fl_lbl)
+        archvd_snd_fl_pth = cr_engn.etc.save_file(mod_fct_form.attached_sound_file.data, consts.ARCHIVE_SOUND_PATH, fl_lbl)
+        archvd_vdo_fl_pth = cr_engn.etc.save_file(mod_fct_form.attached_video_file.data, consts.ARCHIVE_VIDEO_PATH, fl_lbl)
         fct.spell_and_header = escape(mod_fct_form.spell_and_header.data)
         fct.mean_and_body = escape(mod_fct_form.mean_and_body.data)
         fct.category_tag = escape(mod_fct_form.category_tag.data)
@@ -7994,7 +8025,7 @@ def modify_rule():
     mod_rl_form = ModifyRuleForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /modify_rule")
+    rslt = cr_engn.etc.logging__info("view at /modify_rule")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8084,7 +8115,7 @@ def modify_rule():
         rl = (
         db_session.query(Rule).filter(Rule.id == session["hidden-modify-item-id"]).first()
         )
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         rl.spell_and_header = escape(mod_rl_form.spell_and_header.data)
         rl.mean_and_body = escape(mod_rl_form.mean_and_body.data)
         rl.category_tag = escape(mod_rl_form.category_tag.data)
@@ -8110,7 +8141,7 @@ def modify_reaction():
     mod_rctn_form = ModifyReactionForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /modify_reaction")
+    rslt = cr_engn.etc.logging__info("view at /modify_reaction")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8149,8 +8180,8 @@ def modify_reaction():
         mod_rctn_form.mean_and_body.data = rctn.mean_and_body
         mod_rctn_form.staff_psychology.data = rctn.staff_psychology
         mod_rctn_form.scene_and_background.data = rctn.scene_and_background
-        mod_rctn_form.message_example_from_staff.data = rctn.staff_example_message
-        mod_rctn_form.message_example_from_application.data = rctn.application_example_message
+        mod_rctn_form.message_example_from_staff.data = rctn.staff_example_text_message
+        mod_rctn_form.message_example_from_application.data = rctn.application_example_text_message
         mod_rctn_form.staff_name.data = rctn.staff_name
         mod_rctn_form.staff_kana_name.data = rctn.staff_kana_name
         mod_rctn_form.is_hidden.data = ("yes" if rctn.is_hidden == True else "no")
@@ -8204,7 +8235,7 @@ def modify_reaction():
         rctn = (
         db_session.query(Reaction).filter(Reaction.id == session["hidden-modify-item-id"]).first()
         )
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         rctn.spell_and_header = escape(mod_rctn_form.spell_and_header.data)
         rctn.mean_and_body = escape(mod_rctn_form.mean_and_body.data)
         rctn.staff_psychology = escape(mod_rctn_form.staff_psychology.data)
@@ -8231,7 +8262,7 @@ def modify_enter_or_exit():
     mod_entr_or_exit_form = ModifyEnterOrExitForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /modify_enter_or_exit")
+    rslt = cr_engn.etc.logging__info("view at /modify_enter_or_exit")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8316,7 +8347,7 @@ def modify_enter_or_exit():
         entr_or_exit = (
         db_session.query(EnterOrExit).filter(EnterOrExit.id == int(session["hidden-modify-item-id"])).first()
         )
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         if mod_entr_or_exit_form.enter_or_exit_at_second.data == "":
             crrnt_dttm_scnd = "00"
         elif ((int(mod_entr_or_exit_form.enter_or_exit_at_second.data) < 10) and
@@ -8327,7 +8358,7 @@ def modify_enter_or_exit():
         entr_or_exit.staff_name = escape(mod_entr_or_exit_form.staff_name.data)
         entr_or_exit.staff_kana_name = escape(mod_entr_or_exit_form.staff_kana_name.data)
         entr_or_exit.reason = mod_entr_or_exit_form.reason.data
-        entr_or_exit.enter_or_exit_at = se.etc.convert_datetime_object_to_string_for_timestamp(mod_entr_or_exit_form.enter_or_exit_at.data, True)
+        entr_or_exit.enter_or_exit_at = cr_engn.etc.convert_datetime_object_to_string_for_timestamp(mod_entr_or_exit_form.enter_or_exit_at.data, True)
         entr_or_exit.enter_or_exit_at_second = crrnt_dttm_scnd
         entr_or_exit.updated_at = crrnt_dttm
         entr_or_exit.is_hidden = (True if mod_entr_or_exit_form.is_hidden.data == "yes" else False)
@@ -8347,7 +8378,7 @@ def modify_staff():
     mod_stff_form = ModifyStaffForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /modify_staff")
+    rslt = cr_engn.etc.logging__info("view at /modify_staff")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8428,7 +8459,7 @@ def modify_staff():
         if len(mod_stff_form.kana_name.data) > consts.STAFF_KANA_NAME_LENGTH:
             flash("職員カナ名は, " + str(consts.STAFF_KANA_NAME_LENGTH) + "文字以内にしてください.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
-        if not se.reg.check_katakana_uppercase_in_ja(mod_stff_form.kana_name.data):
+        if not cr_engn.reg.check_katakana_uppercase_in_ja(mod_stff_form.kana_name.data):
             flash("職員カナ名は, カタカナのみにしてください.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
         # if len(mod_stff_form.password.data) > consts.PASSWORD_LENGTH:
@@ -8444,9 +8475,9 @@ def modify_staff():
         #     flash("パスワードの一部として, 半角スペースは使用できません.")
         #     return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
 
-        drtn_in_dys__crit1 = se.etc.retrieve_timedelta_from_years(consts.STAFF_AGE_TOP)
-        drtn_in_dys__crit2 = se.etc.retrieve_timedelta_from_years(consts.STAFF_AGE_BOTTOM)
-        drtn_in_dys__brth_to_prsnt = se.etc.retrieve_timedelta_from_date_object(mod_stff_form.birth_date.data)
+        drtn_in_dys__crit1 = cr_engn.etc.retrieve_timedelta_from_years(consts.STAFF_AGE_TOP)
+        drtn_in_dys__crit2 = cr_engn.etc.retrieve_timedelta_from_years(consts.STAFF_AGE_BOTTOM)
+        drtn_in_dys__brth_to_prsnt = cr_engn.etc.retrieve_timedelta_from_date_object(mod_stff_form.birth_date.data)
 
         if drtn_in_dys__brth_to_prsnt > drtn_in_dys__crit1:
             flash("本アプリは, " + str(consts.STAFF_AGE_TOP) + "歳超の方には提供しておりません.")
@@ -8465,7 +8496,7 @@ def modify_staff():
         stff = (
         db_session.query(Staff).filter(Staff.id == int(session["hidden-modify-item-id"])).first()
         )
-        crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+        crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         stff.name = escape(mod_stff_form.name.data)
         stff.kana_name = escape(mod_stff_form.kana_name.data)
         # stff.hashed_password = generate_password_hash(mod_stff_form.password.data)
@@ -8489,7 +8520,7 @@ def detail_word():
     dtl_wrd_form = DetailWordForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /detail_word")
+    rslt = cr_engn.etc.logging__info("view at /detail_word")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8550,7 +8581,7 @@ def detail_theme():
     dtl_thm_form = DetailThemeForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /detail_theme")
+    rslt = cr_engn.etc.logging__info("view at /detail_theme")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8603,7 +8634,7 @@ def detail_category():
     dtl_ctgr_form = DetailCategoryForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /detail_category")
+    rslt = cr_engn.etc.logging__info("view at /detail_category")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8658,7 +8689,7 @@ def detail_knowledge():
     dtl_fct_form = DetailFactForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /detail_fact")
+    rslt = cr_engn.etc.logging__info("view at /detail_fact")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8718,7 +8749,7 @@ def detail_rule():
     dtl_rl_form = DetailRuleForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /detail_rule")
+    rslt = cr_engn.etc.logging__info("view at /detail_rule")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8773,7 +8804,7 @@ def detail_reaction():
     dtl_rl_form = DetailReactionForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /detail_rule")
+    rslt = cr_engn.etc.logging__info("view at /detail_rule")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8812,8 +8843,8 @@ def detail_reaction():
         dtl_rl_form.concept_and_notion.data = rctn.concept_and_notion
         dtl_rl_form.staff_psychology.data = rctn.staff_psychology
         dtl_rl_form.scene_and_background.data = rctn.scene_and_background
-        dtl_rl_form.message_example_from_staff.data = rctn.staff_example_message
-        dtl_rl_form.message_example_from_application.data = rctn.application_example_message
+        dtl_rl_form.message_example_from_staff.data = rctn.staff_example_text_message
+        dtl_rl_form.message_example_from_application.data = rctn.application_example_text_message
         dtl_rl_form.staff_name.data = rctn.staff_name
         dtl_rl_form.staff_kana_name.data = rctn.staff_kana_name
         dtl_rl_form.created_at.data = rctn.created_at
@@ -8829,7 +8860,7 @@ def detail_generate():
     dtl_gen_form = DetailGenerateForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /detail_generate")
+    rslt = cr_engn.etc.logging__info("view at /detail_generate")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8882,7 +8913,7 @@ def detail_history():
     dtl_hist_form = DetailHistoryForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /detail_history")
+    rslt = cr_engn.etc.logging__info("view at /detail_history")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8916,8 +8947,8 @@ def detail_history():
 
         # フォームにレコードの内容を複写して, フォームと共にテンプレートを返す.
         dtl_hist_form.id.data = hist.id
-        dtl_hist_form.staff_message.data = hist.staff_message
-        dtl_hist_form.application_message.data = hist.application_message
+        dtl_hist_form.staff_text_message.data = hist.staff_text_message
+        dtl_hist_form.application_text_message.data = hist.application_text_message
         dtl_hist_form.staff_name.data = hist.staff_name
         dtl_hist_form.staff_kana_name.data = hist.staff_kana_name
         dtl_hist_form.created_at.data = hist.created_at
@@ -8933,7 +8964,7 @@ def detail_enter_or_exit():
     dtl_entr_or_exit_form = DetailEnterOrExitForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /detail_enter_or_exit")
+    rslt = cr_engn.etc.logging__info("view at /detail_enter_or_exit")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8985,7 +9016,7 @@ def detail_staff():
     dtl_stff_form = DetailStaffForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /detail_staff")
+    rslt = cr_engn.etc.logging__info("view at /detail_staff")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9042,7 +9073,7 @@ def import_words():
     imprt_wrd_form = ImportWordForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /import_words")
+    rslt = cr_engn.etc.logging__info("view at /import_words")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9097,9 +9128,9 @@ def import_words():
                 continue
             try:
                    #@ ここで, 語句情報を学習するための各種の高度な計算を行う.
-                   cncpt_n_ntn = se.learn_word(escape(child.find("spell-and-header").text),
+                   cncpt_n_ntn = cr_engn.learn_word(escape(child.find("spell-and-header").text),
                                                escape(child.find("mean-and-body").text))
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
                    db_session.add(Word(spell_and_header=escape(child.find("spell-and-header").text),
                                        mean_and_body=escape(child.find("mean-and-body").text),
                                        concept_and_notion=cncpt_n_ntn,
@@ -9114,7 +9145,7 @@ def import_words():
                                        staff_name=escape(child.find("staff-name").text),
                                        staff_kana_name=escape(child.find("staff-kana-name").text),
                                        created_at=(
-                                       se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
+                                       cr_engn.etc.convert_string_to_datetime_object_for_timestamp(cr_engn.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
                                        ),
                                        updated_at=crrnt_dttm,
                                        is_hidden=child.find("is-hidden").text,
@@ -9147,7 +9178,7 @@ def import_themes():
     imprt_thm_form = ImportThemeForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /import_themes")
+    rslt = cr_engn.etc.logging__info("view at /import_themes")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9202,9 +9233,9 @@ def import_themes():
                 continue
             try:
                    #@ ここで, 主題情報を学習するための各種の高度な計算を行う.
-                   cncpt_n_ntn = se.learn_theme(escape(child.find("spell-and-header").text),
+                   cncpt_n_ntn = cr_engn.learn_theme(escape(child.find("spell-and-header").text),
                                                 escape(child.find("mean-and-body").text))
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
                    db_session.add(Theme(spell_and_header=escape(child.find("spell-and-header").text),
                                         mean_and_body=escape(child.find("mean-and-body").text),
                                         concept_and_notion=cncpt_n_ntn,
@@ -9213,7 +9244,7 @@ def import_themes():
                                         staff_name=escape(child.find("staff-name").text),
                                         staff_kana_name=escape(child.find("staff-kana-name").text),
                                         created_at=(
-                                        se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
+                                        cr_engn.etc.convert_string_to_datetime_object_for_timestamp(cr_engn.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
                                         ),
                                         updated_at=crrnt_dttm,
                                         is_hidden=child.find("is-hidden").text,
@@ -9246,7 +9277,7 @@ def import_categories():
     imprt_ctgr_form = ImportCategoryForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /import_categories")
+    rslt = cr_engn.etc.logging__info("view at /import_categories")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9301,9 +9332,9 @@ def import_categories():
                 continue
             try:
                    #@ ここで, 分類情報を学習するための各種の高度な計算を行う.
-                   cncpt_n_ntn = se.learn_category(escape(child.find("spell-and-header").text),
+                   cncpt_n_ntn = cr_engn.learn_category(escape(child.find("spell-and-header").text),
                                                    escape(child.find("mean-and-body").text))
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
                    db_session.add(Category(spell_and_header=escape(child.find("spell-and-header").text),
                                            mean_and_body=escape(child.find("mean-and-body").text),
                                            concept_and_notion=cncpt_n_ntn,
@@ -9313,7 +9344,7 @@ def import_categories():
                                            staff_name=escape(child.find("staff-name").text),
                                            staff_kana_name=escape(child.find("staff-kana-name").text),
                                            created_at=(
-                                           se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
+                                           cr_engn.etc.convert_string_to_datetime_object_for_timestamp(cr_engn.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
                                            ),
                                            updated_at=crrnt_dttm,
                                            is_hidden=child.find("is-hidden").text,
@@ -9346,7 +9377,7 @@ def import_facts():
     imprt_fct_form = ImportFactForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /import_facts")
+    rslt = cr_engn.etc.logging__info("view at /import_facts")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9401,9 +9432,9 @@ def import_facts():
                 continue
             try:
                    #@ ここで, 事実情報を学習するための各種の高度な計算を行う.
-                   cncpt_n_ntn = se.learn_fact(escape(child.find("spell-and-header").text),
+                   cncpt_n_ntn = cr_engn.learn_fact(escape(child.find("spell-and-header").text),
                                                escape(child.find("mean-and-body").text))
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
                    db_session.add(Fact(spell_and_header=escape(child.find("spell-and-header").text),
                                        mean_and_body=escape(child.find("mean-and-body").text),
                                        concept_and_notion=cncpt_n_ntn, 
@@ -9414,7 +9445,7 @@ def import_facts():
                                        staff_name=escape(child.find("staff-name").text),
                                        staff_kana_name=escape(child.find("staff-kana-name").text),
                                        created_at=(
-                                       se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
+                                       cr_engn.etc.convert_string_to_datetime_object_for_timestamp(cr_engn.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
                                        ),
                                        updated_at=crrnt_dttm,
                                        is_hidden=child.find("is-hidden").text,
@@ -9447,7 +9478,7 @@ def import_rules():
     imprt_rl_form = ImportRuleForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /import_rules")
+    rslt = cr_engn.etc.logging__info("view at /import_rules")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9502,9 +9533,9 @@ def import_rules():
                 continue
             try:
                    #@ ここで, 規則情報を学習するための各種の高度な計算を行う.
-                   cncpt_n_ntn = se.learn_rule(escape(child.find("spell-and-header").text),
+                   cncpt_n_ntn = cr_engn.learn_rule(escape(child.find("spell-and-header").text),
                                                escape(child.find("mean-and-body").text))
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
                    db_session.add(Rule(spell_and_header=escape(child.find("spell-and-header").text),
                                        mean_and_body=escape(child.find("mean-and-body").text),
                                        concept_and_notion=cncpt_n_ntn,
@@ -9514,7 +9545,7 @@ def import_rules():
                                        staff_name=escape(child.find("staff-name").text),
                                        staff_kana_name=escape(child.find("staff-kana-name").text),
                                        created_at=(
-                                       se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
+                                       cr_engn.etc.convert_string_to_datetime_object_for_timestamp(cr_engn.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
                                        ),
                                        updated_at=crrnt_dttm,
                                        is_hidden=child.find("is-hidden").text,
@@ -9547,7 +9578,7 @@ def import_reactions():
     imprt_rctn_form = ImportReactionForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /import_reactions")
+    rslt = cr_engn.etc.logging__info("view at /import_reactions")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9602,9 +9633,9 @@ def import_reactions():
                 continue
             try:
                    #@ ここで, 反応情報を学習するための各種の高度な計算を行う.
-                   cncpt_n_ntn = se.learn_reaction(escape(child.find("spell-and-header").text),
+                   cncpt_n_ntn = cr_engn.learn_reaction(escape(child.find("spell-and-header").text),
                                                    escape(child.find("mean-and-body").text))
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
                    db_session.add(Reaction(spell_and_header=escape(child.find("spell-and-header").text),
                                            mean_and_body=escape(child.find("mean-and-body").text),
                                            concept_and_notion=cncpt_n_ntn,
@@ -9615,7 +9646,7 @@ def import_reactions():
                                            staff_name=escape(child.find("staff-name").text),
                                            staff_kana_name=escape(child.find("staff-kana-name").text),
                                            created_at=(
-                                           se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
+                                           cr_engn.etc.convert_string_to_datetime_object_for_timestamp(cr_engn.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
                                            ),
                                            updated_at=crrnt_dttm,
                                            is_hidden=child.find("is-hidden").text,
@@ -9648,7 +9679,7 @@ def import_generates():
     imprt_gen_form = ImportGenerateForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /import_generates")
+    rslt = cr_engn.etc.logging__info("view at /import_generates")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9702,14 +9733,14 @@ def import_generates():
                 pass_cnt += 1
                 continue
             try:
-                   crrnt_dttm = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+                   crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
                    db_session.add(Generate(spell_and_header=escape(child.find("spell-and-header").text),
                                            mean_and_body=escape(child.find("mean-and-body").text),
                                            generated_file_path=child.find("generated-file-path").text,
                                            staff_name=escape(child.find("staff-name").text),
                                            staff_kana_name=escape(child.find("staff-kana-name").text),
                                            created_at=(
-                                           se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
+                                           cr_engn.etc.convert_string_to_datetime_object_for_timestamp(cr_engn.etc.modify_style_for_datetime_string(child.find("created-at").text, True), True)
                                            ),
                                            updated_at=crrnt_dttm,
                                            is_hidden=child.find("is-hidden").text,
@@ -9739,7 +9770,7 @@ def import_enters_or_exits():
     imprt_entr_n_exit_form = ImportEnterOrExitForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /import_enters_or_exits")
+    rslt = cr_engn.etc.logging__info("view at /import_enters_or_exits")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9813,11 +9844,11 @@ def import_enters_or_exits():
                 rcd[2] != "外出" and rcd[2] != "休憩" and
                 rcd[2] != "忘却or失効" and rcd[2] != "アプリ終了"):
                  continue
-            if not se.etc.check_timestamp_by_display_style(rcd[3]):
+            if not cr_engn.etc.check_timestamp_by_display_style(rcd[3]):
                 continue
-            if not se.etc.check_timestamp_by_display_style(rcd[4]):
+            if not cr_engn.etc.check_timestamp_by_display_style(rcd[4]):
                 continue
-            if not se.etc.check_timestamp_by_display_style(rcd[5]):
+            if not cr_engn.etc.check_timestamp_by_display_style(rcd[5]):
                 continue
 
             # 不正なデータがないことを確認した上で, 
@@ -9842,11 +9873,11 @@ def import_enters_or_exits():
                 rsn = "application-termination"
             else:
                 rsn = "unknown"
-            dttm1 = se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(rcd[3], True))
-            dttm2 = se.etc.convert_string_to_datetime_object_for_timestamp(se.etc.modify_style_for_datetime_string(rcd[4], True))
+            dttm1 = cr_engn.etc.convert_string_to_datetime_object_for_timestamp(cr_engn.etc.modify_style_for_datetime_string(rcd[3], True))
+            dttm2 = cr_engn.etc.convert_string_to_datetime_object_for_timestamp(cr_engn.etc.modify_style_for_datetime_string(rcd[4], True))
             is_hddn = True if rcd[6] == "はい" else False
             is_excld = True if rcd[7] == "はい" else False
-            crrnt_dttm3 = se.etc.retrieve_current_datetime_as_datetime_object("JST")
+            crrnt_dttm3 = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
             db_session.add(EnterOrExit(staff_name=stff_nm,
                                        staff_kana_name=stff_kn_nm,
                                        reason=rsn,
@@ -9872,7 +9903,7 @@ def export_words():
     exprt_wrd_form = ExportWordForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /export_words")
+    rslt = cr_engn.etc.logging__info("view at /export_words")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9924,8 +9955,8 @@ def export_words():
             ET.SubElement(wrd_elm, "part-of-speech").text = wrd.part_of_speech
             ET.SubElement(wrd_elm, "staff-name").text = wrd.staff_name
             ET.SubElement(wrd_elm, "staff-kana-name").text = wrd.staff_kana_name
-            ET.SubElement(wrd_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(wrd.created_at), False)
-            ET.SubElement(wrd_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(wrd.updated_at), False)
+            ET.SubElement(wrd_elm, "created-at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(wrd.created_at), False)
+            ET.SubElement(wrd_elm, "updated_at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(wrd.updated_at), False)
             ET.SubElement(wrd_elm, "is-hidden").text = "はい" if wrd.is_hidden == "yes" else "いいえ"
             ET.SubElement(wrd_elm, "is-exclude").text = "いいえ"
 
@@ -9951,7 +9982,7 @@ def export_themes():
     exprt_thm_form = ExportThemeForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /export_themes")
+    rslt = cr_engn.etc.logging__info("view at /export_themes")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9998,8 +10029,8 @@ def export_themes():
             ET.SubElement(thm_elm, "category-tags").text = thm.category_tag
             ET.SubElement(thm_elm, "staff-name").text = thm.staff_name
             ET.SubElement(thm_elm, "staff-kana-name").text = thm.staff_kana_name
-            ET.SubElement(thm_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(thm.created_at), False)
-            ET.SubElement(thm_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(thm.updated_at), False)
+            ET.SubElement(thm_elm, "created-at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(thm.created_at), False)
+            ET.SubElement(thm_elm, "updated_at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(thm.updated_at), False)
             ET.SubElement(thm_elm, "is-hidden").text = "はい" if thm.is_hidden == "yes" else "いいえ"
             ET.SubElement(thm_elm, "is-exclude").text = "いいえ"
 
@@ -10025,7 +10056,7 @@ def export_categories():
     exprt_ctgr_form = ExportCategoryForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /export_categories")
+    rslt = cr_engn.etc.logging__info("view at /export_categories")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10074,8 +10105,8 @@ def export_categories():
             ET.SubElement(ctgr_elm, "child-category-tags").text = ctgr.child_category_tag
             ET.SubElement(ctgr_elm, "staff-name").text = ctgr.staff_name
             ET.SubElement(ctgr_elm, "staff-kana-name").text = ctgr.staff_kana_name
-            ET.SubElement(ctgr_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ctgr.created_at), False)
-            ET.SubElement(ctgr_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ctgr.updated_at), False)
+            ET.SubElement(ctgr_elm, "created-at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ctgr.created_at), False)
+            ET.SubElement(ctgr_elm, "updated_at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ctgr.updated_at), False)
             ET.SubElement(ctgr_elm, "is-hidden").text = "はい" if ctgr.is_hidden == "yes" else "いいえ"
             ET.SubElement(ctgr_elm, "is-exclude").text = "いいえ"
 
@@ -10101,7 +10132,7 @@ def export_facts():
     exprt_fct_form = ExportFactForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /export_facts")
+    rslt = cr_engn.etc.logging__info("view at /export_facts")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10151,8 +10182,8 @@ def export_facts():
             ET.SubElement(fct_elm, "archived-video-file-path").text = fct.archived_video_file_path
             ET.SubElement(fct_elm, "staff-name").text = fct.staff_name
             ET.SubElement(fct_elm, "staff-kana-name").text = fct.staff_kana_name
-            ET.SubElement(fct_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(fct.created_at), False)
-            ET.SubElement(fct_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(fct.updated_at), False)
+            ET.SubElement(fct_elm, "created-at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(fct.created_at), False)
+            ET.SubElement(fct_elm, "updated_at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(fct.updated_at), False)
             ET.SubElement(fct_elm, "is-hidden").text = "はい" if fct.is_hidden == "yes" else "いいえ"
             ET.SubElement(fct_elm, "is-exclude").text = "いいえ"
 
@@ -10178,7 +10209,7 @@ def export_rules():
     exprt_rl_form = ExportRuleForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /export_rules")
+    rslt = cr_engn.etc.logging__info("view at /export_rules")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10227,8 +10258,8 @@ def export_rules():
             ET.SubElement(rl_elm, "inference-result").text = rl.inference_and_speculation_result
             ET.SubElement(rl_elm, "staff-name").text = rl.staff_name
             ET.SubElement(rl_elm, "staff-kana-name").text = rl.staff_kana_name
-            ET.SubElement(rl_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(rl.created_at), False)
-            ET.SubElement(rl_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(rl.updated_at), False)
+            ET.SubElement(rl_elm, "created-at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(rl.created_at), False)
+            ET.SubElement(rl_elm, "updated_at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(rl.updated_at), False)
             ET.SubElement(rl_elm, "is-hidden").text = "はい" if rl.is_hidden == "yes" else "いいえ"
             ET.SubElement(rl_elm, "is-exclude").text = "いいえ"
 
@@ -10254,7 +10285,7 @@ def export_reactions():
     exprt_rctn_form = ExportReactionForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /export_reactions")
+    rslt = cr_engn.etc.logging__info("view at /export_reactions")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10304,8 +10335,8 @@ def export_reactions():
             ET.SubElement(rctn_elm, "message-example-from-application").text = rctn.message_example_from_application
             ET.SubElement(rctn_elm, "staff-name").text = rctn.staff_name
             ET.SubElement(rctn_elm, "staff-kana-name").text = rctn.staff_kana_name
-            ET.SubElement(rctn_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(rctn.created_at), False)
-            ET.SubElement(rctn_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(rctn.updated_at), False)
+            ET.SubElement(rctn_elm, "created-at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(rctn.created_at), False)
+            ET.SubElement(rctn_elm, "updated_at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(rctn.updated_at), False)
             ET.SubElement(rctn_elm, "is-hidden").text = "はい" if rctn.is_hidden == "yes" else "いいえ"
             ET.SubElement(rctn_elm, "is-exclude").text = "いいえ"
 
@@ -10331,7 +10362,7 @@ def export_generates():
     exprt_gen_form = ExportGenerateForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /export_words")
+    rslt = cr_engn.etc.logging__info("view at /export_words")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10378,8 +10409,8 @@ def export_generates():
             ET.SubElement(gen_elm, "generated-file-path").text = gen.generated_file_path
             ET.SubElement(gen_elm, "staff-name").text = gen.staff_name
             ET.SubElement(gen_elm, "staff-kana-name").text = gen.staff_kana_name
-            ET.SubElement(gen_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(gen.created_at), False)
-            ET.SubElement(gen_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(gen.updated_at), False)
+            ET.SubElement(gen_elm, "created-at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(gen.created_at), False)
+            ET.SubElement(gen_elm, "updated_at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(gen.updated_at), False)
             ET.SubElement(gen_elm, "is-hidden").text = "はい" if gen.is_hidden == "yes" else "いいえ"
             ET.SubElement(gen_elm, "is-exclude").text = "いいえ"
 
@@ -10405,7 +10436,7 @@ def export_histories():
     exprt_hist_form = ExportHistoryForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /export_words")
+    rslt = cr_engn.etc.logging__info("view at /export_words")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10447,12 +10478,12 @@ def export_histories():
         root = ET.Element("History-Dictionary")
         for hist in hists:
             hist_elm = ET.SubElement(root, "History-Entry")
-            ET.SubElement(hist_elm, "first-character").text = hist.staff_message
-            ET.SubElement(hist_elm, "characters-count").text = hist.application_message
+            ET.SubElement(hist_elm, "first-character").text = hist.staff_text_message
+            ET.SubElement(hist_elm, "characters-count").text = hist.application_text_message
             ET.SubElement(hist_elm, "staff-name").text = hist.staff_name
             ET.SubElement(hist_elm, "staff-kana-name").text = hist.staff_kana_name
-            ET.SubElement(hist_elm, "created-at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(hist.created_at), False)
-            ET.SubElement(hist_elm, "updated_at").text = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(hist.updated_at), False)
+            ET.SubElement(hist_elm, "created-at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(hist.created_at), False)
+            ET.SubElement(hist_elm, "updated_at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(hist.updated_at), False)
             ET.SubElement(hist_elm, "is-hidden").text = "はい" if hist.is_hidden == "yes" else "いいえ"
             ET.SubElement(hist_elm, "is-exclude").text = "いいえ"
 
@@ -10479,7 +10510,7 @@ def export_enters_or_exits():
     exprt_entr_or_exit_form = ExportEnterOrExitForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /export_enters_or_exits")
+    rslt = cr_engn.etc.logging__info("view at /export_enters_or_exits")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10539,18 +10570,18 @@ def export_enters_or_exits():
                 rsn = "アプリ終了"
             else:
                 rsn = "その他(分類不明)"
-            if str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[1].split(":")[2] == "00":
-                dt_tmp = str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[0] + " "
+            if str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[1].split(":")[2] == "00":
+                dt_tmp = str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[0] + " "
                 tm_tmp = (
-                str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[1].split(":")[0] + ":" +
-                str(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[1].split(":")[1] + ":" +
+                str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[1].split(":")[0] + ":" +
+                str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[1].split(":")[1] + ":" +
                 str(ent_or_ext.enter_or_exit_at_second)
                 )
-                dttm1 = se.etc.modify_style_for_datetime_string(dt_tmp + tm_tmp, False)
+                dttm1 = cr_engn.etc.modify_style_for_datetime_string(dt_tmp + tm_tmp, False)
             else:
-                dttm1 = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at), False)
-            dttm2 = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.created_at), False)
-            dttm3 = se.etc.modify_style_for_datetime_string(se.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.updated_at), False)
+                dttm1 = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at), False)
+            dttm2 = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.created_at), False)
+            dttm3 = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.updated_at), False)
             is_hddn = "はい" if ent_or_ext.is_hidden == "yes" else "いいえ"
             is_excld = "いいえ"
             fl_rcd = (stff_nm + "," + stff_kn_nm + "," + rsn + ","
@@ -10577,7 +10608,7 @@ def retrieve_generate():
     rtrv_gen_form = RetrieveGenerateForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /retrieve_generate")
+    rslt = cr_engn.etc.logging__info("view at /retrieve_generate")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10624,7 +10655,7 @@ def retrieve_generate():
 
         # もし生成レコードと関連付けられている生成ファイルが存在しなければ,
         # エラーメッセージを設定して, 空のフォームと共にテンプレートを返す.
-        if not se.etc.check_exist_file(gen.generated_file_path):
+        if not cr_engn.etc.check_exist_file(gen.generated_file_path):
             flash("生成ファイルが存在しません, ファイルが削除済みか破損しています.")
             return render_template("retrieve_generate.html", form=rtrv_gen_form)
 
@@ -10639,7 +10670,7 @@ def reset_database():
     rst_db_form = ResetDatabaseForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /reset_database")
+    rslt = cr_engn.etc.logging__info("view at /reset_database")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10661,7 +10692,7 @@ def reset_database():
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.reset_database"
-        return render_template("reset_database.html", form=rst_db_form)
+        return render_template("reset_databacr_engn.html", form=rst_db_form)
 
     if request.method == "POST":
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
@@ -10681,7 +10712,7 @@ def reset_database():
             rst_db_form.histories.data = False
             rst_db_form.enters_or_exits.data = False
             rst_db_form.staffs.data = False
-            return render_template("reset_database.html", form=rst_db_form)
+            return render_template("reset_databacr_engn.html", form=rst_db_form)
 
         # フォームのチェックボックスに全くチェックが入っていない場合の処理をする.
         if (not rst_db_form.words.data and
@@ -10695,7 +10726,7 @@ def reset_database():
             not rst_db_form.enters_or_exits.data and
             not rst_db_form.staffs.data):
             flash("DBをリセットしませんでした.")
-            return render_template("reset_database.html", form=rst_db_form)
+            return render_template("reset_databacr_engn.html", form=rst_db_form)
 
         # フォームのチェックが入っている箇所に対応するテーブルを削除する.
         if rst_db_form.words.data:
@@ -10741,7 +10772,7 @@ def reset_database():
         rst_db_form.enters_or_exits.data = False
         rst_db_form.staffs.data = False
         flash("DBをリセットしました.")
-        return render_template("reset_database.html", form=rst_db_form)
+        return render_template("reset_databacr_engn.html", form=rst_db_form)
 
 
 # 「environment_settings」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -10752,7 +10783,7 @@ def environment_settings():
     env_sttng_form = EnvironmentSettingForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /environment_settings")
+    rslt = cr_engn.etc.logging__info("view at /environment_settings")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10870,7 +10901,7 @@ def security_settings():
     sec_sttng_form = SecuritySettingForm()
 
     # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = se.etc.logging__info("view at /security_settings")
+    rslt = cr_engn.etc.logging__info("view at /security_settings")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":

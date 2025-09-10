@@ -368,8 +368,8 @@ class SearchHistoryForm(FlaskForm):
       menu_choices1 = consts.MENU_CHOICE_1_FOR_SEARCH_FORM
       menu_choices2 = consts.MENU_CHOICE_2_FOR_SEARCH_FORM
       id = StringField("ID :", default="", render_kw={"autocomplete": "off"})
-      staff_message = TextAreaField("職員メッセージ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      application_message = TextAreaField("アプリメッセージ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      staff_text_message = TextAreaField("職員メッセージ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      application_text_message = TextAreaField("アプリメッセージ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       staff_name = StringField("職員名 :", default="", render_kw={"autocomplete": "off"})
       staff_kana_name = StringField("職員カナ名 :", default="", render_kw={"autocomplete": "off"})
       created_at_begin = DateTimeField("作成日時(検索区間の始め) :", default="", format=consts.GENERAL_DATE_FORMAT)
@@ -702,8 +702,8 @@ class DetailGenerateForm(FlaskForm):
 class DetailHistoryForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_UNIVERSAL_FORM
       id = StringField("ID :", default="", render_kw={"disabled": True})
-      staff_message = TextAreaField("職員メッセージ :", default="", render_kw={"rows": "4", "disabled": True})
-      application_message = TextAreaField("アプリメッセージ :", default="", render_kw={"rows": "4", "disabled": True})
+      staff_text_message = TextAreaField("職員メッセージ :", default="", render_kw={"rows": "4", "disabled": True})
+      application_text_message = TextAreaField("アプリメッセージ :", default="", render_kw={"rows": "4", "disabled": True})
       staff_name = StringField("職員名 :", default="", render_kw={"disabled": True})
       staff_kana_name = StringField("職員カナ名 :", default="", render_kw={"disabled": True})
       created_at = DateTimeField("作成日時 :", default="", format=consts.GENERAL_DATE_FORMAT, render_kw={"disabled": True})
