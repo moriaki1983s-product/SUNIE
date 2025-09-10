@@ -9,7 +9,7 @@ SUNIE-Core-Engine
  ・SUNIE-Tagnet-Clowler  
  ・SUNIE-Tagnet-Interpreter  
  ・SUNIE-Task-Resolver  
- ・SUNIE-PolicyChecker  
+ ・SUNIE-Policy-Checker  
  ・SUNIE-Natural-Text-Assembler  
 
 SUNIE-Visual-Engine  
