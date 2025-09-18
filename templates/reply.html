@@ -1,6 +1,8 @@
 {% extends "after_staff_enter__base.html" %}
 {% block inner_main %}
 <section>
+<form method="post">
+{{ form.hidden_tag() }}
 <table class="table">
 {% if staff_text_message %}
 <tr>
@@ -33,5 +35,38 @@
 </tr>
 {% endif %}
 </table>
+<table class="table">
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>
+{{ form.send_continue(class_="btn btn-primary btn-block") }}
+</td>
+<td></td>
+<td></td>
+<td>
+{{ form.send_stop(class_="btn btn-primary btn-block") }}
+</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</table>
+</form>
 </section>
 {% endblock %}
