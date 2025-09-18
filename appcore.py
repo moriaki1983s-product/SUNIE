@@ -8,10 +8,11 @@ import os
 import sys
 
 # 独自のモジュール(engines)をインポートする.
-import modules.engines.core.interpreter as intrprtr
-import modules.engines.core.tagnet_builder as tgnt_bldr
 import modules.engines.core.tagnet_clowler as tgnt_clwlr
+import modules.engines.core.tagnet_interpreter as tgnt_intrprtr
 import modules.engines.core.task_resolver as tsk_rslvr
+import modules.engines.core.policy_checker as plcy_chckr
+import modules.engines.core.natural_text_assembler as ntrl_txt_assmblr
 import modules.engines.visual.image as img
 import modules.engines.visual.graphic as grph
 import modules.engines.audio.sound as snd
@@ -42,10 +43,11 @@ class CoreEngine:
 
     # インスタンス初期化のためのメソッドを宣言・定義する.
     def __init__(self):
-        self.interpreter = intrprtr.Interpreter()
-        self.tagnet_builder = tgnt_bldr.TagnetBuilder()
         self.tagnet_clowler = tgnt_clwlr.TagnetClowlwer()
+        self.tagnet_interpreter = tgnt_intrprtr.TagnetInterpreter()
         self.task_resolver = tsk_rslvr.TaskResolver()
+        self.policy_checker = plcy_chckr.PolicyChecker()
+        self.natural_text_assembler = ntrl_txt_assmblr.NaturalTextAssembler()
         self.reg = reg.RegUnit()
         self.cog = cog.CogUnit()
         self.emo = emo.EmoUnit()
@@ -64,17 +66,6 @@ class CoreEngine:
     # データを消去するためのメソッドを宣言・定義する.
     def clear_data(self):
         self.dat = None
-
-    # データを解析するためのメソッドを宣言・定義する.
-    def analytical_drive(self):
-        anlyzd_dat = self.dat
-        return anlyzd_dat
-
-    # データを生成するためのメソッドを宣言・定義する.
-    def generative_drive(self):
-        gnrtd_dat = self.dat
-        return gnrtd_dat
-
 
     # 語句情報を学習するためのメソッドを宣言・定義する.
     def learn_word(self, spll_n_hdr, mn_n_bdy):
@@ -134,16 +125,6 @@ class VisualEngine:
     def clear_data(self):
         self.dat = None
 
-    # データを解析するためのメソッドを宣言・定義する.
-    def analytical_drive(self):
-        anlyzd_dat = self.dat
-        return anlyzd_dat
-
-    # データを生成するためのメソッドを宣言・定義する.
-    def generative_drive(self):
-        gnrtd_dat = self.dat
-        return gnrtd_dat
-
 
 # Sunieの聴覚エンジンのクラスを宣言・定義する.
 class AudioEngine:
@@ -174,16 +155,6 @@ class AudioEngine:
     def clear_data(self):
         self.dat = None
 
-    # データを解析するためのメソッドを宣言・定義する.
-    def analytical_drive(self):
-        anlyzd_dat = self.dat
-        return anlyzd_dat
-
-    # データを生成するためのメソッドを宣言・定義する.
-    def generative_drive(self):
-        gnrtd_dat = self.dat
-        return gnrtd_dat
-
 
 # Sunieの視聴覚エンジンのクラスを宣言・定義する.
 class VideoEngine:
@@ -213,13 +184,3 @@ class VideoEngine:
     # データを消去するためのメソッドを宣言・定義する.
     def clear_data(self):
         self.dat = None
-
-    # データを解析するためのメソッドを宣言・定義する.
-    def analytical_drive(self):
-        anlyzd_dat = self.dat
-        return anlyzd_dat
-
-    # データを生成するためのメソッドを宣言・定義する.
-    def generative_drive(self):
-        gnrtd_dat = self.dat
-        return gnrtd_dat

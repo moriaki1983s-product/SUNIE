@@ -7,7 +7,6 @@
 import os
 import sys
 import csv
-import datetime
 import configparser
 import xml.dom.minidom as MD
 import xml.etree.ElementTree as ET
@@ -75,6 +74,7 @@ from forms import (
      DetailHistoryForm,
      DetailEnterOrExitForm,
      DetailStaffForm,
+     ReplyForm,
      ImportWordForm,
      ImportThemeForm,
      ImportCategoryForm,
@@ -122,7 +122,7 @@ import constants as consts
 # ビュー関数群にBlueprintにおける名前を付与する.
 view = Blueprint("view", __name__)
 
-# Flaskの初回起動時処理を実行するためのフラッグ変数を宣言する.
+# アプリ内の初回リクエスト処理を実行するためのフラッグ変数を宣言・定義する.
 is_frst_rqst = True
 
 # Sunie独自の各種エンジンを生成する.
@@ -165,7 +165,7 @@ def home():
           case _:
                tm_ped = "evening/night"
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
     rslt = cr_engn.etc.logging__info("view at /home")
 
     # ロギングに失敗したら, 例外を発生させる.
@@ -223,7 +223,7 @@ def usage():
     session["is-admin-enter"] = False
     session["referrer-page"] = "view.usage"
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
     rslt = cr_engn.etc.logging__info("view at /usage")
 
     # ロギングに失敗したら, 例外を発生させる.
@@ -247,7 +247,7 @@ def guide():
     session["is-admin-enter"] = False
     session["referrer-page"] = "view.guide"
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
     rslt = cr_engn.etc.logging__info("view at /guide")
 
     # ロギングに失敗したら, 例外を発生させる.
@@ -268,8 +268,8 @@ def staff_enter():
     crrnt_dttm = ""
     stff_entr_form = StaffEnterForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /staff_enter")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /staff_enter __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -284,19 +284,33 @@ def staff_enter():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /staff_enter __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.staff_enter" 
         return render_template("staff_enter.html", form=stff_entr_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /staff_enter __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.staff_enter":
             return redirect(url_for("view.home"))
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共に該当ページを返す.
-        if stff_entr_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共に該当ページを返す.
+        if stff_entr_form.enter_cancel.data:
             stff_entr_form.name.data = ""
             stff_entr_form.password.data = ""
             stff_entr_form.reason.data = ""
@@ -401,8 +415,8 @@ def staff_exit():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     stff_exit_form = StaffExitForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /staff_exit")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /staff_exit __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -421,19 +435,33 @@ def staff_exit():
        return redirect(url_for(session["referrer-page"]))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /staff_exit __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.staff_exit"
         return render_template("staff_exit.html", form=stff_exit_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /staff_exit __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.staff_exit":
             return redirect(url_for("view.staff_dashboard"))
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if stff_exit_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if stff_exit_form.exit_cancel.data:
             stff_exit_form.reason.data = ""
             return render_template("staff_exit.html", form=stff_exit_form)
 
@@ -472,8 +500,8 @@ def admin_enter():
     config = configparser.ConfigParser()
     admn_entr_form = AdminEnterForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /admin_enter")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /admin_enter __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -488,19 +516,33 @@ def admin_enter():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /admin_exit __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.admin_enter"
         return render_template("admin_enter.html", form=admn_entr_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /admin_exit __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.admin_enter":
             return redirect(url_for("view.home"))
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if admn_entr_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if admn_entr_form.enter_cancel.data:
             admn_entr_form.password.data = ""
             return render_template("admin_enter.html", form=admn_entr_form)
 
@@ -539,7 +581,7 @@ def admin_enter():
         # セッションに管理者入室の状態を設定する.
         session["is-admin-enter"] = True
 
-        # 管理者用のダッシュボード画面のページへリダイレクトする.
+        # 管理者ダッシュボード画面ページへリダイレクトする.
         return redirect(url_for("view.admin_dashboard"))
 
 
@@ -549,8 +591,8 @@ def admin_exit():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     admn_exit_form = AdminExitForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /admin_exit")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /admin_exit __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -569,20 +611,34 @@ def admin_exit():
        return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /admin_exit __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.admin_exit"
         return render_template("admin_exit.html", form=admn_exit_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /admin_exit __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.admin_exit":
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.admin_exit"))
 
-        # フォームの取消ボタンが押下されたら,
-        # ダッシュボード画面のページへリダイレクトする.
-        if admn_exit_form.cancel.data:
+        # フォームの取止ボタンが押下されたら,
+        # 管理者ダッシュボード画面ページへリダイレクトする.
+        if admn_exit_form.exit_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
     # セッションの内容を初期化して, ホーム画面のページへリダイレクトする.
@@ -593,8 +649,8 @@ def admin_exit():
 # 「staff_dashboard」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
 @view.route("/staff_dashboard", methods=["GET"])
 def staff_dashboard():
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /staff_dashboard")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /staff_dashboard __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -613,6 +669,13 @@ def staff_dashboard():
        return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /staff_dashboard __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して, テンプレートを返す.
         session["referrer-page"] = "view.staff_dashboard"
         return render_template("staff_dashboard.html",
@@ -622,8 +685,8 @@ def staff_dashboard():
 # 「admin_dashboard」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
 @view.route("/admin_dashboard", methods=["GET"])
 def admin_dashboard():
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /admin_dashboard")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /admin_dashboard __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -642,6 +705,13 @@ def admin_dashboard():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /admin_dashboard __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して, テンプレートを返す.
         session["referrer-page"] = "view.admin_dashboard"
         return render_template("admin_dashboard.html",
@@ -657,8 +727,8 @@ def send():
     stff_rls = []
     send_form = SendForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /send")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /send __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -677,19 +747,33 @@ def send():
        return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /send __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.send"
         return render_template("send.html", form=send_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /send __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.send":
-            return redirect(url_for("view.staff_dashboard"))
+            return redirect(url_for("view.send"))
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if send_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if send_form.send_cancel.data:
             send_form.text_message.data = ""
             return render_template("send.html", form=send_form)
 
@@ -767,8 +851,8 @@ def send():
 
         for stff_wrd in stff_wrds:
             fct_in_txt = (
-            db_session.query(Fact.spell_and_header == stff_wrd.spell_and_header)
-            .filter()
+            db_session.query(Fact)
+            .filter(Fact.spell_and_header == stff_wrd.spell_and_header)
             .order_by(Fact.id.desc())
             .first()
             )
@@ -778,8 +862,8 @@ def send():
 
         for stff_wrd in stff_wrds:
             rl_in_txt = (
-            db_session.query(Rule.spell_and_header == stff_wrd.spell_and_header)
-            .filter()
+            db_session.query(Rule)
+            .filter(Rule.spell_and_header == stff_wrd.spell_and_header)
             .order_by(Rule.id.desc())
             .first()
             )
@@ -787,15 +871,25 @@ def send():
                 stff_rls.append(rl_in_txt)
                 continue
 
+        # テスト出力.
         print(stff_wrds)
         print(stff_fcts)
         print(stff_rls)
 
-        # sunieエンジンに職員への返信テキスト(=メッセージ)を生成させる.
-        # stff_fct, stff_intnt, stff_sntmnt = cr_engn.reg.analyze_words_in_texts(stff_wrds_in_txts)
-        # app_wrds_in_txts= cr_engn.reg.generate_words_in_texts(stff_fct, stff_intnt, stff_sntmnt)
-        # app_txt_msg = cr_engn.reg.asemble_text_message(app_wrds_in_txts)
-        app_txt_msg = cr_engn.reg.asemble_text_message()
+        # DBから一括取得した語句・事実・規則の情報の中から、sunieタグクローラーに必要な情報を絞り込ませる.
+        wrds_net, fcts_net, rls_net = cr_engn.tagnet_clowler.execution(stff_wrds, stff_fcts, stff_rls)
+
+        # タグクローラーが絞り込んだ情報をsunieインタプリターに, これをソースとして処理させる.
+        # sunieタスクリゾルバーがタスクを解決してから, 結果を検査した上で, 返信メッセを生成する.
+        ii_code, new_wrds, new_fcts, new_rls = cr_engn.tagnet_interpreter.execution(wrds_net, fcts_net, rls_net)
+        fr_code = cr_engn.task_resolver.execution(ii_code)
+        if cr_engn.policy_checker.execution(fr_code):
+            app_txt_msg = "注意: アプリが不適切な結果を生成したので, メッセージ出力を抑止しました."
+        else:
+            app_txt_msg = cr_engn.natural_text_assembler.execution(fr_code)
+
+        # 今回の会話中に登場した新規の語句・事実・規則の情報をDBに書き込む.
+        # [new_wrds, new_fcts, new_rls]
 
         # 履歴情報をレコードとして, DBに保存・登録する.
         stff_txt_msg = send_form.text_message.data
@@ -820,10 +914,13 @@ def send():
 
 
 # 「reply」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
-@view.route("/reply", methods=["GET"])
+@view.route("/reply", methods=["GET", "POST"])
 def reply():
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /reply")
+    # 関数内で使用する変数・オブジェクトを宣言・定義する.
+    rply_form = ReplyForm()
+
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /reply __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -848,12 +945,40 @@ def reply():
         return redirect(url_for("view.staff_dashboard"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /reply __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.reply"
         return render_template("reply.html",
                                staff_text_message=session["staff-text-message"],
-                               application_text_message=session["application-text-message"])
+                               application_text_message=session["application-text-message"],
+                               form=rply_form)
+
+    if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /reply __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
+        # 直前に, GETメソッドで該当ページを取得しているかを調べる.
+        # 取得していなければ, 強制的に職員ダッシュボードへリダイレクトする.
+        if session["referrer-page"] != "view.reply":
+            return redirect(url_for("view.staff_dashboard"))
+
+        # フォームの続行ボタンが押下されたら, メッセ送信ページへリダイレクトする.
+        # フォームの取止ボタンが押下されたら, 職員ダッシュボードへリダイレクトする.
+        if rply_form.send_continue.data:
+            return redirect(url_for("view.send"))
+        else:
+            return redirect(url_for("view.staff_dashboard"))
 
 
 # 「learn_word」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -862,8 +987,8 @@ def learn_word():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     lrn_wrd_form = LearnWordForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /learn_word")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /learn_word __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -882,19 +1007,33 @@ def learn_word():
        return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /learn_word __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.learn_word"
         return render_template("learn_word.html", form=lrn_wrd_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /learn_word __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.learn_word":
             return redirect(url_for("view.staff_dashboard"))
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if lrn_wrd_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if lrn_wrd_form.learn_cancel.data:
             lrn_wrd_form.spell_and_header.data = ""
             lrn_wrd_form.mean_and_body.data = ""
             lrn_wrd_form.intent.data = ""
@@ -941,7 +1080,7 @@ def learn_word():
 
         #@ ここで, 語句情報を学習するための各種の高度な計算を行う.
         cncpt_n_ntn = cr_engn.learn_word(lrn_wrd_form.spell_and_header.data,
-                                    lrn_wrd_form.mean_and_body.data)
+                                         lrn_wrd_form.mean_and_body.data)
 
         # 語句情報をレコードとして, DBに保存・登録する.
         crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
@@ -978,8 +1117,8 @@ def learn_theme():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     lrn_thm_form = LearnThemeForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /learn_theme")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /learn_theme __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -998,19 +1137,33 @@ def learn_theme():
        return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /learn_theme __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.learn_theme"
         return render_template("learn_theme.html", form=lrn_thm_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /learn_theme __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.learn_theme":
             return redirect(url_for("view.staff_dashboard"))
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if lrn_thm_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if lrn_thm_form.learn_cancel.data:
             lrn_thm_form.spell_and_header.data = ""
             lrn_thm_form.mean_and_body.data = ""
             lrn_thm_form.category_tag.data = ""
@@ -1038,7 +1191,7 @@ def learn_theme():
 
         #@ ここで, 主題情報を学習するための各種の高度な計算を行う.
         cncpt_n_ntn = cr_engn.learn_theme(lrn_thm_form.spell_and_header.data,
-                                     lrn_thm_form.mean_and_body.data)
+                                          lrn_thm_form.mean_and_body.data)
 
         # 主題情報をレコードとして, DBに保存・登録する.
         crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
@@ -1067,8 +1220,8 @@ def learn_category():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     lrn_ctgr_form = LearnCategoryForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /learn_category")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /learn_category __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1087,19 +1240,33 @@ def learn_category():
        return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /learn_category __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.learn_category"
         return render_template("learn_category.html", form=lrn_ctgr_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /learn_category __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.learn_category":
             return redirect(url_for("view.staff_dashboard"))
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if lrn_ctgr_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if lrn_ctgr_form.learn_cancel.data:
             lrn_ctgr_form.spell_and_header.data = ""
             lrn_ctgr_form.mean_and_body.data = ""
             lrn_ctgr_form.parent_category_tag.data = ""
@@ -1135,7 +1302,7 @@ def learn_category():
 
         #@ ここで, 分類情報を学習するための各種の高度な計算を行う.
         cncpt_n_ntn = cr_engn.learn_category(lrn_ctgr_form.spell_and_header.data,
-                                        lrn_ctgr_form.mean_and_body.data)
+                                             lrn_ctgr_form.mean_and_body.data)
 
         # 分類情報をレコードとして, DBに保存・登録する.
         crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
@@ -1170,8 +1337,8 @@ def learn_fact():
     vdo_sv_pth = ""
     lrn_fct_form = LearnFactForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /learn_fact")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /learn_fact __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1190,19 +1357,33 @@ def learn_fact():
        return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /learn_fact __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.learn_fact"
         return render_template("learn_fact.html", form=lrn_fct_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /learn_fact __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.learn_fact":
             return redirect(url_for("view.staff_dashboard"))
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if lrn_fct_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if lrn_fct_form.learn_cancel.data:
             lrn_fct_form.spell_and_header.data = ""
             lrn_fct_form.mean_and_body.data = ""
             lrn_fct_form.category_tag.data = ""
@@ -1233,7 +1414,7 @@ def learn_fact():
 
         #@ ここで, 事実情報を学習するための各種の高度な計算を行う.
         cncpt_n_ntn = cr_engn.learn_category(lrn_fct_form.spell_and_header.data,
-                                        lrn_fct_form.mean_and_body.data)
+                                             lrn_fct_form.mean_and_body.data)
 
         # 事実情報をレコードとして, DBに保存・登録する.
         fl_lbl = cr_engn.etc.retrieve_current_time_as_file_label()
@@ -1269,8 +1450,8 @@ def learn_rule():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     lrn_rl_form = LearnRuleForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /learn_rule")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /learn_rule __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1289,19 +1470,33 @@ def learn_rule():
        return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /learn_rule __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.learn_rule"
         return render_template("learn_rule.html", form=lrn_rl_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /learn_rule __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.learn_rule":
             return redirect(url_for("view.staff_dashboard"))
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if lrn_rl_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if lrn_rl_form.learn_cancel.data:
             lrn_rl_form.spell_and_header.data = ""
             lrn_rl_form.mean_and_body.data = ""
             lrn_rl_form.category_tag.data = ""
@@ -1337,7 +1532,7 @@ def learn_rule():
 
         #@ ここで, 規則情報を学習するための各種の高度な計算を行う.
         cncpt_n_ntn = cr_engn.learn_rule(lrn_rl_form.spell_and_header.data,
-                                    lrn_rl_form.mean_and_body.data)
+                                         lrn_rl_form.mean_and_body.data)
 
         # 規則情報をレコードとして, DBに保存・登録する.
         crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
@@ -1368,8 +1563,8 @@ def learn_reaction():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     lrn_rctn_form = LearnReactionForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /learn_reaction")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /learn_reaction __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1388,25 +1583,39 @@ def learn_reaction():
        return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /learn_reaction __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.learn_reaction"
         return render_template("learn_reaction.html", form=lrn_rctn_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /learn_reaction __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.learn_reaction":
             return redirect(url_for("view.staff_dashboard"))
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if lrn_rctn_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if lrn_rctn_form.learn_cancel.data:
             lrn_rctn_form.spell_and_header.data = ""
             lrn_rctn_form.mean_and_body.data = ""
             lrn_rctn_form.staff_psychology.data = ""
             lrn_rctn_form.scene_and_background.data = ""
-            lrn_rctn_form.message_example_from_staff.data = ""
-            lrn_rctn_form.message_example_from_application.data = ""
+            lrn_rctn_form.staff_example_text_message.data = ""
+            lrn_rctn_form.application_example_text_message.data = ""
             lrn_rctn_form.is_hidden.data = False
             lrn_rctn_form.is_exclude.data = False
             return render_template("learn_reaction.html", form=lrn_rctn_form)
@@ -1425,10 +1634,10 @@ def learn_reaction():
         if lrn_rctn_form.scene_and_background.data == "":
             flash("情景&背景が入力されていません.")
             return render_template("learn_reaction.html", form=lrn_rctn_form, happen_error=True)
-        if lrn_rctn_form.message_example_from_staff.data == "":
+        if lrn_rctn_form.staff_example_text_message.data == "":
             flash("職員メッセージ例が入力されていません.")
             return render_template("learn_reaction.html", form=lrn_rctn_form, happen_error=True)
-        if lrn_rctn_form.message_example_from_application.data == "":
+        if lrn_rctn_form.application_example_text_message.data == "":
             flash("アプリメッセージ例が入力されていません.")
             return render_template("learn_reaction.html", form=lrn_rctn_form, happen_error=True)
         if lrn_rctn_form.is_hidden.data == "":
@@ -1440,7 +1649,7 @@ def learn_reaction():
 
         #@ ここで, 反応情報を学習するための各種の高度な計算を行う.
         cncpt_n_ntn = cr_engn.learn_reaction(lrn_rctn_form.spell_and_header.data,
-                                        lrn_rctn_form.mean_and_body.data)
+                                             lrn_rctn_form.mean_and_body.data)
 
         # 反応情報をレコードとして, DBに保存・登録する.
         crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
@@ -1472,8 +1681,8 @@ def generate():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     gen_form = GenerateForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /generate")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /generate __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1492,19 +1701,33 @@ def generate():
        return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /generate __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.generate"
         return render_template("generate.html", form=gen_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /generate __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.generate":
             return redirect(url_for("view.generate"))
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if gen_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if gen_form.generate_cancel.data:
             gen_form.spell_and_header.data = ""
             gen_form.mean_and_body.data = ""
             gen_form.attached_image_file.data = ""
@@ -1562,8 +1785,8 @@ def show_words(id=None):
     wrds_tmp = []
     wrds_fnl = []
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_words")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /show_words __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1594,6 +1817,13 @@ def show_words(id=None):
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_words __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.show_words"
@@ -1685,6 +1915,13 @@ def show_words(id=None):
             return render_template("show_words.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_words __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.show_words":
@@ -1710,8 +1947,8 @@ def show_themes(id=None):
     thms_tmp = []
     thms_fnl = []
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_themes")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /show_themes __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1742,6 +1979,13 @@ def show_themes(id=None):
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_themes __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.show_themes"
@@ -1833,6 +2077,13 @@ def show_themes(id=None):
             return render_template("show_themes.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_themes __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.show_themes":
@@ -1858,8 +2109,8 @@ def show_categories(id=None):
     ctgrs_tmp = []
     ctgrs_fnl = []
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_categories")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /show_categories __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1890,6 +2141,13 @@ def show_categories(id=None):
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_categories __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.show_categories"
@@ -1981,6 +2239,13 @@ def show_categories(id=None):
             return render_template("show_categories.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_categories __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.show_categories":
@@ -2006,8 +2271,8 @@ def show_facts(id=None):
     fcts_tmp = []
     fcts_fnl = []
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_knowledges")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /show_facts __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2038,6 +2303,13 @@ def show_facts(id=None):
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_facts __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.show_facts"
@@ -2073,7 +2345,7 @@ def show_facts(id=None):
                                     mn_n_bdy_tmp,
                                     stff_nm_tmp
                                   ])
-                per_pg = consts.KNOWLEDGE_ITEM_PER_PAGE
+                per_pg = consts.FACT_ITEM_PER_PAGE
                 pg = request.args.get(get_page_parameter(), type=int, default=1)
                 pg_dat = fcts_fnl[(pg - 1) * per_pg : pg * per_pg]
                 pgntn = Pagination(page=pg,
@@ -2083,7 +2355,7 @@ def show_facts(id=None):
                                   )
                 return render_template("show_facts.html", page_data=pg_dat, pagination=pgntn)
 
-            per_pg = consts.KNOWLEDGE_ITEM_PER_PAGE
+            per_pg = consts.FACT_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = fcts_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -2118,7 +2390,7 @@ def show_facts(id=None):
                                     mn_n_bdy_tmp,
                                     stff_nm_tmp
                                    ])
-            per_pg = consts.KNOWLEDGE_ITEM_PER_PAGE
+            per_pg = consts.FACT_ITEM_PER_PAGE
             pg = request.args.get(get_page_parameter(), type=int, default=1)
             pg_dat = fcts_fnl[(pg - 1) * per_pg : pg * per_pg]
             pgntn = Pagination(page=pg,
@@ -2129,6 +2401,13 @@ def show_facts(id=None):
             return render_template("show_facts.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_facts __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.show_facts":
@@ -2154,8 +2433,8 @@ def show_rules(id=None):
     rls_tmp = []
     rls_fnl = []
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_rules")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /show_rules __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2186,6 +2465,13 @@ def show_rules(id=None):
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_rules __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.show_rules"
@@ -2277,6 +2563,13 @@ def show_rules(id=None):
             return render_template("show_rules.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_rules __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.show_rules":
@@ -2302,8 +2595,8 @@ def show_reactions(id=None):
     rctns_tmp = []
     rctns_fnl = []
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_reactions")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /show_reactions __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2334,6 +2627,13 @@ def show_reactions(id=None):
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_reactions __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.show_reactions"
@@ -2425,6 +2725,13 @@ def show_reactions(id=None):
             return render_template("show_reactions.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_reactions __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.show_reactions":
@@ -2450,8 +2757,8 @@ def show_generates(id=None):
     gens_tmp = []
     gens_fnl = []
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_generates")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /show_generates __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2482,6 +2789,13 @@ def show_generates(id=None):
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_generates __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.show_generates"
@@ -2573,6 +2887,13 @@ def show_generates(id=None):
             return render_template("show_generates.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_generates __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.show_generates":
@@ -2598,8 +2919,8 @@ def show_histories(id=None):
     hists_tmp = []
     hists_fnl = []
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_histories")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /show_histories __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2630,6 +2951,13 @@ def show_histories(id=None):
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_histories __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.show_histories"
@@ -2720,6 +3048,13 @@ def show_histories(id=None):
             return render_template("show_histories.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_histories __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.show_histories":
@@ -2742,8 +3077,8 @@ def show_enters_or_exits(id=None):
     ents_or_exts_tmp = []
     ents_or_exts_fnl = []
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_enters_or_exits")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /show_enters_or_exits __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2774,6 +3109,13 @@ def show_enters_or_exits(id=None):
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_enters_or_exits __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.show_enters_or_exits"
@@ -2909,6 +3251,13 @@ def show_enters_or_exits(id=None):
             return render_template("show_enters_or_exits.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_enters_or_exits __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.show_enters_or_exits":
@@ -2934,8 +3283,8 @@ def show_staffs(id=None):
     stffs_tmp = []
     stffs_fnl = []
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_staffs")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /show_staffs __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2966,6 +3315,13 @@ def show_staffs(id=None):
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_staffs __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.show_staffs"
@@ -3081,6 +3437,13 @@ def show_staffs(id=None):
             return render_template("show_staffs.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /show_staffs __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.show_staffs":
@@ -3104,8 +3467,8 @@ def search_words():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     srch_wrd_form = SearchWordForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_words")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_words __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3124,6 +3487,13 @@ def search_words():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_words __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.search_words"
@@ -3148,13 +3518,20 @@ def search_words():
         return render_template("search_words.html", form=srch_wrd_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_words __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_words":
             return render_template("search_words.html", form=srch_wrd_form)
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if srch_wrd_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if srch_wrd_form.search_cancel.data:
             srch_wrd_form.id.data = ""
             srch_wrd_form.spell_and_header.data = ""
             srch_wrd_form.mean_and_body.data = ""
@@ -3201,8 +3578,8 @@ def search_themes():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     srch_thm_form = SearchThemeForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_words")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_words __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3221,6 +3598,13 @@ def search_themes():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_words __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.search_themes"
@@ -3241,13 +3625,20 @@ def search_themes():
         return render_template("search_themes.html", form=srch_thm_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_words __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_themes":
             return render_template("search_themes.html", form=srch_thm_form)
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if srch_thm_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if srch_thm_form.search_cancel.data:
             srch_thm_form.id.data = ""
             srch_thm_form.spell_and_header.data = ""
             srch_thm_form.mean_and_body.data = ""
@@ -3286,8 +3677,8 @@ def search_categories():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     srch_ctgr_form = SearchCategoryForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_words")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_words __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3306,6 +3697,13 @@ def search_categories():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_words __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.search_categories"
@@ -3328,13 +3726,20 @@ def search_categories():
         return render_template("search_categories.html", form=srch_ctgr_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_words __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_categories":
             return render_template("search_categories.html", form=srch_ctgr_form)
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if srch_ctgr_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if srch_ctgr_form.search_cancel.data:
             srch_ctgr_form.id.data = ""
             srch_ctgr_form.spell_and_header.data = ""
             srch_ctgr_form.mean_and_body.data = ""
@@ -3377,8 +3782,8 @@ def search_knowledges():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     srch_fct_form = SearchFactForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_knowledges")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_knowledges __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3397,6 +3802,13 @@ def search_knowledges():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_knowledges __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.search_knowledges"
@@ -3420,13 +3832,20 @@ def search_knowledges():
         return render_template("search_knowledges.html", form=srch_fct_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_knowledges __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_knowledges":
             return render_template("search_knowledges.html", form=srch_fct_form)
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if srch_fct_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if srch_fct_form.search_cancel.data:
             srch_fct_form.id.data = ""
             srch_fct_form.spell_and_header.data = ""
             srch_fct_form.mean_and_body.data = ""
@@ -3471,8 +3890,8 @@ def search_rules():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     srch_rl_form = SearchRuleForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_rules")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_rules __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3491,6 +3910,13 @@ def search_rules():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_rules __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.search_rules"
@@ -3513,13 +3939,20 @@ def search_rules():
         return render_template("search_rules.html", form=srch_rl_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_rules __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_rules":
             return render_template("search_rules.html", form=srch_rl_form)
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if srch_rl_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if srch_rl_form.search_cancel.data:
             srch_rl_form.id.data = ""
             srch_rl_form.spell_and_header.data = ""
             srch_rl_form.mean_and_body.data = ""
@@ -3562,8 +3995,8 @@ def search_reactions():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     srch_rctn_form = SearchReactionForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_rules")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_rules __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3582,6 +4015,13 @@ def search_reactions():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_rules __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.search_reactions"
@@ -3605,20 +4045,27 @@ def search_reactions():
         return render_template("search_reactions.html", form=srch_rctn_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_rules __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_reactions":
             return render_template("search_reactions.html", form=srch_rctn_form)
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if srch_rctn_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if srch_rctn_form.search_cancel.data:
             srch_rctn_form.id.data = ""
             srch_rctn_form.spell_and_header.data = ""
             srch_rctn_form.mean_and_body.data = ""
             srch_rctn_form.staff_psychology.data = ""
             srch_rctn_form.scene_and_background.data = ""
-            srch_rctn_form.message_example_from_staff.data = ""
-            srch_rctn_form.message_example_from_application.data = ""
+            srch_rctn_form.staff_example_text_message.data = ""
+            srch_rctn_form.application_example_text_message.data = ""
             srch_rctn_form.staff_name.data = ""
             srch_rctn_form.staff_kana_name.data = ""
             srch_rctn_form.created_at_begin.data = ""
@@ -3656,8 +4103,8 @@ def search_generates():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     srch_gen_form = SearchGenerateForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_generates")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_generates __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3676,6 +4123,13 @@ def search_generates():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_generates __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.search_generates"
@@ -3695,13 +4149,20 @@ def search_generates():
         return render_template("search_generates.html", form=srch_gen_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_generates __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_generates":
             return render_template("search_generates.html", form=srch_gen_form)
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if srch_gen_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if srch_gen_form.search_cancel.data:
             srch_gen_form.id.data = ""
             srch_gen_form.spell_and_header.data = ""
             srch_gen_form.mean_and_body.data = ""
@@ -3738,8 +4199,8 @@ def search_histories():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     srch_hist_form = SearchHistoryForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_histories")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_histories __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3758,6 +4219,13 @@ def search_histories():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_histories __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.search_histories"
@@ -3777,13 +4245,20 @@ def search_histories():
         return render_template("search_histories.html", form=srch_hist_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_histories __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_histories":
             return render_template("search_histories.html", form=srch_hist_form)
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if srch_hist_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if srch_hist_form.search_cancel.data:
             srch_hist_form.id.data = ""
             srch_hist_form.staff_text_message.data = ""
             srch_hist_form.application_text_message.data = ""
@@ -3820,8 +4295,8 @@ def search_enters_or_exits():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     srch_entr_or_exit_form = SearchEnterOrExitForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /enters_or_exits")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /enters_or_exits __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3840,6 +4315,13 @@ def search_enters_or_exits():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /enters_or_exits __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.search_enters_or_exits"
@@ -3860,18 +4342,27 @@ def search_enters_or_exits():
         return render_template("search_enters_or_exits.html", form=srch_entr_or_exit_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /enters_or_exits __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_enters_or_exits":
             return render_template("search_enters_or_exits.html", form=srch_entr_or_exit_form)
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if srch_entr_or_exit_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if srch_entr_or_exit_form.search_cancel.data:
             srch_entr_or_exit_form.id.data = ""
             srch_entr_or_exit_form.staff_name.data = ""
             srch_entr_or_exit_form.staff_kana_name.data = ""
             srch_entr_or_exit_form.reason.data = ""
-            srch_entr_or_exit_form.enter_or_exit_at.data = ""
+            srch_entr_or_exit_form.enter_or_exit_at_begin.data = ""
+            srch_entr_or_exit_form.enter_or_exit_at_end.data = ""
+            srch_entr_or_exit_form.enter_or_exit_at_second.data = ""
             srch_entr_or_exit_form.created_at_begin.data = ""
             srch_entr_or_exit_form.created_at_end.data = ""
             srch_entr_or_exit_form.updated_at_begin.data = ""
@@ -3887,6 +4378,7 @@ def search_enters_or_exits():
         session["reason"] = srch_entr_or_exit_form.reason.data
         session["enter-or-exit-at-begin"] = srch_entr_or_exit_form.enter_or_exit_at_begin.data
         session["enter-or-exit-at-end"] = srch_entr_or_exit_form.enter_or_exit_at_end.data
+        session["enter-or-exit-at-second"] = srch_entr_or_exit_form.enter_or_exit_at_second.data
         session["created-at-begin"] = srch_entr_or_exit_form.created_at_begin.data
         session["created-at-end"] = srch_entr_or_exit_form.created_at_end.data
         session["updated-at-begin"] = srch_entr_or_exit_form.updated_at_begin.data
@@ -3904,8 +4396,8 @@ def search_staffs():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     srch_stff_form = SearchStaffForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_staffs")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_staffs __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3924,6 +4416,13 @@ def search_staffs():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_staffs __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.search_staffs"
@@ -3944,13 +4443,20 @@ def search_staffs():
         return render_template("search_staffs.html", form=srch_stff_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_staffs __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_staffs":
             return render_template("search_staffs.html", form=srch_stff_form)
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if srch_stff_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if srch_stff_form.search_cancel.data:
             srch_stff_form.id.data = ""
             srch_stff_form.name.data = ""
             srch_stff_form.kana_name.data = ""
@@ -3991,8 +4497,8 @@ def search_words_results():
     wrds_fnl = []
     is_srch_done = False
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_words_results")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_words_results __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -4011,6 +4517,13 @@ def search_words_results():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_words_results __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_words_results"
 
@@ -4359,6 +4872,13 @@ def search_words_results():
         return render_template("search_words_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_words_results __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_words_results":
@@ -4384,8 +4904,8 @@ def search_themes_results():
     thms_fnl = []
     is_srch_done = False
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_themes_results")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_themes_results __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -4404,6 +4924,13 @@ def search_themes_results():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_themes_results __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_themes_results"
 
@@ -4658,6 +5185,13 @@ def search_themes_results():
         return render_template("search_themes_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_themes_results __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_themes_results":
@@ -4683,8 +5217,8 @@ def search_categories_results():
     ctgrs_fnl = []
     is_srch_done = False
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_categories_results")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_categories_results __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -4703,6 +5237,13 @@ def search_categories_results():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_categories_results __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_categories_results"
 
@@ -5013,6 +5554,13 @@ def search_categories_results():
         return render_template("search_categories_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_categories_results __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_categories_results":
@@ -5038,8 +5586,8 @@ def search_knowledges_results():
     fcts_fnl = []
     is_srch_done = False
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_knowledges_results")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_knowledges_results __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -5058,6 +5606,13 @@ def search_knowledges_results():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_knowledges_results __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_knowledges_results"
 
@@ -5384,7 +5939,7 @@ def search_knowledges_results():
                                  mn_n_bdy_tmp,
                                  stff_nm_tmp
                                 ])
-        per_pg = consts.KNOWLEDGE_ITEM_PER_PAGE
+        per_pg = consts.FACT_ITEM_PER_PAGE
         pg = request.args.get(get_page_parameter(), type=int, default=1)
         pg_dat = fcts_fnl[(pg - 1) * per_pg : pg * per_pg]
         pgntn = Pagination(page=pg,
@@ -5395,6 +5950,13 @@ def search_knowledges_results():
         return render_template("search_knowledges_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_knowledges_results __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_knowledges_results":
@@ -5420,8 +5982,8 @@ def search_rules_results():
     rls_fnl = []
     is_srch_done = False
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_rules_results")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_rules_results __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -5440,6 +6002,13 @@ def search_rules_results():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_rules_results __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_rules_results"
 
@@ -5750,6 +6319,13 @@ def search_rules_results():
         return render_template("search_rules_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_rules_results __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_rules_results":
@@ -5775,8 +6351,8 @@ def search_reactions_results():
     rctns_fnl = []
     is_srch_done = False
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_reactions_results")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_reactions_results __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -5795,6 +6371,13 @@ def search_reactions_results():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_reactions_results __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_reactions_results"
 
@@ -6132,6 +6715,13 @@ def search_reactions_results():
         return render_template("search_reactions_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_reactions_results __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_reactions_results":
@@ -6157,8 +6747,8 @@ def search_generates_results():
     gens_fnl = []
     is_srch_done = False
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_generates_results")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_generates_results __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -6177,6 +6767,13 @@ def search_generates_results():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_generates_results __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_generates_results"
 
@@ -6406,6 +7003,13 @@ def search_generates_results():
         return render_template("search_generatess_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_generates_results __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_generates_results":
@@ -6431,8 +7035,8 @@ def search_histories_results():
     hists_fnl = []
     is_srch_done = False
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_histories_results")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_histories_results __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -6451,6 +7055,13 @@ def search_histories_results():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_histories_results __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_histories_results"
 
@@ -6680,6 +7291,13 @@ def search_histories_results():
         return render_template("search_histories_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_histories_results __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_histories_results":
@@ -6702,8 +7320,8 @@ def search_enters_or_exits_results():
     entrs_or_exits_fnl = []
     is_srch_done = False
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_enters_or_exits_results")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_enters_or_exits_results __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -6722,6 +7340,13 @@ def search_enters_or_exits_results():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_enters_or_exits_results __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_enters_or_exits_results"
 
@@ -6976,6 +7601,13 @@ def search_enters_or_exits_results():
         return render_template("search_enters_or_exits_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_enters_or_exits_results __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_enters_or_exits_results":
@@ -7001,8 +7633,8 @@ def search_staffs_results():
     stffs_fnl = []
     is_srch_done = False
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_staffs_results")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /search_staffs_results __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7021,6 +7653,13 @@ def search_staffs_results():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_staffs_results __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定する.
         session["referrer-page"] = "view.search_staffs_results"
 
@@ -7164,7 +7803,7 @@ def search_staffs_results():
                   db_session.close()
                   is_srch_done = True
             else:
-                  entrs_or_exits_tmp = (
+                  stffs_tmp = (
                   db_session.query(Staff).filter(Staff.blood_type.in_(srch_trgt)).order_by(Staff.id.desc()).all()
                   )
                   db_session.close()
@@ -7277,6 +7916,13 @@ def search_staffs_results():
         return render_template("search_staffs_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /search_staffs_results __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.search_staffs_results":
@@ -7300,8 +7946,8 @@ def register_enter_or_exit():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     rgstr_entr_or_exit_form = RegisterEnterOrExitForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /register_enter_or_exit")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /register_enter_or_exit __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7320,18 +7966,32 @@ def register_enter_or_exit():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /register_enter_or_exit __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して, フォームと共にテンプレートを返す.
         session["referrer-page"] = "view.register_enter_or_exit"
         return render_template("register_enter_or_exit.html", form=rgstr_entr_or_exit_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /register_enter_or_exit __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.register_enter_or_exit":
             return redirect(url_for("view.register_enter_or_exit"))
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if rgstr_entr_or_exit_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if rgstr_entr_or_exit_form.register_cancel.data:
             rgstr_entr_or_exit_form.staff_name.data = ""
             rgstr_entr_or_exit_form.staff_kana_name.data = ""
             rgstr_entr_or_exit_form.reason.data = ""
@@ -7398,8 +8058,8 @@ def register_staff():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     rgstr_stff_form = RegisterStaffForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /register_staff")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /register_staff __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7418,18 +8078,32 @@ def register_staff():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /register_staff __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,フォームと共にテンプレートを返す.
         session["referrer-page"] = "view.register_staff"
         return render_template("register_staff.html", form=rgstr_stff_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /register_staff __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.register_staff":
             return redirect(url_for("view.register_staff"))
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if rgstr_stff_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if rgstr_stff_form.register_cancel.data:
             rgstr_stff_form.name.data = ""
             rgstr_stff_form.kana_name.data = ""
             rgstr_stff_form.password.data = ""
@@ -7545,8 +8219,8 @@ def modify_word():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     mod_wrd_form = ModifyWordForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_word")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /modify_word __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7570,6 +8244,13 @@ def modify_word():
         return redirect(url_for(session["referrer-page"]))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_word __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.modify_word"
@@ -7596,13 +8277,21 @@ def modify_word():
         return render_template("modify_word.html", form=mod_wrd_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_word __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.modify_word":
             return redirect(url_for("view.modify_word"))
 
-        # フォームの取消ボタンが押下されたら, 強制的に現在ページへリダイレクトする.
-        if mod_wrd_form.cancel.data:
+        # フォームの取止ボタンが押下されたら,
+        # 管理者ダッシュボード画面ページへリダイレクトする.
+        if mod_wrd_form.modify_cancel.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # flaskフォームに入力・記憶されている内容をバリデーションする.
@@ -7679,8 +8368,8 @@ def modify_theme():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     mod_thm_form = ModifyThemeForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_theme")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /modify_theme __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7704,6 +8393,13 @@ def modify_theme():
         return redirect(url_for(session["referrer-page"]))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_theme __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.modify_theme"
@@ -7725,13 +8421,21 @@ def modify_theme():
         return render_template("learn_theme.html", form=mod_thm_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_theme __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.modify_theme":
             return redirect(url_for("view.modify_theme"))
 
-        # フォームの取消ボタンが押下されたら, 強制的に現在ページへリダイレクトする.
-        if mod_thm_form.cancel.data:
+        # フォームの取止ボタンが押下されたら,
+        # 管理者ダッシュボード画面ページへリダイレクトする.
+        if mod_thm_form.modify_cancel.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # flaskフォームに入力・記憶されている内容をバリデーションする.
@@ -7785,8 +8489,8 @@ def modify_category():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     mod_ctgr_form = ModifyCategoryForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_category")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /modify_category __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7810,6 +8514,13 @@ def modify_category():
         return redirect(url_for(session["referrer-page"]))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_category __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.modify_category"
@@ -7833,13 +8544,21 @@ def modify_category():
         return render_template("learn_category.html", form=mod_ctgr_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_category __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.modify_category":
             return redirect(url_for("view.modify_category"))
 
-        # フォームの取消ボタンが押下されたら, 強制的に現在ページへリダイレクトする.
-        if mod_ctgr_form.cancel.data:
+        # フォームの取止ボタンが押下されたら,
+        # 管理者ダッシュボード画面ページへリダイレクトする.
+        if mod_ctgr_form.modify_cancel.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # flaskフォームに入力・記憶されている内容をバリデーションする.
@@ -7901,8 +8620,8 @@ def modify_fact():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     mod_fct_form = ModifyFactForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_fact")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /modify_fact __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7926,6 +8645,13 @@ def modify_fact():
         return redirect(url_for(session["referrer-page"]))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_fact __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.modify_fact"
@@ -7951,13 +8677,21 @@ def modify_fact():
                               )
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_fact __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.modify_fact":
             return redirect(url_for("view.modify_fact"))
 
-        # フォームの取消ボタンが押下されたら, 強制的に現在ページへリダイレクトする.
-        if mod_fct_form.cancel.data:
+        # フォームの取止ボタンが押下されたら,
+        # 管理者ダッシュボード画面ページへリダイレクトする.
+        if mod_fct_form.modify_cancel.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # flaskフォームに入力・記憶されている内容をバリデーションする.
@@ -8024,8 +8758,8 @@ def modify_rule():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     mod_rl_form = ModifyRuleForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_rule")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /modify_rule __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8049,6 +8783,13 @@ def modify_rule():
         return redirect(url_for(session["referrer-page"]))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_rule __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.modify_rule"
@@ -8072,13 +8813,21 @@ def modify_rule():
         return render_template("modify_fact.html", form=mod_rl_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_rule __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.modify_rule":
             return redirect(url_for("view.modify_rule"))
 
-        # フォームの取消ボタンが押下されたら, 強制的に現在ページへリダイレクトする.
-        if mod_rl_form.cancel.data:
+        # フォームの取止ボタンが押下されたら,
+        # 管理者ダッシュボード画面ページへリダイレクトする.
+        if mod_rl_form.modify_cancel.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # flaskフォームに入力・記憶されている内容をバリデーションする.
@@ -8140,8 +8889,8 @@ def modify_reaction():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     mod_rctn_form = ModifyReactionForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_reaction")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /modify_reaction __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8165,6 +8914,13 @@ def modify_reaction():
         return redirect(url_for(session["referrer-page"]))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_reaction __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.modify_reaction"
@@ -8180,8 +8936,8 @@ def modify_reaction():
         mod_rctn_form.mean_and_body.data = rctn.mean_and_body
         mod_rctn_form.staff_psychology.data = rctn.staff_psychology
         mod_rctn_form.scene_and_background.data = rctn.scene_and_background
-        mod_rctn_form.message_example_from_staff.data = rctn.staff_example_text_message
-        mod_rctn_form.message_example_from_application.data = rctn.application_example_text_message
+        mod_rctn_form.staff_example_text_message.data = rctn.staff_example_text_message
+        mod_rctn_form.application_example_text_message.data = rctn.application_example_text_message
         mod_rctn_form.staff_name.data = rctn.staff_name
         mod_rctn_form.staff_kana_name.data = rctn.staff_kana_name
         mod_rctn_form.is_hidden.data = ("yes" if rctn.is_hidden == True else "no")
@@ -8189,13 +8945,21 @@ def modify_reaction():
         return render_template("modify_reaction.html", form=mod_rctn_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_reaction __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.modify_reaction":
             return redirect(url_for("view.modify_reaction"))
 
-        # フォームの取消ボタンが押下されたら, 強制的に現在ページへリダイレクトする.
-        if mod_rctn_form.cancel.data:
+        # フォームの取止ボタンが押下されたら,
+        # 管理者ダッシュボード画面ページへリダイレクトする.
+        if mod_rctn_form.modify_cancel.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # flaskフォームに入力・記憶されている内容をバリデーションする.
@@ -8240,8 +9004,8 @@ def modify_reaction():
         rctn.mean_and_body = escape(mod_rctn_form.mean_and_body.data)
         rctn.staff_psychology = escape(mod_rctn_form.staff_psychology.data)
         rctn.scene_and_background = escape(mod_rctn_form.scene_and_background.data)
-        rctn.message_example_from_staff = escape(mod_rctn_form.message_example_from_staff.data)
-        rctn.message_example_from_application = escape(mod_rctn_form.message_example_from_application.data)
+        rctn.staff_example_text_message = escape(mod_rctn_form.staff_example_text_message.data)
+        rctn.application_example_text_message = escape(mod_rctn_form.application_example_text_message.data)
         rctn.staff_name = escape(mod_rctn_form.staff_name.data)
         rctn.staff_kana_name = escape(mod_rctn_form.staff_kana_name.data)
         rctn.updated_at = crrnt_dttm
@@ -8261,8 +9025,8 @@ def modify_enter_or_exit():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     mod_entr_or_exit_form = ModifyEnterOrExitForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_enter_or_exit")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /modify_enter_or_exit __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8286,6 +9050,13 @@ def modify_enter_or_exit():
         return redirect(url_for(session["referrer-page"]))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_enter_or_exit __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.modify_enter_or_exit"
@@ -8307,13 +9078,20 @@ def modify_enter_or_exit():
         return render_template("modify_enter_or_exit.html", form=mod_entr_or_exit_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_enter_or_exit __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.modify_enter_or_exit":
             return redirect(url_for("view.modify_enter_or_exit"))
 
-        # フォームの取消ボタンが押下されたら, 強制的に現在ページへリダイレクトする.
-        if mod_entr_or_exit_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 強制的に現在ページへリダイレクトする.
+        if mod_entr_or_exit_form.modify_cancel.data:
             return redirect(url_for("view.modify_enter_or_exit"))
 
         # flaskフォームに入力・記憶されている内容をバリデーションする.
@@ -8377,8 +9155,8 @@ def modify_staff():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     mod_stff_form = ModifyStaffForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_staff")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /modify_staff __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8402,6 +9180,13 @@ def modify_staff():
         return redirect(url_for(session["referrer-page"]))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_staff __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.modify_staff"
@@ -8411,11 +9196,10 @@ def modify_staff():
         db_session.query(Staff).filter(Staff.id == int(session["hidden-modify-item-id"])).first()
         )
         db_session.close()
-        print(stff.hashed_password)
+
         # フォームにレコードの内容を複写して, フォームと共にテンプレートを返す.
         mod_stff_form.name.data = stff.name
         mod_stff_form.kana_name.data = stff.kana_name
-        # mod_stff_form.password.data = stff.hashed_password
         mod_stff_form.sex.data = stff.sex
         mod_stff_form.blood_type.data = stff.blood_type
         mod_stff_form.birth_date.data = stff.birth_date
@@ -8424,13 +9208,21 @@ def modify_staff():
         return render_template("modify_staff.html", form=mod_stff_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /modify_staff __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.modify_staff":
             return redirect(url_for("view.modify_staff"))
 
-        # フォームの取消ボタンが押下されたら, 強制的に現在ページへリダイレクトする.
-        if mod_stff_form.cancel.data:
+        # フォームの取止ボタンが押下されたら,
+        # 管理者ダッシュボード画面ページへリダイレクトする.
+        if mod_stff_form.modify_cancel.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # flaskフォームに入力・記憶されている内容をバリデーションする.
@@ -8441,9 +9233,6 @@ def modify_staff():
         if mod_stff_form.kana_name.data == "":
             flash("職員カナ名が入力されていません.")
             return render_template("modify_stafff.html", form=mod_stff_form, happen_error=True)
-        # if mod_stff_form.password.data == "":
-        #     flash("パスワードが入力されていません.")
-        #     return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
         if mod_stff_form.sex.data == "":
             flash("性別が選択されていません.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
@@ -8462,18 +9251,12 @@ def modify_staff():
         if not cr_engn.reg.check_katakana_uppercase_in_ja(mod_stff_form.kana_name.data):
             flash("職員カナ名は, カタカナのみにしてください.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
-        # if len(mod_stff_form.password.data) > consts.PASSWORD_LENGTH:
-        #     flash("パスワードは, " + str(consts.PASSWORD_LENGTH) + "文字以内にしてください.")
-        #     return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
         if ((" " in mod_stff_form.name.data) or ("　" in mod_stff_form.name.data)):
             flash("職員名の一部として, 半角スペースと全角スペースは使用できません.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
         if ((" " in mod_stff_form.kana_name.data) or ("　" in mod_stff_form.kana_name.data)):
             flash("職員カナ名の一部として, 半角スペースと全角スペースは使用できません.")
             return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
-        # if " " in mod_stff_form.password.data:
-        #     flash("パスワードの一部として, 半角スペースは使用できません.")
-        #     return render_template("modify_staff.html", form=mod_stff_form, happen_error=True)
 
         drtn_in_dys__crit1 = cr_engn.etc.retrieve_timedelta_from_years(consts.STAFF_AGE_TOP)
         drtn_in_dys__crit2 = cr_engn.etc.retrieve_timedelta_from_years(consts.STAFF_AGE_BOTTOM)
@@ -8499,7 +9282,6 @@ def modify_staff():
         crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
         stff.name = escape(mod_stff_form.name.data)
         stff.kana_name = escape(mod_stff_form.kana_name.data)
-        # stff.hashed_password = generate_password_hash(mod_stff_form.password.data)
         stff.sex = mod_stff_form.sex.data
         stff.blood_type = mod_stff_form.blood_type.data
         stff.birth_date = mod_stff_form.birth_date.data
@@ -8519,8 +9301,8 @@ def modify_staff():
 def detail_word():
     dtl_wrd_form = DetailWordForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_word")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /detail_word __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8538,12 +9320,19 @@ def detail_word():
     if session["is-admin-enter"] == False:
         return redirect(url_for("view.home"))
 
-    # [show_words][search_words]ページを介さずに,
-    # 不正アクセスされたら, 直前画面のページヘリダイレクトする.
+    # words系ページを介さずに不正にアクセスされたら,
+    # 管理者ダッシュボード画面ページヘリダイレクトする.
     if "hidden-detail-item-id" not in session:
         return redirect(url_for("view.admin_dashboard"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /detail_word __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.detail_word"
@@ -8580,8 +9369,8 @@ def detail_word():
 def detail_theme():
     dtl_thm_form = DetailThemeForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_theme")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /detail_theme __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8599,12 +9388,19 @@ def detail_theme():
     if session["is-admin-enter"] == False:
         return redirect(url_for("view.home"))
 
-    # [show_themes][search_themes]ページを介さずに,
-    # 不正アクセスされたら, 直前画面のページヘリダイレクトする.
+    # themes系ページを介さずに不正にアクセスされたら,
+    # 管理者ダッシュボード画面ページヘリダイレクトする.
     if "hidden-detail-item-id" not in session:
         return redirect(url_for("view.admin_dashboard"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /detail_theme __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.detail_theme"
@@ -8633,8 +9429,8 @@ def detail_theme():
 def detail_category():
     dtl_ctgr_form = DetailCategoryForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_category")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /detail_category __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8652,12 +9448,19 @@ def detail_category():
     if session["is-admin-enter"] == False:
         return redirect(url_for("view.home"))
 
-    # [show_categories][search_categories]ページを介さずに,
-    # 不正アクセスされたら, 直前画面のページヘリダイレクトする.
+    # categories系ページを介さずに不正にアクセスされたら,
+    # 管理者ダッシュボード画面ページヘリダイレクトする.
     if "hidden-detail-item-id" not in session:
         return redirect(url_for("view.admin_dashboard"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /detail_category __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.detail_category"
@@ -8688,8 +9491,8 @@ def detail_category():
 def detail_knowledge():
     dtl_fct_form = DetailFactForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_fact")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /detail_fact __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8707,12 +9510,19 @@ def detail_knowledge():
     if session["is-admin-enter"] == False:
         return redirect(url_for("view.home"))
 
-    # [show_facts][search_facts]ページを介さずに,
-    # 不正アクセスされたら, 直前画面のページヘリダイレクトする.
+    # facts系ページを介さずに不正にアクセスされたら,
+    # 管理者ダッシュボード画面ページヘリダイレクトする.
     if "hidden-detail-item-id" not in session:
         return redirect(url_for("view.admin_dashboard"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /detail_fact __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.detail_fact"
@@ -8748,8 +9558,8 @@ def detail_knowledge():
 def detail_rule():
     dtl_rl_form = DetailRuleForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_rule")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /detail_rule __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8767,12 +9577,19 @@ def detail_rule():
     if session["is-admin-enter"] == False:
         return redirect(url_for("view.home"))
 
-    # [show_rules][search_rules]ページを介さずに,
-    # 不正アクセスされたら, 直前画面のページヘリダイレクトする.
+    # rules系ページを介さずに不正にアクセスされたら,
+    # 管理者ダッシュボード画面ページヘリダイレクトする.
     if "hidden-detail-item-id" not in session:
         return redirect(url_for("view.admin_dashboard"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /detail_rule __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.detail_rule"
@@ -8803,8 +9620,8 @@ def detail_rule():
 def detail_reaction():
     dtl_rl_form = DetailReactionForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_rule")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /detail_rule __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8822,12 +9639,19 @@ def detail_reaction():
     if session["is-admin-enter"] == False:
         return redirect(url_for("view.home"))
 
-    # [show_reactions][search_reactions]ページを介さずに,
-    # 不正アクセスされたら, 直前画面のページヘリダイレクトする.
+    # reactions系ページを介さずに不正にアクセスされたら,
+    # 管理者ダッシュボード画面ページヘリダイレクトする.
     if "hidden-detail-item-id" not in session:
         return redirect(url_for("view.admin_dashboard"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /detail_rule __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.detail_reaction"
@@ -8859,8 +9683,8 @@ def detail_reaction():
 def detail_generate():
     dtl_gen_form = DetailGenerateForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_generate")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /detail_generate __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8878,12 +9702,19 @@ def detail_generate():
     if session["is-admin-enter"] == False:
         return redirect(url_for("view.home"))
 
-    # [show_generates][search_generates]ページを介さずに,
-    # 不正アクセスされたら, 直前画面のページヘリダイレクトする.
+    # generates系ページを介さずに不正にアクセスされたら,
+    # 管理者ダッシュボード画面ページヘリダイレクトする.
     if "hidden-detail-item-id" not in session:
         return redirect(url_for("view.admin_dashboard"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /detail_generate __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.detail_generate"
@@ -8912,8 +9743,8 @@ def detail_generate():
 def detail_history():
     dtl_hist_form = DetailHistoryForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_history")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /detail_history __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8931,12 +9762,19 @@ def detail_history():
     if session["is-admin-enter"] == False:
         return redirect(url_for("view.home"))
 
-    # [show_histories][search_histories]ページを介さずに,
-    # 不正アクセスされたら, 直前画面のページヘリダイレクトする.
+    # histories系ページを介さずに不正にアクセスされたら,
+    # 管理者ダッシュボード画面ページヘリダイレクトする.
     if "hidden-detail-item-id" not in session:
         return redirect(url_for("view.admin_dashboard"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /detail_history __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.detail_history"
@@ -8963,8 +9801,8 @@ def detail_history():
 def detail_enter_or_exit():
     dtl_entr_or_exit_form = DetailEnterOrExitForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_enter_or_exit")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /detail_enter_or_exit __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8982,12 +9820,19 @@ def detail_enter_or_exit():
     if session["is-admin-enter"] == False:
         return redirect(url_for("view.home"))
 
-    # [show_enters_or_exits][search_enters_or_exits]ページを介さずに,
-    # 不正アクセスされたら, 直前画面のページヘリダイレクトする.
+    # enters_or_exits系ページを介さずに不正にアクセスされたら,
+    # 管理者ダッシュボード画面ページヘリダイレクトする.
     if "hidden-detail-item-id" not in session:
         return redirect(url_for("view.admin_dashboard"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /detail_enter_or_exit __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.detail_enter_or_exit"
@@ -9015,8 +9860,8 @@ def detail_enter_or_exit():
 def detail_staff():
     dtl_stff_form = DetailStaffForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_staff")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /detail_staff __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9034,12 +9879,19 @@ def detail_staff():
     if session["is-admin-enter"] == False:
         return redirect(url_for("view.home"))
 
-    # [show_staffs][search_staffs]ページを介さずに,
-    # 不正アクセスされたら, 直前画面のページヘリダイレクトする.
+    # staffs系ページを介さずに不正にアクセスされたら,
+    # 管理者ダッシュボード画面ページヘリダイレクトする.
     if "hidden-detail-item-id" not in session:
         return redirect(url_for("view.admin_dashboard"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /detail_staff __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.detail_staff"
@@ -9072,8 +9924,8 @@ def import_words():
     pass_cnt = 0
     imprt_wrd_form = ImportWordForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_words")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /import_words __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9092,19 +9944,34 @@ def import_words():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_words __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.import_words"
         return render_template("import_words.html", form=imprt_wrd_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_words __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.import_words":
             return redirect(url_for("view.import_words"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if imprt_wrd_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if imprt_wrd_form.import_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
@@ -9177,8 +10044,8 @@ def import_themes():
     pass_cnt = 0
     imprt_thm_form = ImportThemeForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_themes")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /import_themes __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9197,19 +10064,34 @@ def import_themes():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_themes __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.import_themes"
         return render_template("import_themes.html", form=imprt_thm_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_themes __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.import_themes":
             return redirect(url_for("view.import_themes"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if imprt_thm_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if imprt_thm_form.import_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
@@ -9276,8 +10158,8 @@ def import_categories():
     pass_cnt = 0
     imprt_ctgr_form = ImportCategoryForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_categories")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /import_categories __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9296,19 +10178,34 @@ def import_categories():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_categories __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.import_categories"
         return render_template("import_categories.html", form=imprt_ctgr_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_categories __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.import_categories":
             return redirect(url_for("view.import_categories"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if imprt_ctgr_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if imprt_ctgr_form.import_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
@@ -9376,8 +10273,8 @@ def import_facts():
     pass_cnt = 0
     imprt_fct_form = ImportFactForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_facts")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /import_facts __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9396,19 +10293,34 @@ def import_facts():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_facts __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.import_facts"
         return render_template("import_facts.html", form=imprt_fct_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_facts __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.import_facts":
             return redirect(url_for("view.import_facts"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if imprt_fct_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if imprt_fct_form.import_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
@@ -9477,8 +10389,8 @@ def import_rules():
     pass_cnt = 0
     imprt_rl_form = ImportRuleForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_rules")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /import_rules __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9497,19 +10409,34 @@ def import_rules():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_rules __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.import_rules"
         return render_template("import_rules.html", form=imprt_rl_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_rules __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.import_rules":
             return redirect(url_for("view.import_rules"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if imprt_rl_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if imprt_rl_form.import_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
@@ -9577,8 +10504,8 @@ def import_reactions():
     pass_cnt = 0
     imprt_rctn_form = ImportReactionForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_reactions")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /import_reactions __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9597,19 +10524,34 @@ def import_reactions():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_reactions __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.import_reactions"
         return render_template("import_reactions.html", form=imprt_rctn_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_reactions __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.import_reactions":
             return redirect(url_for("view.import_reactions"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if imprt_rctn_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if imprt_rctn_form.import_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
@@ -9678,8 +10620,8 @@ def import_generates():
     pass_cnt = 0
     imprt_gen_form = ImportGenerateForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_generates")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /import_generates __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9698,19 +10640,34 @@ def import_generates():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_generates __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.import_generates"
         return render_template("import_generates.html", form=imprt_gen_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_generates __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.import_generates":
             return redirect(url_for("view.import_generates"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if imprt_gen_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if imprt_gen_form.import_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
@@ -9769,8 +10726,8 @@ def import_enters_or_exits():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     imprt_entr_n_exit_form = ImportEnterOrExitForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_enters_or_exits")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /import_enters_or_exits __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9789,19 +10746,34 @@ def import_enters_or_exits():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_enters_or_exits __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.import_enters_or_exits"
         return render_template("import_enters_or_exits.html", form=imprt_entr_n_exit_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /import_enters_or_exits __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.import_enters_or_exits":
             return redirect(url_for("view.import_enters_or_exits"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if imprt_entr_n_exit_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if imprt_entr_n_exit_form.import_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
@@ -9902,8 +10874,8 @@ def export_words():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     exprt_wrd_form = ExportWordForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_words")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /export_words __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9922,19 +10894,34 @@ def export_words():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_words __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.export_words"
         return render_template("export_words.html", form=exprt_wrd_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_words __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.export_words":
             return redirect(url_for("view.export_words"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if exprt_wrd_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if exprt_wrd_form.export_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 非処理フラグの立っていない語句レコードをDBから取得する.
@@ -9981,8 +10968,8 @@ def export_themes():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     exprt_thm_form = ExportThemeForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_themes")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /export_themes __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10001,19 +10988,34 @@ def export_themes():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_themes __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.export_themes"
         return render_template("export_themes.html", form=exprt_thm_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_themes __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.export_themes":
             return redirect(url_for("view.export_themes"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if exprt_thm_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if exprt_thm_form.export_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 非処理フラグの立っていない主題レコードをDBから取得する.
@@ -10055,8 +11057,8 @@ def export_categories():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     exprt_ctgr_form = ExportCategoryForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_categories")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /export_categories __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10075,19 +11077,34 @@ def export_categories():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_categories __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.export_categories"
         return render_template("export_categories.html", form=exprt_ctgr_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_categories __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.export_categories":
             return redirect(url_for("view.export_categories"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if exprt_ctgr_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if exprt_ctgr_form.export_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 非処理フラグの立っていない分類レコードをDBから取得する.
@@ -10131,8 +11148,8 @@ def export_facts():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     exprt_fct_form = ExportFactForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_facts")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /export_facts __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10151,19 +11168,34 @@ def export_facts():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_facts __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.export_facts"
         return render_template("export_facts.html", form=exprt_fct_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_facts __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.export_facts":
             return redirect(url_for("view.export_facts"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if exprt_fct_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if exprt_fct_form.export_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 非処理フラグの立っていない事実レコードをDBから取得する.
@@ -10208,8 +11240,8 @@ def export_rules():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     exprt_rl_form = ExportRuleForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_rules")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /export_rules __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10228,19 +11260,34 @@ def export_rules():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_rules __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.export_rules"
         return render_template("export_rules.html", form=exprt_rl_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_rules __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.export_rules":
             return redirect(url_for("view.export_rules"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if exprt_rl_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if exprt_rl_form.export_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 非処理フラグの立っていない規則レコードをDBから取得する.
@@ -10284,8 +11331,8 @@ def export_reactions():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     exprt_rctn_form = ExportReactionForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_reactions")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /export_reactions __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10304,19 +11351,34 @@ def export_reactions():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_reactions __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.export_reactions"
         return render_template("export_reactions.html", form=exprt_rctn_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_reactions __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.export_reactions":
             return redirect(url_for("view.export_reactions"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if exprt_rctn_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if exprt_rctn_form.export_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 非処理フラグの立っていない反応レコードをDBから取得する.
@@ -10331,8 +11393,8 @@ def export_reactions():
             ET.SubElement(rctn_elm, "mean-and-body").text = rctn.mean_and_body
             ET.SubElement(rctn_elm, "staff-psychology").text = rctn.staff_psychology
             ET.SubElement(rctn_elm, "scene-and-background").text = rctn.scene_and_background
-            ET.SubElement(rctn_elm, "message-example-from-staff").text = rctn.message_example_from_staff
-            ET.SubElement(rctn_elm, "message-example-from-application").text = rctn.message_example_from_application
+            ET.SubElement(rctn_elm, "staff-example-text-message").text = rctn.staff_example_text_message
+            ET.SubElement(rctn_elm, "application-example-text-message").text = rctn.application_example_text_message
             ET.SubElement(rctn_elm, "staff-name").text = rctn.staff_name
             ET.SubElement(rctn_elm, "staff-kana-name").text = rctn.staff_kana_name
             ET.SubElement(rctn_elm, "created-at").text = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(rctn.created_at), False)
@@ -10361,8 +11423,8 @@ def export_generates():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     exprt_gen_form = ExportGenerateForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_words")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /export_words __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10381,19 +11443,34 @@ def export_generates():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_words __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.export_generates"
         return render_template("export_generates.html", form=exprt_gen_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_words __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.export_generates":
             return redirect(url_for("view.export_generates"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if exprt_gen_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if exprt_gen_form.export_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 非処理フラグの立っていない生成レコードをDBから取得する.
@@ -10435,8 +11512,8 @@ def export_histories():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     exprt_hist_form = ExportHistoryForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_words")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /export_words __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10455,19 +11532,34 @@ def export_histories():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_words __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.export_histories"
         return render_template("export_histories.html", form=exprt_hist_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_words __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.export_histories":
             return redirect(url_for("view.export_histories"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if exprt_hist_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if exprt_hist_form.export_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 非処理フラグの立っていない履歴レコードをDBから取得する.
@@ -10509,8 +11601,8 @@ def export_enters_or_exits():
     fl_buf = []
     exprt_entr_or_exit_form = ExportEnterOrExitForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_enters_or_exits")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /export_enters_or_exits __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10529,19 +11621,34 @@ def export_enters_or_exits():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_enters_or_exits __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.export_enters_or_exits"
         return render_template("export_enters_or_exits.html", form=exprt_entr_or_exit_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /export_enters_or_exits __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.export_enters_or_exits":
             return redirect(url_for("view.export_enters_or_exits"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if exprt_entr_or_exit_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if exprt_entr_or_exit_form.export_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # ID昇順で, 非処理フラグの立っていない入退レコードをDBから取得する.
@@ -10607,8 +11714,8 @@ def retrieve_generate():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     rtrv_gen_form = RetrieveGenerateForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /retrieve_generate")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /retrieve_generate __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10632,19 +11739,34 @@ def retrieve_generate():
         return redirect(url_for(session["referrer-page"]))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /retrieve_generate __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.retrieve_generate"
         return render_template("retrieve_generate.html", form=rtrv_gen_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /retrieve_generate __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.retrieve_generate":
             return redirect(url_for("view.retrieve_generate"))
 
-        # フォームの取消ボタンが押されたら, 直前画面のページヘリダイレクトする.
-        if rtrv_gen_form.cancel.data:
+        # フォームの取止ボタンが押されたら,
+        # 管理者ダッシュボード画面ページヘリダイレクトする.
+        if rtrv_gen_form.retrieve_stop.data:
             return redirect(url_for("view.admin_dashboard"))
 
         # 指定IDの生成レコードをDBから取得する.
@@ -10663,14 +11785,14 @@ def retrieve_generate():
         return send_file(gen.generated_file_path, as_attachment=True)
 
 
-# 「reset_database」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
-@view.route("/reset_database", methods=["GET", "POST"])
-def reset_database():
+# 「reset_databases」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
+@view.route("/reset_databases", methods=["GET", "POST"])
+def reset_databases():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     rst_db_form = ResetDatabaseForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /reset_database")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /reset_database __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10689,19 +11811,33 @@ def reset_database():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /reset_database __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.reset_database"
-        return render_template("reset_databacr_engn.html", form=rst_db_form)
+        return render_template("reset_databases.html", form=rst_db_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /reset_database __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.reset_database":
             return redirect(url_for("view.reset_database"))
 
-        # フォームの取消ボタンが押されたら, 初期状態のフォームと共にテンプレートを返す.
-        if rst_db_form.cancel.data:
+        # フォームの取止ボタンが押されたら, 初期状態のフォームと共にテンプレートを返す.
+        if rst_db_form.reset_cancel.data:
             rst_db_form.words.data = False
             rst_db_form.themes.data = False
             rst_db_form.categories.data = False
@@ -10712,7 +11848,7 @@ def reset_database():
             rst_db_form.histories.data = False
             rst_db_form.enters_or_exits.data = False
             rst_db_form.staffs.data = False
-            return render_template("reset_databacr_engn.html", form=rst_db_form)
+            return render_template("reset_databases.html", form=rst_db_form)
 
         # フォームのチェックボックスに全くチェックが入っていない場合の処理をする.
         if (not rst_db_form.words.data and
@@ -10726,7 +11862,7 @@ def reset_database():
             not rst_db_form.enters_or_exits.data and
             not rst_db_form.staffs.data):
             flash("DBをリセットしませんでした.")
-            return render_template("reset_databacr_engn.html", form=rst_db_form)
+            return render_template("reset_databases.html", form=rst_db_form)
 
         # フォームのチェックが入っている箇所に対応するテーブルを削除する.
         if rst_db_form.words.data:
@@ -10772,7 +11908,7 @@ def reset_database():
         rst_db_form.enters_or_exits.data = False
         rst_db_form.staffs.data = False
         flash("DBをリセットしました.")
-        return render_template("reset_databacr_engn.html", form=rst_db_form)
+        return render_template("reset_databases.html", form=rst_db_form)
 
 
 # 「environment_settings」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -10782,8 +11918,8 @@ def environment_settings():
     config = configparser.ConfigParser()
     env_sttng_form = EnvironmentSettingForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /environment_settings")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /environment_settings __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10802,6 +11938,13 @@ def environment_settings():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /environment_settings __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.environment_settings"
@@ -10837,14 +11980,21 @@ def environment_settings():
         return render_template("environment_settings.html", form=env_sttng_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /environment_settings __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.environment_settings":
             return redirect(url_for("view.environment_settings"))
 
-        # フォームの取消ボタンが押下されたら, 現在の設定内容を読み込んだフォームと共にテンプレートを返す.
+        # フォームの取止ボタンが押下されたら, 現在の設定内容を読み込んだフォームと共にテンプレートを返す.
         # ※各設定項目が消失していた場合, デフォルト値で各項目を復元する.
-        if env_sttng_form.cancel.data == True:
+        if env_sttng_form.setting_stop.data == True:
             config.read(consts.ENVIRONMENT_SETTING_PATH, encoding="utf-8")
             env_sttng_form.short_term_memory_size.data = config.get("memory-size", "short-term-memory-size", fallback=consts.SHORT_TERM_MEMORY_SIZE_DEFAULT)
             env_sttng_form.long_term_memory_size.data = config.get("memory-size", "long-term-memory-size", fallback=consts.LONG_TERM_MEMORY_SIZE_DEFAULT)
@@ -10900,8 +12050,8 @@ def security_settings():
     config = configparser.ConfigParser()
     sec_sttng_form = SecuritySettingForm()
 
-    # 該当のURLエンドポイントに入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /security_settings")
+    # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+    rslt = cr_engn.etc.logging__info("view at /security_settings __ before GET")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10920,6 +12070,13 @@ def security_settings():
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /security_settings __ GET")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
         session["referrer-page"] = "view.security_settings"
@@ -10937,13 +12094,20 @@ def security_settings():
         return render_template("security_settings.html", form=sec_sttng_form)
 
     if request.method == "POST":
+        # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
+        rslt = cr_engn.etc.logging__info("view at /security_settings __ POST")
+
+        # ロギングに失敗したら, 例外を発生させる.
+        if rslt == "NG":
+            raise InternalServerError
+
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
         if session["referrer-page"] != "view.security_settings":
             return redirect(url_for("view.security_settings"))
 
-        # フォームの取消ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
-        if sec_sttng_form.cancel.data:
+        # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
+        if sec_sttng_form.setting_cancel.data:
             sec_sttng_form.new_password.data = ""
             return render_template("security_settings.html", form=sec_sttng_form)
 
@@ -10984,7 +12148,7 @@ def security_settings():
 
 # エラー処理のためのカスタム関数を宣言・定義する.
 # ※指定URLにクエリパラメータが含まれている場合は400番エラーを返す.
-# ※この関数は, 都度, リクエストの直前に呼び出される.
+# ※この関数は, リクエストの直前に, 都度呼び出される.
 @view.before_request
 def check_query_parameters():
     if request.args:

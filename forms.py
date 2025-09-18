@@ -33,36 +33,42 @@ class StaffEnterForm(FlaskForm):
       name = StringField("職員名 :", default="", render_kw={"autocomplete": "off"})
       password = PasswordField("パスワード :", default="", render_kw={"autocomplete": "off"})
       reason = SelectField("入室理由 :", default="", choices=menu_choices)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      enter_decide = SubmitField("決定")
+      enter_cancel = SubmitField("取消")
 
 
 # 職員退室フォーム(=FlaskFormクラス)を宣言・定義する.
 class StaffExitForm(FlaskForm):
       menu_choices = consts.MENU_CHOICE_FOR_STAFF_EXIT_FORM
       reason = SelectField("退室理由 :", default="", choices=menu_choices)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      exit_decide = SubmitField("決定")
+      exit_cancel = SubmitField("取消")
 
 
 # 管理者入室フォーム(=FlaskFormクラス)を宣言・定義する.
 class AdminEnterForm(FlaskForm):
       password = PasswordField("パスワード :", default="", render_kw={"autocomplete": "off"})
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      enter_decide = SubmitField("決定")
+      enter_cancel = SubmitField("取消")
 
 
 # 管理者退室フォーム(=FlaskFormクラス)を宣言・定義する.
 class AdminExitForm(FlaskForm):
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      exit_decide = SubmitField("決定")
+      exit_stop = SubmitField("取止")
 
 
 # 送信フォーム(=FlaskFormクラス)を宣言・定義する.
 class SendForm(FlaskForm):
       text_message = TextAreaField("テキストメッセージ :", default="", render_kw={"autocomplete": "off", "rows": "8"})
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      send_decide = SubmitField("決定")
+      send_cancel = SubmitField("取消")
+
+
+# 返信フォーム(=FlaskFormクラス)を宣言・定義する.
+class ReplyForm(FlaskForm):
+      send_continue = SubmitField("続行")
+      send_stop = SubmitField("取止")
 
 
 # 語句学習フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -83,8 +89,8 @@ class LearnWordForm(FlaskForm):
       part_of_speech = SelectField("品詞分類 :", default="", choices=menu_choices5)
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices6)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices6)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      learn_decide = SubmitField("決定")
+      learn_cancel = SubmitField("取消")
 
 
 # 主題学習フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -95,8 +101,8 @@ class LearnThemeForm(FlaskForm):
       category_tag = TextAreaField("分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      learn_decide = SubmitField("決定")
+      learn_cancel = SubmitField("取消")
 
 
 # 分類学習フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -109,8 +115,8 @@ class LearnCategoryForm(FlaskForm):
       child_category_tag = TextAreaField("子分類タグ :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      learn_decide = SubmitField("決定")
+      learn_cancel = SubmitField("取消")
 
 
 # 知識学習フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -124,8 +130,8 @@ class LearnFactForm(FlaskForm):
       attached_video_file = FileField("添付ビデオ(省略可) :", default="", render_kw=consts.VIDEO_FILE_FORMAT)
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      learn_decide = SubmitField("決定")
+      learn_cancel = SubmitField("取消")
 
 
 # 規則学習フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -138,8 +144,8 @@ class LearnRuleForm(FlaskForm):
       inference_and_speculation_result = TextAreaField("推論結果 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      learn_decide = SubmitField("決定")
+      learn_cancel = SubmitField("取消")
 
 
 # 反応学習フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -149,12 +155,12 @@ class LearnReactionForm(FlaskForm):
       mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       staff_psychology = TextAreaField("職員心理 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       scene_and_background = TextAreaField("情景&背景 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      message_example_from_staff = TextAreaField("職員メッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      message_example_from_application = TextAreaField("アプリメッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      staff_example_text_message = TextAreaField("職員メッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      application_example_text_message = TextAreaField("アプリメッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      learn_decide = SubmitField("決定")
+      learn_cancel = SubmitField("取消")
 
   
 # 生成フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -167,8 +173,8 @@ class GenerateForm(FlaskForm):
       attached_video_file = FileField("添付ビデオ :", default="", render_kw=consts.VIDEO_FILE_FORMAT)
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      generate_decide = SubmitField("決定")
+      generate_cancel = SubmitField("取消")
 
 
 # 入退登録フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -182,8 +188,8 @@ class RegisterEnterOrExitForm(FlaskForm):
       enter_or_exit_at_second = IntegerField("入退日時-秒数 :", default="", render_kw={"autocomplete": "off"})
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices2)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices2)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      register_decide = SubmitField("決定")
+      register_cancel = SubmitField("取消")
 
 
 # 職員登録フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -199,8 +205,8 @@ class RegisterStaffForm(FlaskForm):
       birth_date = DateField("生年月日 :", default="", format=consts.BIRTH_DATE_FORMAT)
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices3)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices3)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      register_decide = SubmitField("決定")
+      register_cancel = SubmitField("取消")
 
 
 # 語句検索フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -229,8 +235,8 @@ class SearchWordForm(FlaskForm):
       updated_at_end = DateTimeField("更新日時(検索区間の終り) :", default="", format=consts.GENERAL_DATE_FORMAT)
       sort_condition = RadioField("整序条件 :", default="condition-1", choices=menu_choices6)
       extract_condition = RadioField("抽出条件 :", default="condition-1", choices=menu_choices7)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      search_decide = SubmitField("決定")
+      search_cancel = SubmitField("取消")
 
 
 # 主題検索フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -249,8 +255,8 @@ class SearchThemeForm(FlaskForm):
       updated_at_end = DateTimeField("更新日時(検索区間の終り) :", default="", format=consts.GENERAL_DATE_FORMAT)
       sort_condition = RadioField("整序条件 :", default="condition-1", choices=menu_choices1)
       extract_condition = RadioField("抽出条件 :", default="condition-1", choices=menu_choices2)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      search_decide = SubmitField("決定")
+      search_cancel = SubmitField("取消")
 
 
 # 分類検索フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -271,8 +277,8 @@ class SearchCategoryForm(FlaskForm):
       updated_at_end = DateTimeField("更新日時(検索区間の終り) :", default="", format=consts.GENERAL_DATE_FORMAT)
       sort_condition = RadioField("整序条件 :", default="condition-1", choices=menu_choices1)
       extract_condition = RadioField("抽出条件 :", default="condition-1", choices=menu_choices2)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      search_decide = SubmitField("決定")
+      search_cancel = SubmitField("取消")
 
 
 # 知識検索フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -295,8 +301,8 @@ class SearchFactForm(FlaskForm):
       updated_at_end = DateTimeField("更新日時(検索区間の終り) :", default="", format=consts.GENERAL_DATE_FORMAT)
       sort_condition = RadioField("整序条件 :", default="condition-1", choices=menu_choices2)
       extract_condition = RadioField("抽出条件 :", default="condition-1", choices=menu_choices3)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      search_decide = SubmitField("決定")
+      search_cancel = SubmitField("取消")
 
 
 # 規則検索フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -317,8 +323,8 @@ class SearchRuleForm(FlaskForm):
       updated_at_end = DateTimeField("更新日時(検索区間の終り) :", default="", format=consts.GENERAL_DATE_FORMAT)
       sort_condition = RadioField("整序条件 :", default="condition-1", choices=menu_choices1)
       extract_condition = RadioField("抽出条件 :", default="condition-1", choices=menu_choices2)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      search_decide = SubmitField("決定")
+      search_cancel = SubmitField("取消")
 
 
 # 反応検索フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -330,8 +336,8 @@ class SearchReactionForm(FlaskForm):
       mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       staff_psychology = TextAreaField("職員心理 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       scene_and_background = TextAreaField("情景&背景 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      message_example_from_staff = TextAreaField("職員メッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      message_example_from_application = TextAreaField("アプリメッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      staff_example_text_message = TextAreaField("職員メッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      application_example_text_message = TextAreaField("アプリメッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       staff_name = StringField("職員名 :", default="", render_kw={"autocomplete": "off"})
       staff_kana_name = StringField("職員カナ名 :", default="", render_kw={"autocomplete": "off"})
       created_at_begin = DateTimeField("作成日時(検索区間の始め) :", default="", format=consts.GENERAL_DATE_FORMAT)
@@ -340,8 +346,8 @@ class SearchReactionForm(FlaskForm):
       updated_at_end = DateTimeField("更新日時(検索区間の終り) :", default="", format=consts.GENERAL_DATE_FORMAT)
       sort_condition = RadioField("整序条件 :", default="condition-1", choices=menu_choices1)
       extract_condition = RadioField("抽出条件 :", default="condition-1", choices=menu_choices2)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      search_decide = SubmitField("決定")
+      search_cancel = SubmitField("取消")
 
 
 # 生成検索フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -359,8 +365,8 @@ class SearchGenerateForm(FlaskForm):
       updated_at_end = DateTimeField("更新日時(検索区間の終り) :", default="", format=consts.GENERAL_DATE_FORMAT)
       sort_condition = RadioField("整序条件 :", default="condition-1", choices=menu_choices1)
       extract_condition = RadioField("抽出条件 :", default="condition-1", choices=menu_choices2)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      search_decide = SubmitField("決定")
+      search_cancel = SubmitField("取消")
 
 
 # 履歴検索フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -378,8 +384,8 @@ class SearchHistoryForm(FlaskForm):
       updated_at_end = DateTimeField("更新日時(検索区間の終り) :", default="", format=consts.GENERAL_DATE_FORMAT)
       sort_condition = RadioField("整序条件 :", default="condition-1", choices=menu_choices1)
       extract_condition = RadioField("抽出条件 :", default="condition-1", choices=menu_choices2)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      search_decide = SubmitField("決定")
+      search_cancel = SubmitField("取消")
 
 
 # 入退検索フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -400,8 +406,8 @@ class SearchEnterOrExitForm(FlaskForm):
       updated_at_end = DateTimeField("更新日時(検索区間の終り) :", default="", format=consts.GENERAL_DATE_FORMAT)
       sort_condition = RadioField("整序条件 :", default="condition-1", choices=menu_choices2)
       extract_condition = RadioField("抽出条件 :", default="condition-1", choices=menu_choices3)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      search_decide = SubmitField("決定")
+      search_cancel = SubmitField("取消")
 
 
 # 職員検索フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -422,8 +428,8 @@ class SearchStaffForm(FlaskForm):
       updated_at_end = DateTimeField("更新日時(検索区間の終り) :", default="", format=consts.GENERAL_DATE_FORMAT)
       sort_condition = RadioField("整序条件 :", default="condition-1", choices=menu_choices3)
       extract_condition = RadioField("抽出条件 :", default="condition-1", choices=menu_choices4)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      search_decide = SubmitField("決定")
+      search_cancel = SubmitField("取消")
 
 
 # 語句変更フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -446,8 +452,8 @@ class ModifyWordForm(FlaskForm):
       staff_kana_name = StringField("職員カナ名 :", render_kw={"autocomplete": "off"})
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices6)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices6)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      modify_decide = SubmitField("決定")
+      modify_cancel = SubmitField("取消")
 
 
 # 主題変更フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -460,8 +466,8 @@ class ModifyThemeForm(FlaskForm):
       staff_kana_name = StringField("職員カナ名 :", render_kw={"autocomplete": "off"})
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      modify_decide = SubmitField("決定")
+      modify_cancel = SubmitField("取消")
 
 
 # 分類変更フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -476,8 +482,8 @@ class ModifyCategoryForm(FlaskForm):
       staff_kana_name = StringField("職員カナ名 :", default="", render_kw={"autocomplete": "off"})
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      modify_decide = SubmitField("決定")
+      modify_cancel = SubmitField("取消")
 
 
 # 知識変更フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -493,8 +499,8 @@ class ModifyFactForm(FlaskForm):
       staff_kana_name = StringField("職員カナ名 :", default="", render_kw={"autocomplete": "off"})
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      modify_decide = SubmitField("決定")
+      modify_cancel = SubmitField("取消")
 
 
 # 規則変更フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -509,8 +515,8 @@ class ModifyRuleForm(FlaskForm):
       staff_kana_name = StringField("職員カナ名 :", render_kw={"autocomplete": "off"})
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      modify_decide = SubmitField("決定")
+      modify_cancel = SubmitField("取消")
 
 
 # 反応変更フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -520,14 +526,14 @@ class ModifyReactionForm(FlaskForm):
       mean_and_body = TextAreaField("意味&本体 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       staff_psychology = TextAreaField("職員心理 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       scene_and_background = TextAreaField("情景&背景 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      message_example_from_staff = TextAreaField("職員メッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
-      message_example_from_application = TextAreaField("アプリメッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      staff_example_text_message = TextAreaField("職員メッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
+      application_example_text_message = TextAreaField("アプリメッセージ例 :", default="", render_kw={"autocomplete": "off", "rows": "4"})
       staff_name = StringField("職員名 :", render_kw={"autocomplete": "off"})
       staff_kana_name = StringField("職員カナ名 :", render_kw={"autocomplete": "off"})
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      modify_decide = SubmitField("決定")
+      modify_cancel = SubmitField("取消")
 
 
 # 入退変更フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -541,8 +547,8 @@ class ModifyEnterOrExitForm(FlaskForm):
       enter_or_exit_at_second = IntegerField("入退日時-秒数 :", default="", render_kw={"autocomplete": "off"})
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices2)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices2)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      modify_decide = SubmitField("決定")
+      modify_cancel = SubmitField("取消")
 
 
 # 職員変更フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -557,8 +563,8 @@ class ModifyStaffForm(FlaskForm):
       birth_date = DateField("生年月日 :", default="", format=consts.BIRTH_DATE_FORMAT)
       is_hidden = SelectField("秘匿の是非 :", default="", choices=menu_choices3)
       is_exclude = SelectField("非処理の是非 :", default="", choices=menu_choices3)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      modify_decide = SubmitField("決定")
+      modify_cancel = SubmitField("取消")
 
 
 # 語句詳細フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -749,117 +755,117 @@ class DetailStaffForm(FlaskForm):
 # 語句取込フォーム(=FlaskFormクラス)を宣言・定義する.
 class ImportWordForm(FlaskForm):
       imported_file = FileField("取込ファイル :", default="", render_kw=consts.DOCUMENT_FILE_FORMAT)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      import_decide = SubmitField("決定")
+      import_stop = SubmitField("取止")
 
 
 # 主題取込フォーム(=FlaskFormクラス)を宣言・定義する.
 class ImportThemeForm(FlaskForm):
       imported_file = FileField("取込ファイル :", default="", render_kw=consts.DOCUMENT_FILE_FORMAT)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      import_decide = SubmitField("決定")
+      import_stop = SubmitField("取止")
 
 
 # 分類取込フォーム(=FlaskFormクラス)を宣言・定義する.
 class ImportCategoryForm(FlaskForm):
       imported_file = FileField("取込ファイル :", default="", render_kw=consts.DOCUMENT_FILE_FORMAT)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      import_decide = SubmitField("決定")
+      import_stop = SubmitField("取止")
 
 
 # 知識取込フォーム(=FlaskFormクラス)を宣言・定義する.
 class ImportFactForm(FlaskForm):
       imported_file = FileField("取込ファイル :", default="", render_kw=consts.DOCUMENT_FILE_FORMAT)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      import_decide = SubmitField("決定")
+      import_stop = SubmitField("取止")
 
 
 # 規則取込フォーム(=FlaskFormクラス)を宣言・定義する.
 class ImportRuleForm(FlaskForm):
       imported_file = FileField("取込ファイル :", default="", render_kw=consts.DOCUMENT_FILE_FORMAT)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      import_decide = SubmitField("決定")
+      import_stop = SubmitField("取止")
 
 
 # 反応取込フォーム(=FlaskFormクラス)を宣言・定義する.
 class ImportReactionForm(FlaskForm):
       imported_file = FileField("取込ファイル :", default="", render_kw=consts.DOCUMENT_FILE_FORMAT)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      import_decide = SubmitField("決定")
+      import_stop = SubmitField("取止")
 
 
 # 生成取込フォーム(=FlaskFormクラス)を宣言・定義する.
 class ImportGenerateForm(FlaskForm):
       imported_file = FileField("取込ファイル :", default="", render_kw=consts.DOCUMENT_FILE_FORMAT)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      import_decide = SubmitField("決定")
+      import_stop = SubmitField("取止")
 
 
 # 入退取込フォーム(=FlaskFormクラス)を宣言・定義する.
 class ImportEnterOrExitForm(FlaskForm):
       imported_file = FileField("取込ファイル :", default="", render_kw=consts.PLAIN_FILE_FORMAT)
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      import_decide = SubmitField("決定")
+      import_stop = SubmitField("取止")
 
 
 # 語句書出フォーム(=FlaskFormクラス)を宣言・定義する.
 class ExportWordForm(FlaskForm):
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      export_decide = SubmitField("決定")
+      export_stop = SubmitField("取止")
 
 
 # 主題書出フォーム(=FlaskFormクラス)を宣言・定義する.
 class ExportThemeForm(FlaskForm):
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      export_decide = SubmitField("決定")
+      export_stop = SubmitField("取止")
 
 
 # 分類書出フォーム(=FlaskFormクラス)を宣言・定義する.
 class ExportCategoryForm(FlaskForm):
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      export_decide = SubmitField("決定")
+      export_stop = SubmitField("取止")
 
 
 # 知識書出フォーム(=FlaskFormクラス)を宣言・定義する.
 class ExportFactForm(FlaskForm):
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      export_decide = SubmitField("決定")
+      export_stop = SubmitField("取止")
 
 
 # 規則書出フォーム(=FlaskFormクラス)を宣言・定義する.
 class ExportRuleForm(FlaskForm):
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      export_decide = SubmitField("決定")
+      export_stop = SubmitField("取止")
 
 
 # 反応書出フォーム(=FlaskFormクラス)を宣言・定義する.
 class ExportReactionForm(FlaskForm):
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      export_decide = SubmitField("決定")
+      export_stop = SubmitField("取止")
 
 
 # 生成書出フォーム(=FlaskFormクラス)を宣言・定義する.
 class ExportGenerateForm(FlaskForm):
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      export_decide = SubmitField("決定")
+      export_stop = SubmitField("取止")
 
 
 # 履歴書出フォーム(=FlaskFormクラス)を宣言・定義する.
 class ExportHistoryForm(FlaskForm):
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      export_decide = SubmitField("決定")
+      export_stop = SubmitField("取止")
 
 
 # 入退書出フォーム(=FlaskFormクラス)を宣言・定義する.
 class ExportEnterOrExitForm(FlaskForm):
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      export_decide = SubmitField("決定")
+      export_stop = SubmitField("取止")
 
 
 # 生成取得フォーム(=FlaskFormクラス)を宣言・定義する.
 class RetrieveGenerateForm(FlaskForm):
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      retrieve_decide = SubmitField("決定")
+      retrieve_stop = SubmitField("取止")
 
 
 # 環境設定フォーム(=FlaskFormクラス)を宣言・定義する.
@@ -874,16 +880,16 @@ class EnvironmentSettingForm(FlaskForm):
       background_processing = BooleanField("バックグラウンド化 :")
       policy_based_decisions = BooleanField("ポリシーベース決定 :")
       personalized_conversations = BooleanField("会話進行の個人特化 :")
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      setting_decide = SubmitField("決定")
+      setting_stop = SubmitField("取止")
 
 
 # 機密設定フォーム(=FlaskFormクラス)を宣言・定義する.
 class SecuritySettingForm(FlaskForm):
       new_password = PasswordField("新しいパスワード :", default="", render_kw={"autocomplete": "off"})
       confirm_password = PasswordField("新しいパスワード(確認) :", default="", render_kw={"autocomplete": "off"})
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      setting_decide = SubmitField("決定")
+      setting_cancel = SubmitField("取消")
 
 
 # DBリセットフォーム(=FlaskFormクラス)を宣言・定義する.
@@ -898,5 +904,5 @@ class ResetDatabaseForm(FlaskForm):
       histories = BooleanField("履歴 :")
       enters_or_exits = BooleanField("入退 :")
       staffs = BooleanField("職員 :")
-      decide = SubmitField("決定")
-      cancel = SubmitField("取消")
+      reset_decide = SubmitField("決定")
+      reset_cancel = SubmitField("取消")
