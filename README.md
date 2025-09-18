@@ -8,20 +8,21 @@
 ここで、思考や感情は心や意識から生まれます。  
 では、心や意識とは何でしょうか・・・？。  
 私が考えるに、心は意識の中にあり、心は外界からの刺激によって駆動する「意識のエンジン」です。  
-刺激を受けて心が動き、感情が生じる・・・。  
+すなわち、刺激を受けて心が動き、感情が生じる・・・。  
 そして、この感情を処理するために思考が働く。  
-思考が働くから、判断や行動が可能になるのです。
+つまり、思考が働くから、判断や行動が可能になるのです。
 
 
 
 
 ## 本件アプリのコンポーネント構成(SUNIE-System)
 SUNIE-Core-Engine  
- ・SUNIE-Tagnet-Clowler  
- ・SUNIE-Tagnet-Interpreter  
- ・SUNIE-Task-Resolver  
- ・SUNIE-Policy-Checker  
- ・SUNIE-Natural-Text-Assembler  
+ ・SUNIE-ProtocolAnalyzer  
+ ・SUNIE-TagnetClowler  
+ ・SUNIE-TagnetInterpreter  
+ ・SUNIE-TaskResolver  
+ ・SUNIE-PolicyChecker  
+ ・SUNIE-NaturalTextAssembler  
 
 SUNIE-Visual-Engine  
  ・SUNIE-Image  
