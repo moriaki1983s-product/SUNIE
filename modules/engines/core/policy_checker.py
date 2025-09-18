@@ -18,14 +18,14 @@ import sys
 
 
 # Sunieエンジンのクラスを宣言・定義する.
-class TaskResolver:
+class PolicyChecker:
     _instance = None
     dat = None
 
     # インスタンス生成のためのメソッドを宣言・定義する.
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
-            cls._instance = super(TaskResolver, cls).__new__(cls, *args, **kwargs)
+            cls._instance = super(PolicyChecker, cls).__new__(cls, *args, **kwargs)
         return cls._instance
 
     # インスタンス初期化のためのメソッドを宣言・定義する.
@@ -49,7 +49,7 @@ class TaskResolver:
     def clear_data(self):
         self.dat = None
 
-    # 語句ネットと事実ネットと規則ネットをソースとして,
-    # これらを解釈・実行するためのメソッドを宣言・定義する.
-    def execution(self, ii_code):
-        return None
+    # 最終結果コード(=Final-Result-code)をソースとして,
+    # これを解釈・実行するためのメソッドを宣言・定義する.
+    def execution(self, fr_code):
+        return False

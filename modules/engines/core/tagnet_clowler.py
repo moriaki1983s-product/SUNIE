@@ -49,12 +49,7 @@ class TagnetClowlwer:
     def clear_data(self):
         self.dat = None
 
-    # データを解析するためのメソッドを宣言・定義する.
-    def analytical_drive(self):
-        anlyzd_dat = self.dat
-        return anlyzd_dat
-
-    # データを生成するためのメソッドを宣言・定義する.
-    def generative_drive(self):
-        gnrtd_dat = self.dat
-        return gnrtd_dat
+    # 職員メッセージに含まれる語句・事実と規則をソースとして,
+    # これらを解釈・実行するためのメソッドを宣言・定義する.
+    def execution(self, stff_wrds, stff_fcts, stff_rls):
+        return None, None, None

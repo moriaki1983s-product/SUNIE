@@ -18,14 +18,14 @@ import sys
 
 
 # Sunieエンジンのクラスを宣言・定義する.
-class TaskResolver:
+class TagnetInterpreter:
     _instance = None
     dat = None
 
     # インスタンス生成のためのメソッドを宣言・定義する.
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
-            cls._instance = super(TaskResolver, cls).__new__(cls, *args, **kwargs)
+            cls._instance = super(TagnetInterpreter, cls).__new__(cls, *args, **kwargs)
         return cls._instance
 
     # インスタンス初期化のためのメソッドを宣言・定義する.
@@ -51,5 +51,5 @@ class TaskResolver:
 
     # 語句ネットと事実ネットと規則ネットをソースとして,
     # これらを解釈・実行するためのメソッドを宣言・定義する.
-    def execution(self, ii_code):
-        return None
+    def execution(self, wrds_net, fcts_net, rls_net):
+        return None, None, None, None
