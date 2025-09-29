@@ -18,8 +18,9 @@
 ## 本件アプリのコンポーネント構成(SUNIE-System)
 SUNIE-Core-Engine  
  ・SUNIE-ProtocolAnalyzer  
- ・SUNIE-TagnetClowler  
+ ・SUNIE-TagnetCrawler  
  ・SUNIE-TagnetInterpreter  
+ ・SUNIE-TagnetBuilder  
  ・SUNIE-TaskResolver  
  ・SUNIE-PolicyChecker  
  ・SUNIE-NaturalTextAssembler  
