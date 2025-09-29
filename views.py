@@ -269,7 +269,7 @@ def staff_enter():
     stff_entr_form = StaffEnterForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /staff_enter __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /staff_enter __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -416,7 +416,7 @@ def staff_exit():
     stff_exit_form = StaffExitForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /staff_exit __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /staff_exit __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -501,7 +501,7 @@ def admin_enter():
     admn_entr_form = AdminEnterForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /admin_enter __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /admin_enter __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -592,7 +592,7 @@ def admin_exit():
     admn_exit_form = AdminExitForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /admin_exit __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /admin_exit __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -650,7 +650,7 @@ def admin_exit():
 @view.route("/staff_dashboard", methods=["GET"])
 def staff_dashboard():
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /staff_dashboard __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /staff_dashboard __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -686,7 +686,7 @@ def staff_dashboard():
 @view.route("/admin_dashboard", methods=["GET"])
 def admin_dashboard():
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /admin_dashboard __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /admin_dashboard __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -725,10 +725,11 @@ def send():
     stff_wrds = []
     stff_fcts = []
     stff_rls = []
+    stff_rctns = []
     send_form = SendForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /send __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /send __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -859,7 +860,6 @@ def send():
             if fct_in_txt is not None:
                 stff_fcts.append(fct_in_txt)
                 continue
-
         for stff_wrd in stff_wrds:
             rl_in_txt = (
             db_session.query(Rule)
@@ -870,26 +870,52 @@ def send():
             if rl_in_txt is not None:
                 stff_rls.append(rl_in_txt)
                 continue
+        for stff_wrd in stff_wrds:
+            rctn_in_txt = (
+            db_session.query(Reaction)
+            .filter(Reaction.spell_and_header == stff_wrd.spell_and_header)
+            .order_by(Reaction.id.desc())
+            .first()
+            )
+            if rctn_in_txt is not None:
+                stff_rctns.append(rctn_in_txt)
+                continue
 
         # テスト出力.
-        print(stff_wrds)
-        print(stff_fcts)
-        print(stff_rls)
+        for stff_wrd in stff_wrds:
+             print(stff_wrd.spell_and_header)
+        for stff_fct in stff_fcts:
+             print(stff_fct.spell_and_header)
+        for stff_rl in stff_rls:
+             print(stff_rl.spell_and_header)
+        for stff_rctn in stff_rctns:
+             print(stff_rctn.spell_and_header)
 
-        # DBから一括取得した語句・事実・規則の情報の中から、sunieタグクローラーに必要な情報を絞り込ませる.
-        wrds_net, fcts_net, rls_net = cr_engn.tagnet_clowler.execution(stff_wrds, stff_fcts, stff_rls)
+        # 会話中に含まれる語句群を、SUNIE-ProtocolAnalyzerに処理させる.
+        thm, intnt, sntmnt = cr_engn.protocol_analyzer.execution(stff_wrds)
 
-        # タグクローラーが絞り込んだ情報をsunieインタプリターに, これをソースとして処理させる.
-        # sunieタスクリゾルバーがタスクを解決してから, 結果を検査した上で, 返信メッセを生成する.
-        ii_code, new_wrds, new_fcts, new_rls = cr_engn.tagnet_interpreter.execution(wrds_net, fcts_net, rls_net)
+        # DBから一括取得した語句・事実・規則・反応の各情報群を,
+        # SUNIE-TagnetClowlerに, 必要最小量に絞り込ませる.
+        wrds_net, fcts_net, rls_net, rctns_net = (
+        cr_engn.tagnet_crawler.execution(thm, intnt, sntmnt, stff_wrds, stff_fcts, stff_rls, stff_rctns)
+        )
+
+        # SUNIE-TagClowlerが絞り込んだ情報群(語句・事実・規則)を,
+        # SUNIE-TagnetIntepreterに, これをソースとして処理させる.
+        ii_code, new_wrds, new_fcts, new_rls, new_rctns = (
+        cr_engn.tagnet_interpreter.execution(wrds_net, fcts_net, rls_net, rctns_net)
+        )
+
+        # SUNIE-TaskResolverがタスクを解決してから, 
+        # SUNIE-PolicyCheckerが, その結果を検査した上で, 返信メッセを生成する.
         fr_code = cr_engn.task_resolver.execution(ii_code)
         if cr_engn.policy_checker.execution(fr_code):
             app_txt_msg = "注意: アプリが不適切な結果を生成したので, メッセージ出力を抑止しました."
         else:
             app_txt_msg = cr_engn.natural_text_assembler.execution(fr_code)
 
-        # 今回の会話中に登場した新規の語句・事実・規則の情報をDBに書き込む.
-        # [new_wrds, new_fcts, new_rls]
+        # 今回の会話中に登場した新規の語句・事実・規則・反応の各情報群をDBに書き込む.
+        cr_engn.tagnet_builder.execution(new_wrds, new_fcts, new_rls, new_rctns)
 
         # 履歴情報をレコードとして, DBに保存・登録する.
         stff_txt_msg = send_form.text_message.data
@@ -920,7 +946,7 @@ def reply():
     rply_form = ReplyForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /reply __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /reply __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -988,7 +1014,7 @@ def learn_word():
     lrn_wrd_form = LearnWordForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /learn_word __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /learn_word __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1118,7 +1144,7 @@ def learn_theme():
     lrn_thm_form = LearnThemeForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /learn_theme __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /learn_theme __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1221,7 +1247,7 @@ def learn_category():
     lrn_ctgr_form = LearnCategoryForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /learn_category __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /learn_category __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1338,7 +1364,7 @@ def learn_fact():
     lrn_fct_form = LearnFactForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /learn_fact __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /learn_fact __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1451,7 +1477,7 @@ def learn_rule():
     lrn_rl_form = LearnRuleForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /learn_rule __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /learn_rule __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1564,7 +1590,7 @@ def learn_reaction():
     lrn_rctn_form = LearnReactionForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /learn_reaction __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /learn_reaction __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1682,7 +1708,7 @@ def generate():
     gen_form = GenerateForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /generate __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /generate __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1786,7 +1812,7 @@ def show_words(id=None):
     wrds_fnl = []
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_words __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /show_words __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1948,7 +1974,7 @@ def show_themes(id=None):
     thms_fnl = []
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_themes __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /show_themes __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2110,7 +2136,7 @@ def show_categories(id=None):
     ctgrs_fnl = []
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_categories __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /show_categories __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2272,7 +2298,7 @@ def show_facts(id=None):
     fcts_fnl = []
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_facts __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /show_facts __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2434,7 +2460,7 @@ def show_rules(id=None):
     rls_fnl = []
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_rules __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /show_rules __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2596,7 +2622,7 @@ def show_reactions(id=None):
     rctns_fnl = []
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_reactions __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /show_reactions __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2758,7 +2784,7 @@ def show_generates(id=None):
     gens_fnl = []
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_generates __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /show_generates __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -2920,7 +2946,7 @@ def show_histories(id=None):
     hists_fnl = []
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_histories __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /show_histories __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3078,7 +3104,7 @@ def show_enters_or_exits(id=None):
     ents_or_exts_fnl = []
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_enters_or_exits __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /show_enters_or_exits __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3284,7 +3310,7 @@ def show_staffs(id=None):
     stffs_fnl = []
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /show_staffs __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /show_staffs __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3468,7 +3494,7 @@ def search_words():
     srch_wrd_form = SearchWordForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_words __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_words __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3579,7 +3605,7 @@ def search_themes():
     srch_thm_form = SearchThemeForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_words __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_words __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3678,7 +3704,7 @@ def search_categories():
     srch_ctgr_form = SearchCategoryForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_words __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_words __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3776,14 +3802,14 @@ def search_categories():
         return redirect(url_for("view.search_categories_results"))
 
 
-# 「search_knowledges」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
-@view.route("/search_knowledges", methods=["GET", "POST"])
-def search_knowledges():
+# 「search_facts」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
+@view.route("/search_facts", methods=["GET", "POST"])
+def search_facts():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     srch_fct_form = SearchFactForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_knowledges __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_facts __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3803,7 +3829,7 @@ def search_knowledges():
 
     if request.method == "GET":
         # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-        rslt = cr_engn.etc.logging__info("view at /search_knowledges __ GET")
+        rslt = cr_engn.etc.logging__info("view at /search_facts __ GET")
 
         # ロギングに失敗したら, 例外を発生させる.
         if rslt == "NG":
@@ -3811,7 +3837,7 @@ def search_knowledges():
 
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
-        session["referrer-page"] = "view.search_knowledges"
+        session["referrer-page"] = "view.search_facts"
 
         # 検索に係るセッション項目(=検索条件)を削除してからテンプレートを返す.
         session.pop("id", None)
@@ -3833,7 +3859,7 @@ def search_knowledges():
 
     if request.method == "POST":
         # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-        rslt = cr_engn.etc.logging__info("view at /search_knowledges __ POST")
+        rslt = cr_engn.etc.logging__info("view at /search_facts __ POST")
 
         # ロギングに失敗したら, 例外を発生させる.
         if rslt == "NG":
@@ -3841,8 +3867,8 @@ def search_knowledges():
 
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
-        if session["referrer-page"] != "view.search_knowledges":
-            return render_template("search_knowledges.html", form=srch_fct_form)
+        if session["referrer-page"] != "view.search_facts":
+            return render_template("search_facts.html", form=srch_fct_form)
 
         # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
         if srch_fct_form.search_cancel.data:
@@ -3861,7 +3887,7 @@ def search_knowledges():
             srch_fct_form.updated_at_end.data = ""
             srch_fct_form.sort_condition.data = "condition-1"
             srch_fct_form.extract_condition.data = "condition-1"
-            return render_template("search_knowledges.html", form=srch_fct_form)
+            return render_template("search_facts.html", form=srch_fct_form)
 
         # 検索に係るセッション項目(=検索条件)を作成する.
         session["id"] = srch_fct_form.id
@@ -3881,7 +3907,7 @@ def search_knowledges():
         session["extract-condition"] = srch_fct_form.extract_condition.data
 
         # 検索条件を保持したまま, 検索結果ページへリダイレクトする.
-        return redirect(url_for("view.search_knowledges_results"))
+        return redirect(url_for("view.search_facts_results"))
 
 
 # 「search_rules」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -3891,7 +3917,7 @@ def search_rules():
     srch_rl_form = SearchRuleForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_rules __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_rules __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -3996,7 +4022,7 @@ def search_reactions():
     srch_rctn_form = SearchReactionForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_rules __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_rules __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -4104,7 +4130,7 @@ def search_generates():
     srch_gen_form = SearchGenerateForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_generates __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_generates __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -4200,7 +4226,7 @@ def search_histories():
     srch_hist_form = SearchHistoryForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_histories __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_histories __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -4296,7 +4322,7 @@ def search_enters_or_exits():
     srch_entr_or_exit_form = SearchEnterOrExitForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /enters_or_exits __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /enters_or_exits __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -4397,7 +4423,7 @@ def search_staffs():
     srch_stff_form = SearchStaffForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_staffs __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_staffs __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -4498,7 +4524,7 @@ def search_words_results():
     is_srch_done = False
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_words_results __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_words_results __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -4905,7 +4931,7 @@ def search_themes_results():
     is_srch_done = False
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_themes_results __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_themes_results __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -5218,7 +5244,7 @@ def search_categories_results():
     is_srch_done = False
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_categories_results __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_categories_results __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -5578,16 +5604,16 @@ def search_categories_results():
         raise BadRequest
 
 
-# 「search_knowledges_results」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
-@view.route("/search_knowledges_results", methods=["GET", "POST"])
-def search_knowledges_results():
+# 「search_facts_results」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
+@view.route("/search_facts_results", methods=["GET", "POST"])
+def search_facts_results():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     fcts_tmp = []
     fcts_fnl = []
     is_srch_done = False
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_knowledges_results __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_facts_results __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -5607,14 +5633,14 @@ def search_knowledges_results():
 
     if request.method == "GET":
         # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-        rslt = cr_engn.etc.logging__info("view at /search_knowledges_results __ GET")
+        rslt = cr_engn.etc.logging__info("view at /search_facts_results __ GET")
 
         # ロギングに失敗したら, 例外を発生させる.
         if rslt == "NG":
             raise InternalServerError
 
         # セッションに現在ページの情報を設定する.
-        session["referrer-page"] = "view.search_knowledges_results"
+        session["referrer-page"] = "view.search_facts_results"
 
         # 検索条件(=検索キー)となる値をまとめて取得する.
         id = str(session["id"]).split(" ")
@@ -5947,11 +5973,11 @@ def search_knowledges_results():
                            per_page=per_pg,
                            css_framework=consts.PAGINATION_CSS
                           )
-        return render_template("search_knowledges_results.html", page_data=pg_dat, pagination=pgntn)
+        return render_template("search_facts_results.html", page_data=pg_dat, pagination=pgntn)
 
     if request.method == "POST":
         # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-        rslt = cr_engn.etc.logging__info("view at /search_knowledges_results __ POST")
+        rslt = cr_engn.etc.logging__info("view at /search_facts_results __ POST")
 
         # ロギングに失敗したら, 例外を発生させる.
         if rslt == "NG":
@@ -5959,8 +5985,8 @@ def search_knowledges_results():
 
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
-        if session["referrer-page"] != "view.search_knowledges_results":
-            return redirect(url_for("view.search_knowledges_results"))
+        if session["referrer-page"] != "view.search_facts_results":
+            return redirect(url_for("view.search_facts_results"))
 
         # フォームボタン群の中から, 押下されたボタンに応じたページへリダイレクトする.
         if request.form["hidden-modify-item-id"] != "":
@@ -5983,7 +6009,7 @@ def search_rules_results():
     is_srch_done = False
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_rules_results __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_rules_results __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -6352,7 +6378,7 @@ def search_reactions_results():
     is_srch_done = False
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_reactions_results __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_reactions_results __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -6748,7 +6774,7 @@ def search_generates_results():
     is_srch_done = False
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_generates_results __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_generates_results __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7036,7 +7062,7 @@ def search_histories_results():
     is_srch_done = False
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_histories_results __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_histories_results __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7321,7 +7347,7 @@ def search_enters_or_exits_results():
     is_srch_done = False
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_enters_or_exits_results __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_enters_or_exits_results __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7634,7 +7660,7 @@ def search_staffs_results():
     is_srch_done = False
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /search_staffs_results __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /search_staffs_results __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -7947,7 +7973,7 @@ def register_enter_or_exit():
     rgstr_entr_or_exit_form = RegisterEnterOrExitForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /register_enter_or_exit __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /register_enter_or_exit __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8059,7 +8085,7 @@ def register_staff():
     rgstr_stff_form = RegisterStaffForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /register_staff __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /register_staff __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8220,7 +8246,7 @@ def modify_word():
     mod_wrd_form = ModifyWordForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_word __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /modify_word __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8369,7 +8395,7 @@ def modify_theme():
     mod_thm_form = ModifyThemeForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_theme __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /modify_theme __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8490,7 +8516,7 @@ def modify_category():
     mod_ctgr_form = ModifyCategoryForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_category __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /modify_category __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8621,7 +8647,7 @@ def modify_fact():
     mod_fct_form = ModifyFactForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_fact __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /modify_fact __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8759,7 +8785,7 @@ def modify_rule():
     mod_rl_form = ModifyRuleForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_rule __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /modify_rule __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -8890,7 +8916,7 @@ def modify_reaction():
     mod_rctn_form = ModifyReactionForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_reaction __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /modify_reaction __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9026,7 +9052,7 @@ def modify_enter_or_exit():
     mod_entr_or_exit_form = ModifyEnterOrExitForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_enter_or_exit __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /modify_enter_or_exit __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9156,7 +9182,7 @@ def modify_staff():
     mod_stff_form = ModifyStaffForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /modify_staff __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /modify_staff __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9302,7 +9328,7 @@ def detail_word():
     dtl_wrd_form = DetailWordForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_word __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /detail_word __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9370,7 +9396,7 @@ def detail_theme():
     dtl_thm_form = DetailThemeForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_theme __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /detail_theme __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9430,7 +9456,7 @@ def detail_category():
     dtl_ctgr_form = DetailCategoryForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_category __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /detail_category __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9488,11 +9514,11 @@ def detail_category():
 
 # 「detail_fact」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
 @view.route("/detail_fact", methods=["GET"])
-def detail_knowledge():
+def detail_fact():
     dtl_fct_form = DetailFactForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_fact __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /detail_fact __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9546,7 +9572,7 @@ def detail_knowledge():
         dtl_fct_form.updated_at.data = fct.updated_at
         dtl_fct_form.is_hidden.data = ("yes" if fct.is_hidden == True else "no")
         dtl_fct_form.is_exclude.data = ("yes" if fct.is_exclude == True else "no")
-        return render_template("detail_facts.html", form=dtl_fct_form,
+        return render_template("detail_fact.html", form=dtl_fct_form,
                                 archived_image_file_path=fct.archived_image_file_path,
                                 archived_sound_file_path=fct.archived_sound_file_path,
                                 archived_video_file_path=fct.archived_video_file_path
@@ -9559,7 +9585,7 @@ def detail_rule():
     dtl_rl_form = DetailRuleForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_rule __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /detail_rule __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9621,7 +9647,7 @@ def detail_reaction():
     dtl_rl_form = DetailReactionForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_rule __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /detail_rule __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9684,7 +9710,7 @@ def detail_generate():
     dtl_gen_form = DetailGenerateForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_generate __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /detail_generate __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9744,7 +9770,7 @@ def detail_history():
     dtl_hist_form = DetailHistoryForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_history __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /detail_history __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9802,7 +9828,7 @@ def detail_enter_or_exit():
     dtl_entr_or_exit_form = DetailEnterOrExitForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_enter_or_exit __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /detail_enter_or_exit __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9861,7 +9887,7 @@ def detail_staff():
     dtl_stff_form = DetailStaffForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /detail_staff __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /detail_staff __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -9925,7 +9951,7 @@ def import_words():
     imprt_wrd_form = ImportWordForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_words __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /import_words __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10045,7 +10071,7 @@ def import_themes():
     imprt_thm_form = ImportThemeForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_themes __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /import_themes __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10159,7 +10185,7 @@ def import_categories():
     imprt_ctgr_form = ImportCategoryForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_categories __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /import_categories __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10274,7 +10300,7 @@ def import_facts():
     imprt_fct_form = ImportFactForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_facts __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /import_facts __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10390,7 +10416,7 @@ def import_rules():
     imprt_rl_form = ImportRuleForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_rules __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /import_rules __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10505,7 +10531,7 @@ def import_reactions():
     imprt_rctn_form = ImportReactionForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_reactions __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /import_reactions __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10621,7 +10647,7 @@ def import_generates():
     imprt_gen_form = ImportGenerateForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_generates __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /import_generates __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10727,7 +10753,7 @@ def import_enters_or_exits():
     imprt_entr_n_exit_form = ImportEnterOrExitForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /import_enters_or_exits __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /import_enters_or_exits __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10875,7 +10901,7 @@ def export_words():
     exprt_wrd_form = ExportWordForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_words __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /export_words __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -10969,7 +10995,7 @@ def export_themes():
     exprt_thm_form = ExportThemeForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_themes __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /export_themes __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -11058,7 +11084,7 @@ def export_categories():
     exprt_ctgr_form = ExportCategoryForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_categories __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /export_categories __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -11149,7 +11175,7 @@ def export_facts():
     exprt_fct_form = ExportFactForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_facts __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /export_facts __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -11241,7 +11267,7 @@ def export_rules():
     exprt_rl_form = ExportRuleForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_rules __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /export_rules __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -11332,7 +11358,7 @@ def export_reactions():
     exprt_rctn_form = ExportReactionForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_reactions __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /export_reactions __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -11424,7 +11450,7 @@ def export_generates():
     exprt_gen_form = ExportGenerateForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_words __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /export_words __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -11513,7 +11539,7 @@ def export_histories():
     exprt_hist_form = ExportHistoryForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_words __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /export_words __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -11602,7 +11628,7 @@ def export_enters_or_exits():
     exprt_entr_or_exit_form = ExportEnterOrExitForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /export_enters_or_exits __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /export_enters_or_exits __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -11715,7 +11741,7 @@ def retrieve_generate():
     rtrv_gen_form = RetrieveGenerateForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /retrieve_generate __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /retrieve_generate __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -11792,7 +11818,7 @@ def reset_databases():
     rst_db_form = ResetDatabaseForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /reset_database __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /reset_database __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -11919,7 +11945,7 @@ def environment_settings():
     env_sttng_form = EnvironmentSettingForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /environment_settings __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /environment_settings __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -12051,7 +12077,7 @@ def security_settings():
     sec_sttng_form = SecuritySettingForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /security_settings __ before GET")
+    rslt = cr_engn.etc.logging__info("view at /security_settings __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":

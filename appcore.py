@@ -8,8 +8,10 @@ import os
 import sys
 
 # 独自のモジュール(engines)をインポートする.
-import modules.engines.core.tagnet_clowler as tgnt_clwlr
+import modules.engines.core.protocol_analyzer as prtcl_anlyzr
+import modules.engines.core.tagnet_crawler as tgnt_clwlr
 import modules.engines.core.tagnet_interpreter as tgnt_intrprtr
+import modules.engines.core.tagnet_builder as tgnt_bldr
 import modules.engines.core.task_resolver as tsk_rslvr
 import modules.engines.core.policy_checker as plcy_chckr
 import modules.engines.core.natural_text_assembler as ntrl_txt_assmblr
@@ -43,8 +45,10 @@ class CoreEngine:
 
     # インスタンス初期化のためのメソッドを宣言・定義する.
     def __init__(self):
-        self.tagnet_clowler = tgnt_clwlr.TagnetClowlwer()
+        self.protocol_analyzer = prtcl_anlyzr.ProtocolAnalyzer()
+        self.tagnet_crawler = tgnt_clwlr.TagnetCrawler()
         self.tagnet_interpreter = tgnt_intrprtr.TagnetInterpreter()
+        self.tagnet_builder = tgnt_bldr.TagnetBuilder()
         self.task_resolver = tsk_rslvr.TaskResolver()
         self.policy_checker = plcy_chckr.PolicyChecker()
         self.natural_text_assembler = ntrl_txt_assmblr.NaturalTextAssembler()

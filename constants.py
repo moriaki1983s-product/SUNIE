@@ -359,22 +359,30 @@ MENU_CHOICE_FOR_STAFF_EXIT_FORM = [
 # 語句学習フォーム内の意図メニューを宣言・定義する.
 MENU_CHOICE_1_FOR_LEARN_WORD_FORM = [
     ("", ""),
-    ("confirmation", "確認"),
-    ("suggestion", "提案"),
-    ("gratitude", "感謝"),
-    ("apology", "謝罪"),
-    ("agreement", "同意"),
-    ("disagreement", "不同意"),
-    ("explanation", "説明"),
-    ("advice", "助言"),
-    ("request", "依頼"),
-    ("guidance", "指導"),
-    ("emotion-expression", "感情表現"),
-    ("disclosure-and-declaration", "開示&宣言"),
-    ("notification-and-announcement", "周知&告知"),
-    ("inquiry-and-question", "質問&疑問"),
-    ("directive-and-command", "指示&命令"),
-    ("unknown", "その他(分類不明)")
+    ("benefactive-type", "施与型"), #「～してあげよう」
+    ("request-type", "依頼型"), #「～してくれ」
+    ("volitional-type", "意志型"), #「～するつもり(だ)」
+    ("speculative-type", "推量型"), #「～だろう」
+    ("prohibitive-type", "禁止型"), #「～してはいけない」
+    ("permissive-type", "許可型"), #「～してもよい」
+    ("desiderative-type", "希望型"),#「～したい」
+    ("emotive-type", "感情型"), #「～(してもらって)うれしい」
+    ("obligative-type", "義務型"), #「～するべき(だ)」
+    ("potential-type", "可能型"), #「～することができる」
+    ("confirmation-type", "確認型"), #「～しますか(？)」
+    ("suggestion-type", "提案型"), #「～はどうだろう」
+    ("gratitude-type", "感謝型"), #「～(してもらって)ありがたい」
+    ("apology-type", "謝罪型"), #「～(してしまって)すまない」
+    ("agreement-type", "同意型"), #「はい」
+    ("disagreement-type", "不同意型"), #「いいえ」
+    ("explanation-type", "説明型"), #「～ということ(だ)」
+    ("advice-type", "助言型"), #「～してはどう(か)(？)」
+    ("guidance-type", "指導型"), #「～してあげよう」
+    ("disclosure-and-declaration-type", "開示&宣言型"), #「～です」
+    ("notification-and-announcement-type", "周知&告知型"), #「～とのこと(です)」
+    ("inquiry-and-question-type", "質問&疑問型"), #「～(ということ)ですか？」
+    ("directive-and-command-type", "指示&命令型"), #「～しなさい」
+    ("unknown-type", "その他型（分類不明）")
 ]
 
 # 語句学習フォーム内の感情メニューを宣言・定義する.
@@ -414,27 +422,32 @@ MENU_CHOICE_4_FOR_LEARN_WORD_FORM = [
     ("unknown", "その他(分類不明)")
 ]
 
-# 語句学習フォーム内の品詞分類メニューを宣言・定義する.
+# 語句学習フォーム内の品詞分類メニューを宣言・定義する
 MENU_CHOICE_5_FOR_LEARN_WORD_FORM = [
     ("", ""),
-    ("noun", "名詞"),
-    ("pron", "代名詞"),
-    ("propn", "固有名詞"),
-    ("adj", "形容詞"),
-    ("verb", "動詞"),
-    ("adv", "副詞"),
-    ("aux", "助動詞"),
-    ("adp", "前置詞"),
-    ("cconj", "接続詞(等位接続詞)"),
-    ("sconj", "従属接続詞"),
-    ("det", "限定詞"),
-    ("intj", "間投詞"),
-    ("num", "数詞"),
-    ("part", "助詞"),
-    ("punct", "句読点"),
-    ("sym", "記号"),
+    ("noun", "名詞"),  # 物・事・概念などを表す語（例：本、情報）
+    ("pron", "代名詞"),  # 名詞の代わりに使う語（例：私、それ）
+    ("propn", "固有名詞"),  # 人名・地名などの固有の名称（例：東京、太郎）
+    ("adj", "形容詞"),  # 名詞を修飾する語（例：大きい、美しい）
+    ("verb", "動詞"),  # 動作や状態を表す語（例：走る、考える）
+    ("adv", "副詞"),  # 動詞・形容詞などを修飾する語（例：すぐに、とても）
+    ("aux", "助動詞"),  # 動詞に意味を加える補助語（例：〜たい、〜れる）
+    ("adp", "前置詞"),  # 英語などで名詞の前に置かれる語（例：in, on）※日本語では助詞に近い
+    ("cconj", "等位接続詞"),  # 対等な語句や文をつなぐ語（例：そして、または）
+    ("sconj", "従属接続詞"),  # 主従関係のある文をつなぐ語（例：〜ので、〜ながら）
+    ("det", "限定詞"),  # 名詞の範囲や数量を限定する語（例：この、すべての）
+    ("intj", "間投詞"),  # 感情や反応を表す語（例：あっ、わーい）
+    ("num", "数詞"),  # 数量や順序を表す語（例：一、三番目）
+    ("part", "助詞"),  # 文法関係を示す語（例：が、を、に）
+    ("clf", "類別詞"),  # 数量詞に付く分類語（例：一冊、一人）※日本語特有
+    ("cop", "連結詞"),  # 主語と述語をつなぐ語（例：「〜は〜だ」の「だ」）
+    ("mark", "接続標識"),  # 従属節の導入語（例：「〜が」「〜ので」など）
+    ("punct", "読点"),  # 文中の区切り（例：、）
+    ("period", "句点"),  # 文末の区切り（例：。）
+    ("sym", "記号"),  # 数式や特殊記号（例：＋、％）
     ("unknown", "その他(分類不明)")
 ]
+
 
 # 規則学習フォーム内の規則メニューを宣言・定義する.
 MENU_CHOICE_FOR_LEARN_RULE_FORM = [
