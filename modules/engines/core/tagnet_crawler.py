@@ -18,14 +18,14 @@ import sys
 
 
 # Sunieエンジンのクラスを宣言・定義する.
-class TagnetBuilder:
+class TagnetCrawler:
     _instance = None
     dat = None
 
     # インスタンス生成のためのメソッドを宣言・定義する.
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
-            cls._instance = super(TagnetBuilder, cls).__new__(cls, *args, **kwargs)
+            cls._instance = super(TagnetCrawler, cls).__new__(cls, *args, **kwargs)
         return cls._instance
 
     # インスタンス初期化のためのメソッドを宣言・定義する.
@@ -51,5 +51,5 @@ class TagnetBuilder:
 
     # 職員メッセージに含まれる語句・事実と規則をソースとして,
     # これらを解釈・実行するためのメソッドを宣言・定義する.
-    def execution(self, new_wrds, new_fcts, new_rls, new_rctns):
-        pass
+    def execution(self, thm, intnt, sntmnt, stff_wrds, stff_fcts, stff_rls, rctns_net):
+        return None, None, None, None
