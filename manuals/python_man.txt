@@ -1,0 +1,45 @@
+
+@pythonスクリプトの実行を許可
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+
+@Pythonのインストール先の表示
+py --list-paths
+
+@Pythonモジュールのインストール(pip)
+py -m pip install ~~
+
+@pipのアップグレイド
+py.exe(python.exe) -m pip install --upgrade pip
+
+@Pythonプログラムの実行
+~~.py
+py ~~.py
+
+
+
+
+パッケージのインストール
+コマンド	説明
+pip install somepackage	somepackageの最新バージョンをインストールする
+pip install somepackage==x.y.z	バージョンを指定してsomepackageをインストールする
+pip install "somepackage>=x.y.z"	バージョンの下限を指定してsomepackageをインストールする
+pip install --upgrade somepackage	somepackageを最新バージョンにアップグレードする
+pip install -r requirements.txt	requirements.txtファイルに記述されているパッケージをインストールする
+pip install somepkg@git+https://github.com/user/somepkg.git@vx.y.z	GitHubからsomepkgの特定のバージョンをインストールする
+pip installコマンド
+
+
+パッケージのアンインストール
+コマンド	説明
+pip uninstall somepackage	somepackageをアンインストール
+pip uninstall --yes somepackage	確認プロンプトを表示せず、アンインストールを行う
+pip uninstall -r requirements.txt	requirements.txtファイルに記述されているモジュールをアンインストールする
+pip uninstallコマンド
+
+
+インストールされているパッケージの一覧
+コマンド	説明
+pip freeze	インストールされているパッケージの一覧を出力する
+pip freeze > requirements.txt	インストールされているパッケージの一覧をrequirements.txtファイルに出力する
+pip list	インストールされているパッケージの一覧を出力する
+pip show somepackage	somepackageについての情報を出力する

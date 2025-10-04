@@ -1,0 +1,12 @@
+@ Flask-Migatate - 初期化(最初だけ)
+flask db init
+
+@ Flask-Migatate - スキーマ変更を検出してマイグレーションファイル作成(モデル変更後)
+flask db migrate -m "Add LEM-Rights to Staff"
+
+@ Flask-Migatate - DBに反映
+flask db upgrade
+
+
+@ Flask-Testing - テストの実行
+python -m unittest discover -s tests
