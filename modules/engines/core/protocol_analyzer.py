@@ -18,14 +18,14 @@ import sys
 
 
 # Sunieエンジンのクラスを宣言・定義する.
-class TagnetInterpreter:
+class ProtocolAnalyzer:
     _instance = None
     dat = None
 
     # インスタンス生成のためのメソッドを宣言・定義する.
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
-            cls._instance = super(TagnetInterpreter, cls).__new__(cls, *args, **kwargs)
+            cls._instance = super(ProtocolAnalyzer, cls).__new__(cls, *args, **kwargs)
         return cls._instance
 
     # インスタンス初期化のためのメソッドを宣言・定義する.
@@ -49,7 +49,11 @@ class TagnetInterpreter:
     def clear_data(self):
         self.dat = None
 
-    # 語句ネットと事実ネットと規則ネットをソースとして,
+    # 職員メッセージに含まれる語句群をソースとして,
     # これらを解釈・実行するためのメソッドを宣言・定義する.
-    def execution(self, wrds_net, fcts_net, rls_net, rctns_net):
-        return None, None, None, None, None
+    def execution(self, stff_wrds):
+        thm = ""
+        intnt = ""
+        sntmnt = ""
+
+        return thm, intnt, sntmnt
