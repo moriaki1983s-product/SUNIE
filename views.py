@@ -895,27 +895,40 @@ def send():
         thm, intnt, sntmnt = cr_engn.protocol_analyzer.execution(stff_wrds)
 
         # DBから一括取得した語句・事実・規則・反応の各情報群を,
-        # SUNIE-TagnetClowlerに, 必要最小量に絞り込ませる.
+        # SUNIE-TagnetClowlerに必要最小限の量に絞り込ませる.
         wrds_net, fcts_net, rls_net, rctns_net = (
         cr_engn.tagnet_crawler.execution(thm, intnt, sntmnt, stff_wrds, stff_fcts, stff_rls, stff_rctns)
         )
 
-        # SUNIE-TagClowlerが絞り込んだ情報群(語句・事実・規則)を,
-        # SUNIE-TagnetIntepreterに, これをソースとして処理させる.
-        ii_code, new_wrds, new_fcts, new_rls, new_rctns = (
+        # TagClowlerが絞り込んだ情報群(=語句・事実・規則・反応)を,
+        # SUNIE-TagnetIntepreterにソースとして処理させる.
+        # ※TagnetIntepreterが, II-Code(=Internal-Imidiate-Code)を生成する。
+        ii_code, new_wrds_net, new_fcts_net, new_rls_net, new_rctns_net = (
         cr_engn.tagnet_interpreter.execution(wrds_net, fcts_net, rls_net, rctns_net)
         )
 
-        # SUNIE-TaskResolverがタスクを解決してから, 
-        # SUNIE-PolicyCheckerが, その結果を検査した上で, 返信メッセを生成する.
+        # TagnetIntepreterの処理結果(=II-Code)を, SUNIE-TaskResolverに処理させる,
+        # ※SUNIE-TaskResolverが, FR-Code(=Final-Result-Code)を生成する。
         fr_code = cr_engn.task_resolver.execution(ii_code)
-        if cr_engn.policy_checker.execution(fr_code):
-            app_txt_msg = "注意: アプリが不適切な結果を生成したので, メッセージ出力を抑止しました."
+
+        # TagnetIntepreterの処理結果(=II-Code)を, NaturalTextAssemblerに処理させる.
+        # ※NaturalTextAssemblerが, NT-Code(=Natural-Text-Code)を生成する。
+        nt_code = cr_engn.natural_text_assembler.execution(fr_code)
+
+        # NaturalTextAssemblerの処理結果を, SUNIE-PolicyCheckerに処理させる.
+        # ※PolicyCheckerが, 最終的な出力内容の適切性を検証する.
+        if cr_engn.policy_checker.execution(nt_code) == False:
+            app_txt_msg = nt_code
         else:
-            app_txt_msg = cr_engn.natural_text_assembler.execution(fr_code)
+            app_txt_msg = "注意: アプリが不適切な結果を生成したので, メッセージ出力を抑止しました."
 
         # 今回の会話中に登場した新規の語句・事実・規則・反応の各情報群をDBに書き込む.
-        cr_engn.tagnet_builder.execution(new_wrds, new_fcts, new_rls, new_rctns)
+        new_wrds, new_fcts, new_rls, new_rctns = (
+            cr_engn.tagnet_builder.execution(new_wrds_net, new_fcts_net, new_rls_net, new_rctns_net)
+        )
+
+        # 今回の会話中に登場した新規の語句・事実・規則・反応の各情報群をDBに書き込む.
+        # [new_wrds, new_fcts, new_rls, new_rctns]
 
         # 履歴情報をレコードとして, DBに保存・登録する.
         stff_txt_msg = send_form.text_message.data

@@ -13,8 +13,9 @@ from flask import (
     render_template
 )
 from datetime import timedelta
-from flask_sqlalchemy import SQLAlchemy
 from flask_talisman import Talisman
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from werkzeug.exceptions import HTTPException
 
 # 設定のためのモジュールをインポートする.
@@ -68,6 +69,9 @@ Talisman(app, content_security_policy=consts.CSP, force_https=consts.FORCE_HTTPS
 
 # FlaskとSQLAlchemyを連携させる.
 db = SQLAlchemy(app)
+
+# FlaskとFlask-Migrateを連携させる.
+migrate = Migrate(app, db)
 
 # データベースを構築する.
 with app.app_context():
