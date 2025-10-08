@@ -1714,14 +1714,14 @@ def learn_reaction():
         return render_template("learn_reaction.html", form=lrn_rctn_form)
 
 
-# 「generate」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
-@view.route("/generate", methods=["GET", "POST"])
-def generate():
+# 「learn_generate」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
+@view.route("/learn_generate", methods=["GET", "POST"])
+def learn_generate():
     # 関数内で使用する変数・オブジェクトを宣言・定義する.
     gen_form = GenerateForm()
 
     # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-    rslt = cr_engn.etc.logging__info("view at /generate __ before GET/POST")
+    rslt = cr_engn.etc.logging__info("view at /learn_generate __ before GET/POST")
 
     # ロギングに失敗したら, 例外を発生させる.
     if rslt == "NG":
@@ -1741,7 +1741,7 @@ def generate():
 
     if request.method == "GET":
         # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-        rslt = cr_engn.etc.logging__info("view at /generate __ GET")
+        rslt = cr_engn.etc.logging__info("view at /learn_generate __ GET")
 
         # ロギングに失敗したら, 例外を発生させる.
         if rslt == "NG":
@@ -1749,12 +1749,12 @@ def generate():
 
         # セッションに現在ページの情報を設定して,
         # Flaskフォームと共にテンプレートを返す.
-        session["referrer-page"] = "view.generate"
-        return render_template("generate.html", form=gen_form)
+        session["referrer-page"] = "view.learn_generate"
+        return render_template("learn_generate.html", form=gen_form)
 
     if request.method == "POST":
         # 該当のURLエンドポイント, 加えて, ハンドラー内の各段階に入ったことをロギングする.
-        rslt = cr_engn.etc.logging__info("view at /generate __ POST")
+        rslt = cr_engn.etc.logging__info("view at /learn_generate __ POST")
 
         # ロギングに失敗したら, 例外を発生させる.
         if rslt == "NG":
@@ -1762,8 +1762,8 @@ def generate():
 
         # 直前に, GETメソッドで該当ページを取得しているかを調べる.
         # 取得していなければ, 強制的に現在ページへリダイレクトする.
-        if session["referrer-page"] != "view.generate":
-            return redirect(url_for("view.generate"))
+        if session["referrer-page"] != "view.learn_generate":
+            return redirect(url_for("view.learn_generate"))
 
         # フォームの取止ボタンが押下されたら, 空のフォームと共にテンプレートを返す.
         if gen_form.generate_cancel.data:
@@ -1774,22 +1774,22 @@ def generate():
             gen_form.attached_video_file.data = ""
             gen_form.is_hidden.data = False
             gen_form.is_exclude.data = False
-            return render_template("generate.html", form=gen_form)
+            return render_template("learn_generate.html", form=gen_form)
 
         # flaskフォームに入力・記憶されている内容をバリデーションする.
         # 基準を満たさない場合は, 元のフォームと共にテンプレートを返す.
         if gen_form.spell_and_header.data == "":
             flash("綴り&見出しが入力されていません.")
-            return render_template("generate.html", form=gen_form, happen_error=True)
+            return render_template("learn_generate.html", form=gen_form, happen_error=True)
         if gen_form.mean_and_body.data == "":
             flash("意味&内容が入力されていません.")
-            return render_template("generate.html", form=gen_form, happen_error=True)
+            return render_template("learn_generate.html", form=gen_form, happen_error=True)
         if gen_form.is_hidden.data == "":
             flash("秘匿の是非が選択されていません.")
-            return render_template("generate.html", form=gen_form, happen_error=True)
+            return render_template("learn_generate.html", form=gen_form, happen_error=True)
         if gen_form.is_exclude.data == "":
             flash("非処理の是非が選択されていません.")
-            return render_template("generate.html", form=gen_form, happen_error=True)
+            return render_template("learn_generate.html", form=gen_form, happen_error=True)
 
         #@ ここで, 各種のデータファイルを生成するための各種の高度な計算を行う.
         gnrtd_fl_pth = cr_engn.generate_data_file(gen_form.spell_and_header.data,
@@ -1813,7 +1813,7 @@ def generate():
 
         # 完了メッセージを設定して, テンプレートを返す.
         flash("データファイルを生成しました.")
-        return render_template("generate.html", form=gen_form)
+        return render_template("learn_generate.html", form=gen_form)
 
 
 # 「show_words」のためのビュー関数(=URLエンドポイント)を宣言・定義する.
@@ -1848,11 +1848,11 @@ def show_words(id=None):
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -2010,11 +2010,11 @@ def show_themes(id=None):
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -2172,11 +2172,11 @@ def show_categories(id=None):
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -2334,11 +2334,11 @@ def show_facts(id=None):
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -2496,11 +2496,11 @@ def show_rules(id=None):
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -2658,11 +2658,11 @@ def show_reactions(id=None):
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -2820,11 +2820,11 @@ def show_generates(id=None):
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -3518,11 +3518,11 @@ def search_words():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -3629,11 +3629,11 @@ def search_themes():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -3728,11 +3728,11 @@ def search_categories():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -3833,11 +3833,11 @@ def search_facts():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -3941,11 +3941,11 @@ def search_rules():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -4046,11 +4046,11 @@ def search_reactions():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -4154,11 +4154,11 @@ def search_generates():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -4548,11 +4548,11 @@ def search_words_results():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -4955,11 +4955,11 @@ def search_themes_results():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -5268,11 +5268,11 @@ def search_categories_results():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -5637,11 +5637,11 @@ def search_facts_results():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -6033,11 +6033,11 @@ def search_rules_results():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -6402,11 +6402,11 @@ def search_reactions_results():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -6798,11 +6798,11 @@ def search_generates_results():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -8270,11 +8270,11 @@ def modify_word():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     # [show_knowledges][search_knowledges]ページを介さずに,
@@ -8419,11 +8419,11 @@ def modify_theme():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     # [show_themes][search_themes]ページを介さずに,
@@ -8540,11 +8540,11 @@ def modify_category():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     # [show_categories][search_categories]ページを介さずに,
@@ -8671,11 +8671,11 @@ def modify_fact():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     # [show_knowledges][search_knowledges]ページを介さずに,
@@ -8809,11 +8809,11 @@ def modify_rule():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     # [show_rules][search_rules]ページを介さずに,
@@ -8940,11 +8940,11 @@ def modify_reaction():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     # [show_rules][search_rules]ページを介さずに,
@@ -9015,10 +9015,10 @@ def modify_reaction():
         if mod_rctn_form.scene_and_background.data == "":
             flash("情景&背景が入力されていません.")
             return render_template("modify_reaction.html", form=mod_rctn_form, happen_error=True)
-        if mod_rctn_form.message_example_from_staff.data == "":
+        if mod_rctn_form.staff_example_text_message.data == "":
             flash("職員メッセージ例が入力されていません.")
             return render_template("modify_reaction.html", form=mod_rctn_form, happen_error=True)
-        if mod_rctn_form.message_example_from_application.data == "":
+        if mod_rctn_form.application_example_text_message.data == "":
             flash("アプリメッセージ例が入力されていません.")
             return render_template("modify_reaction.html", form=mod_rctn_form, happen_error=True)
         if mod_rctn_form.staff_name.data == "":
@@ -9352,11 +9352,11 @@ def detail_word():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     # words系ページを介さずに不正にアクセスされたら,
@@ -9420,11 +9420,11 @@ def detail_theme():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     # themes系ページを介さずに不正にアクセスされたら,
@@ -9480,11 +9480,11 @@ def detail_category():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     # categories系ページを介さずに不正にアクセスされたら,
@@ -9542,11 +9542,11 @@ def detail_fact():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     # facts系ページを介さずに不正にアクセスされたら,
@@ -9609,11 +9609,11 @@ def detail_rule():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     # rules系ページを介さずに不正にアクセスされたら,
@@ -9671,11 +9671,11 @@ def detail_reaction():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     # reactions系ページを介さずに不正にアクセスされたら,
@@ -9734,11 +9734,11 @@ def detail_generate():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     # generates系ページを介さずに不正にアクセスされたら,
@@ -9975,11 +9975,11 @@ def import_words():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -10011,7 +10011,7 @@ def import_words():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if imprt_wrd_form.import_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_words"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
         xml_fl = imprt_wrd_form.imported_file.data
@@ -10095,11 +10095,11 @@ def import_themes():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -10131,7 +10131,7 @@ def import_themes():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if imprt_thm_form.import_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_themes"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
         xml_fl = imprt_thm_form.imported_file.data
@@ -10209,11 +10209,11 @@ def import_categories():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -10245,7 +10245,7 @@ def import_categories():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if imprt_ctgr_form.import_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_categories"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
         xml_fl = imprt_ctgr_form.imported_file.data
@@ -10324,11 +10324,11 @@ def import_facts():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -10360,7 +10360,7 @@ def import_facts():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if imprt_fct_form.import_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_facts"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
         xml_fl = imprt_fct_form.imported_file.data
@@ -10440,11 +10440,11 @@ def import_rules():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -10476,7 +10476,7 @@ def import_rules():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if imprt_rl_form.import_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_rules"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
         xml_fl = imprt_rl_form.imported_file.data
@@ -10555,11 +10555,11 @@ def import_reactions():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -10591,7 +10591,7 @@ def import_reactions():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if imprt_rctn_form.import_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_reactions"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
         xml_fl = imprt_rctn_form.imported_file.data
@@ -10671,11 +10671,11 @@ def import_generates():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -10707,7 +10707,7 @@ def import_generates():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if imprt_gen_form.import_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_generates"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
         xml_fl = imprt_gen_form.imported_file.data
@@ -10813,7 +10813,7 @@ def import_enters_or_exits():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if imprt_entr_n_exit_form.import_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_enters_or_exits"))
 
         # フォームと共に送信されたファイルを取得して, 名前を安全な形式に変更する.
         csv_fl = imprt_entr_n_exit_form.imported_file.data
@@ -10925,11 +10925,11 @@ def export_words():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -10961,7 +10961,7 @@ def export_words():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if exprt_wrd_form.export_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_words"))
 
         # ID昇順で, 非処理フラグの立っていない語句レコードをDBから取得する.
         wrds = db_session.query(Word).filter(Word.is_exclude == False).order_by(Word.id.asc()).all()
@@ -11019,11 +11019,11 @@ def export_themes():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -11055,7 +11055,7 @@ def export_themes():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if exprt_thm_form.export_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_themes"))
 
         # ID昇順で, 非処理フラグの立っていない主題レコードをDBから取得する.
         thms = db_session.query(Theme).filter(Theme.is_exclude == False).order_by(Theme.id.asc()).all()
@@ -11108,11 +11108,11 @@ def export_categories():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -11144,7 +11144,7 @@ def export_categories():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if exprt_ctgr_form.export_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_categories"))
 
         # ID昇順で, 非処理フラグの立っていない分類レコードをDBから取得する.
         ctgrs = db_session.query(Category).filter(Category.is_exclude == False).order_by(Category.id.asc()).all()
@@ -11199,11 +11199,11 @@ def export_facts():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -11235,7 +11235,7 @@ def export_facts():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if exprt_fct_form.export_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_facts"))
 
         # ID昇順で, 非処理フラグの立っていない事実レコードをDBから取得する.
         fcts = db_session.query(Fact).filter(Fact.is_exclude == False).order_by(Fact.id.asc()).all()
@@ -11291,11 +11291,11 @@ def export_rules():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -11327,7 +11327,7 @@ def export_rules():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if exprt_rl_form.export_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_rules"))
 
         # ID昇順で, 非処理フラグの立っていない規則レコードをDBから取得する.
         rls = db_session.query(Rule).filter(Rule.is_exclude == False).order_by(Rule.id.asc()).all()
@@ -11382,11 +11382,11 @@ def export_reactions():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -11418,7 +11418,7 @@ def export_reactions():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if exprt_rctn_form.export_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_reactions"))
 
         # ID昇順で, 非処理フラグの立っていない反応レコードをDBから取得する.
         rctns = db_session.query(Reaction).filter(Reaction.is_exclude == False).order_by(Reaction.id.asc()).all()
@@ -11474,11 +11474,11 @@ def export_generates():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     if request.method == "GET":
@@ -11510,7 +11510,7 @@ def export_generates():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if exprt_gen_form.export_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_generates"))
 
         # ID昇順で, 非処理フラグの立っていない生成レコードをDBから取得する.
         gens = db_session.query(Generate).filter(Generate.is_exclude == False).order_by(Generate.id.asc()).all()
@@ -11599,7 +11599,7 @@ def export_histories():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if exprt_hist_form.export_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_histories"))
 
         # ID昇順で, 非処理フラグの立っていない履歴レコードをDBから取得する.
         hists = db_session.query(History).filter(History.is_exclude == False).order_by(History.id.asc()).all()
@@ -11688,7 +11688,7 @@ def export_enters_or_exits():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if exprt_entr_or_exit_form.export_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_enters_or_exits"))
 
         # ID昇順で, 非処理フラグの立っていない入退レコードをDBから取得する.
         ents_or_exts = db_session.query(EnterOrExit).filter(EnterOrExit.is_exclude == False).order_by(EnterOrExit.id.asc()).all()
@@ -11765,11 +11765,11 @@ def retrieve_generate():
         return redirect(url_for("view.home"))
 
     # セッション失効or未初期化ならば, ホーム画面のページヘリダイレクトする.
-    if "is-admin-enter" not in session:
+    if "is-staff-enter" not in session:
         return redirect(url_for("view.home"))
 
     # 管理者未入室の状態ならば, ホーム画面のページヘリダイレクトする.
-    if session["is-admin-enter"] == False:
+    if session["is-staff-enter"] == False:
         return redirect(url_for("view.home"))
 
     # [show_generates][search_generates]ページを介さずに,
@@ -11806,7 +11806,7 @@ def retrieve_generate():
         # フォームの取止ボタンが押されたら,
         # 管理者ダッシュボード画面ページヘリダイレクトする.
         if rtrv_gen_form.retrieve_stop.data:
-            return redirect(url_for("view.admin_dashboard"))
+            return redirect(url_for("view.show_generate"))
 
         # 指定IDの生成レコードをDBから取得する.
         gen = (
