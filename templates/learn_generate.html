@@ -1,7 +1,8 @@
 {% extends "after_staff_enter__base.html" %}
 {% block inner_main %}
 <section>
-<form method="post">
+<form method="post" enctype="multipart/form-data">
+{{ form.csrf_token }}
 {{ form.hidden_tag() }}
 <table class="table">
 <tr>
@@ -20,35 +21,21 @@
 <table class="table">
 <tr>
 <td>
-{{ form.category_tags.label }}{{ form.category_tags(class_="form-control", style_="resize: none;") }}
+{{ form.attached_image_file.label }}{{ form.attached_image_file(class_="form-control") }}
 </td>
 </tr>
 </table>
 <table class="table">
 <tr>
 <td>
-{{ form.inference_condition.label }}{{ form.inference_condition(class_="form-control", style_="resize: none;") }}
+{{ form.attached_sound_file.label }}{{ form.attached_sound_file(class_="form-control") }}
 </td>
 </tr>
 </table>
 <table class="table">
 <tr>
 <td>
-{{ form.inference_result.label }}{{ form.inference_result(class_="form-control", style_="resize: none;") }}
-</td>
-</tr>
-</table>
-<table class="table">
-<tr>
-<td>
-{{ form.staff_name.label }}{{ form.staff_name(class_="form-control") }}
-</td>
-</tr>
-</table>
-<table class="table">
-<tr>
-<td>
-{{ form.staff_kana_name.label }}{{ form.staff_kana_name(class_="form-control") }}
+{{ form.attached_video_file.label }}{{ form.attached_video_file(class_="form-control") }}
 </td>
 </tr>
 </table>
@@ -79,12 +66,12 @@
 <td></td>
 <td></td>
 <td>
-{{ form.modify_decide(class_="btn btn-primary btn-block") }}
+{{ form.generate_decide(class_="btn btn-primary btn-block") }}
 </td>
 <td></td>
 <td></td>
 <td>
-{{ form.modify_cancel(class_="btn btn-primary btn-block") }}
+{{ form.generate_cancel(class_="btn btn-primary btn-block") }}
 </td>
 <td></td>
 <td></td>
@@ -99,15 +86,5 @@
 </tr>
 </table>
 </form>
-</section>
-<section>
-<br>
-<br>
-<a class="btn btn-primary" href="{{url_for('view.show_rules')}}">規則一覧</a>
-<a class="btn btn-primary" href="{{url_for('view.search_rules')}}">規則検索</a>
-<a class="btn btn-primary" href="{{url_for('view.import_rules')}}">規則取込</a>
-<a class="btn btn-primary" href="{{url_for('view.export_rules')}}">規則書出</a>
-<br>
-<br>
 </section>
 {% endblock %}

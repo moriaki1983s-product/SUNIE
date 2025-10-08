@@ -1,4 +1,4 @@
-{% extends "after_admin_enter__base.html" %}
+{% extends "after_staff_enter__base.html" %}
 {% block inner_main %}
 <section>
 <form method="post">
@@ -53,6 +53,7 @@ onclick="document.getElementById('hidden-detail-item-id').value='{{item[0]}}';"/
 <br>
 <a class="btn btn-primary" href="{{url_for('view.show_themes')}}">主題一覧</a>
 <a class="btn btn-primary" href="{{url_for('view.search_themes')}}">主題検索</a>
+<a class="btn btn-primary" href="{{url_for('view.learn_theme')}}">主題学習</a>
 <a class="btn btn-primary" href="{{url_for('view.import_themes')}}">主題取込</a>
 <a class="btn btn-primary" href="{{url_for('view.export_themes')}}">主題書出</a>
 <br>

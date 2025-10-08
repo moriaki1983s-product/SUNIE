@@ -1,4 +1,4 @@
-{% extends "after_admin_enter__base.html" %}
+{% extends "after_staff_enter__base.html" %}
 {% block inner_main %}
 <section>
 <form method="post">
@@ -53,6 +53,7 @@ onclick="document.getElementById('hidden-detail-item-id').value='{{item[0]}}';"/
 <br>
 <a class="btn btn-primary" href="{{url_for('view.show_words')}}">語句一覧</a>
 <a class="btn btn-primary" href="{{url_for('view.search_words')}}">語句検索</a>
+<a class="btn btn-primary" href="{{url_for('view.learn_word')}}">語句学習</a>
 <a class="btn btn-primary" href="{{url_for('view.import_words')}}">語句取込</a>
 <a class="btn btn-primary" href="{{url_for('view.export_words')}}">語句書出</a>
 <br>
