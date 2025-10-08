@@ -22,8 +22,8 @@ SUNIE-Core-Engine
  ・SUNIE-TagnetInterpreter  
  ・SUNIE-TagnetBuilder  
  ・SUNIE-TaskResolver  
- ・SUNIE-PolicyChecker  
  ・SUNIE-NaturalTextAssembler  
+ ・SUNIE-PolicyChecker  
 
 SUNIE-Visual-Engine  
  ・SUNIE-Image  
