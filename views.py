@@ -343,6 +343,13 @@ def staff_enter():
         stff = db_session.query(Staff).filter(Staff.name==stff_nm).first()
         db_session.close()
 
+        # 指定職員が非処理の場合には, エラーメッセージを設定して,
+        # 入力内容を空にしたFlaskフォームと共にテンプレートを返す.
+        if stff.is_exclude == True:
+            session["staff-enter-fault"] = str(int(session["staff-enter-fault"]) + 1)
+            flash("その職員は現在入室できません.")
+            return render_template("staff_enter.html", form=stff_entr_form, happen_error=True)
+
         # 指定職員が存在しない場合には, エラーメッセージを設定して,
         # 入力内容を空にしたFlaskフォームと共にテンプレートを返す.
         if stff is None:
