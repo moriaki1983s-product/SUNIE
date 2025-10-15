@@ -33,9 +33,11 @@ SUNIE-Visual-Engine
 SUNIE-Audio-Engine  
  ・SUNIE-Sound  
  ・SUNIE-Voice  
+ ・SUNIE-Music  
 
 SUNIE-Video-Engine  
  ・SUNIE-Clip  
+ ・SUNIE-Effect  
  ・SUNIE-Transition
 
 
