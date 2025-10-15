@@ -9,8 +9,8 @@
 では、心や意識とは何でしょうか・・・？。  
 私が考えるに、心は意識の中にあり、心は外界からの刺激によって駆動する「意識のエンジン」です。  
 すなわち、刺激を受けて心が動き、感情が生じる・・・。  
-そして、この感情を処理するために思考が働く。  
-つまり、思考が働くから、判断や行動が可能になるのです。
+この感情を処理するために思考が働く。  
+そして、思考が働くから、判断や行動が可能になるのです。
 
 
 
@@ -21,7 +21,7 @@ SUNIE-Core-Engine
  ・SUNIE-ProtocolGenerater  
  ・SUNIE-TagnetCrawler  
  ・SUNIE-TagnetInterpreter  
- ・SUNIE-TagnetPruner  
+ ・SUNIE-TagnetReducer  
  ・SUNIE-TagnetBuilder  
  ・SUNIE-TaskResolver  
  ・SUNIE-PolicyChecker  
