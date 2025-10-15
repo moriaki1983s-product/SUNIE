@@ -180,14 +180,14 @@ def home():
         db_session.close()
 
         for stff in stffs:
-            ent_or_ext = (
+            entr_or_exit = (
             db_session.query(EnterOrExit).filter(EnterOrExit.staff_name == stff.name).order_by(EnterOrExit.id.desc()).first()
             )
             db_session.close()
-            if ent_or_ext is not None:
-               if (ent_or_ext.reason == "clock-in" or
-                   ent_or_ext.reason == "return-to-out" or
-                   ent_or_ext.reason == "after-break"):
+            if entr_or_exit is not None:
+               if (entr_or_exit.reason == "clock-in" or
+                   entr_or_exit.reason == "return-to-out" or
+                   entr_or_exit.reason == "after-break"):
                    crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
                    db_session.add(EnterOrExit(staff_name=stff.name,
                                               staff_kana_name=stff.kana_name,
@@ -339,16 +339,9 @@ def staff_enter():
         psswrd = stff_entr_form.password.data
         rsn = stff_entr_form.reason.data
 
-        # 入力された名前が使用・登録されているかを確認する.
+        # 指定・入力された名前の職員レコードをDB検索する.
         stff = db_session.query(Staff).filter(Staff.name==stff_nm).first()
         db_session.close()
-
-        # 指定職員が非処理の場合には, エラーメッセージを設定して,
-        # 入力内容を空にしたFlaskフォームと共にテンプレートを返す.
-        if stff.is_exclude == True:
-            session["staff-enter-fault"] = str(int(session["staff-enter-fault"]) + 1)
-            flash("その職員は現在入室できません.")
-            return render_template("staff_enter.html", form=stff_entr_form, happen_error=True)
 
         # 指定職員が存在しない場合には, エラーメッセージを設定して,
         # 入力内容を空にしたFlaskフォームと共にテンプレートを返す.
@@ -365,16 +358,23 @@ def staff_enter():
             flash("そのパスワードは間違っています.")
             return render_template("staff_enter.html", form=stff_entr_form, happen_error=True)
 
+        # 指定職員が非処理の場合には, エラーメッセージを設定して,
+        # 入力内容を空にしたFlaskフォームと共にテンプレートを返す.
+        if stff.is_exclude == True:
+            session["staff-enter-fault"] = str(int(session["staff-enter-fault"]) + 1)
+            flash("その職員は現在入室できません.")
+            return render_template("staff_enter.html", form=stff_entr_form, happen_error=True)
+
         # 前回の入室後に, 退室処理が正常に実行されていない場合には, 自動退室記録をDBに登録する.
-        ent_or_ext = (
+        entr_or_exit = (
         db_session.query(EnterOrExit).filter(EnterOrExit.staff_name==stff.name).order_by(EnterOrExit.id.desc()).first()
         )
         db_session.close()
 
-        if ent_or_ext is not None:
-            if (ent_or_ext.reason == "clock-in" or
-                ent_or_ext.reason == "return-to-out" or
-                ent_or_ext.reason == "after-break"):
+        if entr_or_exit is not None:
+            if (entr_or_exit.reason == "clock-in" or
+                entr_or_exit.reason == "return-to-out" or
+                entr_or_exit.reason == "after-break"):
                 crrnt_dttm = cr_engn.etc.retrieve_current_datetime_as_datetime_object("JST")
                 db_session.add(EnterOrExit(staff_name=stff.name,
                                            staff_kana_name=stff.kana_name,
@@ -3173,46 +3173,46 @@ def show_enters_or_exits(id=None):
         # DBから入退レコードを取得してテンプレートと共に返す.
         # RIDを指定された場合は, 一つだけレコードを取得する.
         if id is not None:
-            ent_or_ext_tmp = db_session.query(EnterOrExit).filter(EnterOrExit.id==id).first()
+            entr_or_exit_tmp = db_session.query(EnterOrExit).filter(EnterOrExit.id==id).first()
             db_session.close()
-            if ent_or_ext_tmp is not None:
-                if len(str(ent_or_ext_tmp.id)) > 6:
-                    id_tmp = ent_or_ext_tmp.id[0:6] + "..."
+            if entr_or_exit_tmp is not None:
+                if len(str(entr_or_exit_tmp.id)) > 6:
+                    id_tmp = entr_or_exit_tmp.id[0:6] + "..."
                 else:
-                    id_tmp = ent_or_ext_tmp.id
-                if len(ent_or_ext_tmp.staff_name) > 6:
-                    stff_nm_tmp = ent_or_ext_tmp.staff_name[0:6] + "..."
+                    id_tmp = entr_or_exit_tmp.id
+                if len(entr_or_exit_tmp.staff_name) > 6:
+                    stff_nm_tmp = entr_or_exit_tmp.staff_name[0:6] + "..."
                 else:
-                    stff_nm_tmp = ent_or_ext_tmp.staff_name
-                if ent_or_ext_tmp.reason == "clock-in":
+                    stff_nm_tmp = entr_or_exit_tmp.staff_name
+                if entr_or_exit_tmp.reason == "clock-in":
                     rsn_tmp = "出勤"
-                elif ent_or_ext_tmp.reason == "return-to-out":
+                elif entr_or_exit_tmp.reason == "return-to-out":
                     rsn_tmp = "外出戻り"
-                elif ent_or_ext_tmp.reason == "after-break":
+                elif entr_or_exit_tmp.reason == "after-break":
                     rsn_tmp = "休憩明け"
-                elif ent_or_ext_tmp.reason == "clock-out":
+                elif entr_or_exit_tmp.reason == "clock-out":
                     rsn_tmp = "退勤"
-                elif ent_or_ext_tmp.reason == "out":
+                elif entr_or_exit_tmp.reason == "out":
                     rsn_tmp = "外出"
-                elif ent_or_ext_tmp.reason == "break":
+                elif entr_or_exit_tmp.reason == "break":
                     rsn_tmp = "休憩"
-                elif ent_or_ext_tmp.reason == "forget-or-revocation":
+                elif entr_or_exit_tmp.reason == "forget-or-revocation":
                     rsn_tmp = "忘却or失効"
-                elif ent_or_ext_tmp.reason == "application-termination":
+                elif entr_or_exit_tmp.reason == "application-termination":
                     rsn_tmp = "アプリ終了"
                 else:
                     rsn_tmp = "その他(分類不明)"
-                if str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[2] == "00":
-                    dt_tmp = str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[0] + " "
+                if str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[2] == "00":
+                    dt_tmp = str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit_tmp.enter_or_exit_at, False)).split("T")[0] + " "
                     tm_tmp = (
-                    str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[0] + ":" +
-                    str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[1] + ":" +
-                    str(ent_or_ext_tmp.enter_or_exit_at_second)
+                    str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[0] + ":" +
+                    str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit_tmp.enter_or_exit_at, False)).split("T")[1].split(":")[1] + ":" +
+                    str(entr_or_exit_tmp.enter_or_exit_at_second)
                     )
                     dttm_tmp = cr_engn.etc.modify_style_for_datetime_string(dt_tmp + tm_tmp, False)
                 else:
                     dttm_tmp = (
-                    cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False), False)
+                    cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit_tmp.enter_or_exit_at, False), False)
                     )
                 ents_or_exts_fnl.append([id_tmp,
                                          stff_nm_tmp,
@@ -3242,44 +3242,44 @@ def show_enters_or_exits(id=None):
         else:
             ents_or_exts_tmp = db_session.query(EnterOrExit).order_by(EnterOrExit.id.asc()).all()
             db_session.close()
-            for ent_or_ext_tmp in ents_or_exts_tmp:
-                if len(str(ent_or_ext_tmp.id)) > 6:
-                    id_tmp = ent_or_ext_tmp.id[0:6] + "..."
+            for entr_or_exit_tmp in ents_or_exts_tmp:
+                if len(str(entr_or_exit_tmp.id)) > 6:
+                    id_tmp = entr_or_exit_tmp.id[0:6] + "..."
                 else:
-                    id_tmp = ent_or_ext_tmp.id
-                if len(ent_or_ext_tmp.staff_name) > 6:
-                    stff_nm_tmp = ent_or_ext_tmp.staff_name[0:6] + "..."
+                    id_tmp = entr_or_exit_tmp.id
+                if len(entr_or_exit_tmp.staff_name) > 6:
+                    stff_nm_tmp = entr_or_exit_tmp.staff_name[0:6] + "..."
                 else:
-                    stff_nm_tmp = ent_or_ext_tmp.staff_name
-                if ent_or_ext_tmp.reason == "clock-in":
+                    stff_nm_tmp = entr_or_exit_tmp.staff_name
+                if entr_or_exit_tmp.reason == "clock-in":
                     rsn_tmp = "出勤"
-                elif ent_or_ext_tmp.reason == "return-to-out":
+                elif entr_or_exit_tmp.reason == "return-to-out":
                     rsn_tmp = "外出戻り"
-                elif ent_or_ext_tmp.reason == "after-break":
+                elif entr_or_exit_tmp.reason == "after-break":
                     rsn_tmp = "休憩明け"
-                elif ent_or_ext_tmp.reason == "clock-out":
+                elif entr_or_exit_tmp.reason == "clock-out":
                     rsn_tmp = "退勤"
-                elif ent_or_ext_tmp.reason == "out":
+                elif entr_or_exit_tmp.reason == "out":
                     rsn_tmp = "外出"
-                elif ent_or_ext_tmp.reason == "break":
+                elif entr_or_exit_tmp.reason == "break":
                     rsn_tmp = "休憩"
-                elif ent_or_ext_tmp.reason == "forget-or-revocation":
+                elif entr_or_exit_tmp.reason == "forget-or-revocation":
                     rsn_tmp = "忘却or失効"
-                elif ent_or_ext_tmp.reason == "application-termination":
+                elif entr_or_exit_tmp.reason == "application-termination":
                     rsn_tmp = "アプリ終了"
                 else:
                     rsn_tmp = "その他(分類不明)"
-                if str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[2] == "00":
-                    dt_tmp = str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[0] + " "
+                if str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[2] == "00":
+                    dt_tmp = str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit_tmp.enter_or_exit_at, True)).split("T")[0] + " "
                     tm_tmp = (
-                    str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[0] + ":" +
-                    str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[1] + ":" +
-                    str(ent_or_ext_tmp.enter_or_exit_at_second)
+                    str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[0] + ":" +
+                    str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit_tmp.enter_or_exit_at, True)).split("T")[1].split(":")[1] + ":" +
+                    str(entr_or_exit_tmp.enter_or_exit_at_second)
                     )
                     dttm_tmp = cr_engn.etc.modify_style_for_datetime_string(dt_tmp + tm_tmp, False)
                 else:
                     dttm_tmp = (
-                    cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext_tmp.enter_or_exit_at, False), False)
+                    cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit_tmp.enter_or_exit_at, False), False)
                     )
                 ents_or_exts_fnl.append([id_tmp,
                                          stff_nm_tmp,
@@ -7623,14 +7623,25 @@ def search_enters_or_exits_results():
                     stff_nm_tmp = entr_or_exit_tmp.staff_name[0:6] + "..."
                 else:
                     stff_nm_tmp = entr_or_exit_tmp.staff_name
-                if len(entr_or_exit_tmp.reason) > 6:
-                    rsn_tmp = entr_or_exit_tmp.reason[0:6] + "..."
+                if entr_or_exit_tmp.reason == "clock-in":
+                    rsn_tmp = "出勤"
+                elif entr_or_exit_tmp.reason == "return-to-out":
+                    rsn_tmp = "外出戻り"
+                elif entr_or_exit_tmp.reason == "after-break":
+                    rsn_tmp = "休憩明け"
+                elif entr_or_exit_tmp.reason == "clock-out":
+                    rsn_tmp = "退勤"
+                elif entr_or_exit_tmp.reason == "out":
+                    rsn_tmp = "外出"
+                elif entr_or_exit_tmp.reason == "break":
+                    rsn_tmp = "休憩"
+                elif entr_or_exit_tmp.reason == "forget-or-revocation":
+                    rsn_tmp = "忘却or失効"
+                elif entr_or_exit_tmp.reason == "application-termination":
+                    rsn_tmp = "アプリ終了"
                 else:
-                    rsn_tmp = entr_or_exit_tmp.reason
-                if len(entr_or_exit_tmp.enter_or_exit_at) > 6:
-                    entr_or_exit_at_tmp = entr_or_exit_tmp.enter_or_exit_at[0:6] + "..."
-                else:
-                    entr_or_exit_at_tmp = entr_or_exit_tmp.enter_or_exit_at
+                    rsn_tmp = "その他(分類不明)"
+                entr_or_exit_at_tmp = entr_or_exit_tmp.enter_or_exit_at
                 entrs_or_exits_fnl.append([id_tmp,
                                            stff_nm_tmp,
                                            rsn_tmp,
@@ -7714,8 +7725,8 @@ def search_staffs_results():
         sex = session["sex"]
         bld_typ = session["blood-type"]
         brth_dt = session["birth-date"]
-        stff_nm = str(session["staff-name"]).split(" ")
-        stff_kn_nm = str(session["staff-kana-name"]).split(" ")
+        stff_nm = str(session["name"]).split(" ")
+        stff_kn_nm = str(session["kana-name"]).split(" ")
         crtd_at_bgn = session["created-at-begin"]
         crtd_at_end = session["created-at-end"]
         updtd_at_bgn = session["updated-at-begin"]
@@ -7938,14 +7949,22 @@ def search_staffs_results():
                     nm_tmp = stff_tmp.name[0:6] + "..."
                 else:
                     nm_tmp = stff_tmp.name
-                if len(stff_tmp.sex) > 6:
-                    sex_tmp = stff_tmp.sex[0:6] + "..."
+                if stff_tmp.sex == "man":
+                    sex_tmp = "男性"
+                elif stff_tmp.sex == "woman":
+                    sex_tmp = "女性"
                 else:
-                    sex_tmp = stff_tmp.sex
-                if len(stff_tmp.blood_type) > 6:
-                    bld_typ_tmp = stff_tmp.blood_type[0:6] + "..."
+                    sex_tmp = "その他(分類不明)"
+                if stff_tmp.blood_type == "type-a":
+                    bld_typ_tmp = "A型"
+                elif stff_tmp.blood_type == "type-b":
+                    bld_typ_tmp = "B型"
+                elif stff_tmp.blood_type == "type-ab":
+                    bld_typ_tmp = "AB型"
+                elif stff_tmp.blood_type == "type-o":
+                    bld_typ_tmp = "O型"
                 else:
-                    bld_typ_tmp = stff_tmp.blood_type
+                    bld_typ_tmp = "その他(分類不明)"
                 stffs_fnl.append([id_tmp,
                                  nm_tmp,
                                  sex_tmp,
@@ -11702,40 +11721,40 @@ def export_enters_or_exits():
         db_session.close()
 
         # DBから取得した入退レコードの内容を変換・整形して配列に格納する.
-        for ent_or_ext in ents_or_exts:
-            stff_nm = ent_or_ext.staff_name
-            stff_kn_nm = ent_or_ext.staff_kana_name
-            if ent_or_ext.reason == "clock-in":
+        for entr_or_exit in ents_or_exts:
+            stff_nm = entr_or_exit.staff_name
+            stff_kn_nm = entr_or_exit.staff_kana_name
+            if entr_or_exit.reason == "clock-in":
                 rsn = "出勤"
-            elif ent_or_ext.reason == "return-to-out":
+            elif entr_or_exit.reason == "return-to-out":
                 rsn = "外出戻り"
-            elif ent_or_ext.reason == "after-break":
+            elif entr_or_exit.reason == "after-break":
                 rsn = "休憩明け"
-            elif ent_or_ext.reason == "clock-out":
+            elif entr_or_exit.reason == "clock-out":
                 rsn = "退勤"
-            elif ent_or_ext.reason == "out":
+            elif entr_or_exit.reason == "out":
                 rsn = "外出"
-            elif ent_or_ext.reason == "break":
+            elif entr_or_exit.reason == "break":
                 rsn = "休憩"
-            elif ent_or_ext.reason == "forget-or-revocation":
+            elif entr_or_exit.reason == "forget-or-revocation":
                 rsn = "忘却or失効"
-            elif ent_or_ext.reason == "application-termination":
+            elif entr_or_exit.reason == "application-termination":
                 rsn = "アプリ終了"
             else:
                 rsn = "その他(分類不明)"
-            if str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[1].split(":")[2] == "00":
-                dt_tmp = str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[0] + " "
+            if str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit.enter_or_exit_at)).split("T")[1].split(":")[2] == "00":
+                dt_tmp = str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit.enter_or_exit_at)).split("T")[0] + " "
                 tm_tmp = (
-                str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[1].split(":")[0] + ":" +
-                str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at)).split("T")[1].split(":")[1] + ":" +
-                str(ent_or_ext.enter_or_exit_at_second)
+                str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit.enter_or_exit_at)).split("T")[1].split(":")[0] + ":" +
+                str(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit.enter_or_exit_at)).split("T")[1].split(":")[1] + ":" +
+                str(entr_or_exit.enter_or_exit_at_second)
                 )
                 dttm1 = cr_engn.etc.modify_style_for_datetime_string(dt_tmp + tm_tmp, False)
             else:
-                dttm1 = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.enter_or_exit_at), False)
-            dttm2 = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.created_at), False)
-            dttm3 = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(ent_or_ext.updated_at), False)
-            is_hddn = "はい" if ent_or_ext.is_hidden == "yes" else "いいえ"
+                dttm1 = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit.enter_or_exit_at), False)
+            dttm2 = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit.created_at), False)
+            dttm3 = cr_engn.etc.modify_style_for_datetime_string(cr_engn.etc.convert_datetime_object_to_string_for_timestamp(entr_or_exit.updated_at), False)
+            is_hddn = "はい" if entr_or_exit.is_hidden == "yes" else "いいえ"
             is_excld = "いいえ"
             fl_rcd = (stff_nm + "," + stff_kn_nm + "," + rsn + ","
                       + dttm1 + "," + dttm2 + "," + dttm3 + "," + is_hddn + "," + is_excld + "\n")
