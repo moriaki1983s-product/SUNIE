@@ -41,9 +41,10 @@ SUNIE-Video-Engine
  ・SUNIE-Transition  
 
 ※ 以下の機能名称は, まだまだ, 検討の段階です.  
+SUNIE-Emotion-Engine  
 SUNIE-Robotics-Engine  
 SUNIE-Blockchain-Engine  
-SUNIE-Foundation-Engine  
+SUNIE-Federation-Engine  
 SUNIE-Webdocs-Engine
 
 
