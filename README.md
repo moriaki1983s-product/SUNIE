@@ -41,7 +41,8 @@ SUNIE-Video-Engine
  ・SUNIE-Effect  
  ・SUNIE-Transition  
 
-※ 以下の機能名称は, まだまだ, 検討の段階です.  
+SUNIE-Draft
+※ 以下の機能名称は, まだ検討の段階です.  
 SUNIE-Emotion-Engine  
 SUNIE-Robotics-Engine  
 SUNIE-Blockchain-Engine  
