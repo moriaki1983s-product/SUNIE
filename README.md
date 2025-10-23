@@ -20,12 +20,12 @@ SUNIE-Core-Engine
  ・SUNIE-ProtocolAnalyzer  
  ・SUNIE-ProtocolGenerater  
  ・SUNIE-TagnetCrawler  
- ・SUNIE-TagnetInterpreter(TSM含む)  
-   ※ TSM, Tagnet-State-Machine  
  ・SUNIE-TagnetReducer  
  ・SUNIE-TagnetBuilder  
- ・SUNIE-TaskResolver  
- ・SUNIE-PolicyChecker  
+ ・SUNIE-TagnetInterpreter  
+ ・SUNIE-TagnetTaskResolver(TSM含む)  
+   ※ TSM, Tagnet-State-Machine  
+ ・SUNIE-TagnetPolicyChecker  
 
 SUNIE-Visual-Engine  
  ・SUNIE-Image  
