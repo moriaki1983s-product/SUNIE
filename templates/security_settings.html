@@ -52,3 +52,28 @@
 </form>
 </section>
 {% endblock %}
+{% block script %}
+<script>
+window.addEventListener('submit', function (event) {
+  var is_stop = false;
+  if (is_stop == false) {
+      const new_password = document.getElementById('new_password');
+      if ((!new_password.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           new_password.focus();
+           is_stop = true;
+      }
+  }
+  if (is_stop == false) {
+      const confirm_password = document.getElementById('confirm_password');
+      if ((!confirm_password.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           confirm_password.focus();
+           is_stop = true;
+      }
+  }
+})
+</script>
+{% endblock %}

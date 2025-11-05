@@ -61,3 +61,6 @@ onclick="document.getElementById('hidden-detail-item-id').value='{{item[0]}}';"/
 <br>
 </section>
 {% endblock %}
+{% block script %}
+<script src="{{url_for('static', filename='statics/javascripts/page-reset.js')}}"></script>
+{% endblock %}

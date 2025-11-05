@@ -98,3 +98,74 @@
 <br>
 </section>
 {% endblock %}
+{% block script %}
+<script src="{{url_for('static', filename='statics/javascripts/datepicker-default.js')}}"></script>
+<script>
+window.addEventListener('submit', function (event) {
+  var is_focusing_stop = false;
+  if (is_focusing_stop == false) {
+      const staff_name = document.getElementById('staff_name');
+      if ((!staff_name.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           staff_name.focus();
+           is_focusing_stop = true;
+      }
+  }
+  if (is_focusing_stop == false) {
+      const staff_kana_name = document.getElementById('staff_kana_name');
+      if ((!staff_kana_name.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           staff_kana_name.focus();
+           is_focusing_stop = true;
+      }
+  }
+  if (is_focusing_stop == false) {
+      const reason = document.getElementById('reason');
+      if ((!reason.value) &&
+           (event.submitter.value === '決定')) {
+            event.preventDefault();
+            reason.focus();
+            is_focusing_stop = true;
+         }
+  }
+  if (is_focusing_stop == false) {
+      const enter_or_exit_at = document.getElementById('enter_or_exit_at');
+      if ((!enter_or_exit_at.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           enter_or_exit_at.focus();
+           is_focusing_stop = true;
+      }
+  }
+  if (is_focusing_stop == false) {
+      const enter_or_exit_at_second = document.getElementById('enter_or_exit_at_second');
+      if ((!enter_or_exit_at_second.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           enter_or_exit_at_second.focus();
+           is_focusing_stop = true;
+      }
+  }
+  if (is_focusing_stop == false) {
+      const is_hidden = document.getElementById('is_hidden');
+      if ((!is_hidden.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           is_hidden.focus();
+           is_focusing_stop = true;
+      }
+  }
+  if (is_focusing_stop == false) {
+      const is_exclude = document.getElementById('is_exclude');
+      if ((!is_exclude.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           is_exclude.focus();
+           is_focusing_stop = true;
+      }
+  }
+})
+</script>
+{% endblock %}

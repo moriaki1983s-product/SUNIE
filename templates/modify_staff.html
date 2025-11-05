@@ -96,3 +96,74 @@
 <br>
 </section>
 {% endblock %}
+{% block script %}
+<script src="{{url_for('static', filename='statics/javascripts/datepicker-default.js')}}"></script>
+<script>
+window.addEventListener('submit', function (event) {
+  var is_focusing_stop = false;
+  if (is_focusing_stop == false) {
+      const name = document.getElementById('name');
+      if ((!name.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           name.focus();
+           is_focusing_stop = true;
+      }
+  }
+  if (is_focusing_stop == false) {
+      const kana_name = document.getElementById('kana_name');
+      if ((!kana_name.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           kana_name.focus();
+           is_focusing_stop = true;
+      }
+  }
+  if (is_focusing_stop == false) {
+      const sex = document.getElementById('sex');
+      if ((!sex.value) &&
+           (event.submitter.value === '決定')) {
+            event.preventDefault();
+            sex.focus();
+            is_focusing_stop = true;
+         }
+  }
+  if (is_focusing_stop == false) {
+      const blood_type = document.getElementById('blood_type');
+      if ((!blood_type.value) &&
+           (event.submitter.value === '決定')) {
+            event.preventDefault();
+            blood_type.focus();
+            is_focusing_stop = true;
+         }
+  }
+  if (is_focusing_stop == false) {
+      const birth_date = document.getElementById('birth_date');
+      if ((!birth_date.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           birth_date.focus();
+           is_focusing_stop = true;
+      }
+  }
+  if (is_focusing_stop == false) {
+      const is_hidden = document.getElementById('is_hidden');
+      if ((!is_hidden.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           is_hidden.focus();
+           is_focusing_stop = true;
+      }
+  }
+  if (is_focusing_stop == false) {
+      const is_exclude = document.getElementById('is_exclude');
+      if ((!is_exclude.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           is_exclude.focus();
+           is_focusing_stop = true;
+      }
+  }
+})
+</script>
+{% endblock %}

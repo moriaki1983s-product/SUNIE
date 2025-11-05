@@ -33,6 +33,13 @@
 <table class="table">
 <tr>
 <td>
+{{ form.linked_tag.label }}{{ form.linked_tag(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
 {{ form.staff_psychology.label }}{{ form.staff_psychology(class_="form-control", style_="resize: none;") }}
 </td>
 </tr>
@@ -103,10 +110,10 @@
 <section>
 <br>
 <br>
-<a class="btn btn-primary" href="{{url_for('view.show_rules')}}">規則一覧</a>
-<a class="btn btn-primary" href="{{url_for('view.search_rules')}}">規則検索</a>
-<a class="btn btn-primary" href="{{url_for('view.import_rules')}}">規則取込</a>
-<a class="btn btn-primary" href="{{url_for('view.export_rules')}}">規則書出</a>
+<a class="btn btn-primary" href="{{url_for('view.show_rules')}}">信条一覧</a>
+<a class="btn btn-primary" href="{{url_for('view.search_rules')}}">信条検索</a>
+<a class="btn btn-primary" href="{{url_for('view.import_rules')}}">信条取込</a>
+<a class="btn btn-primary" href="{{url_for('view.export_rules')}}">信条書出</a>
 <br>
 <br>
 </section>

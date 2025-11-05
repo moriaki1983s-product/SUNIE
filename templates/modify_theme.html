@@ -143,3 +143,50 @@
 <br>
 </section>
 {% endblock %}
+{% block script %}
+<script>
+window.addEventListener('submit', function (event) {
+  var is_focusing_stop = false;
+  if (is_focusing_stop == false) {
+      const spell_and_header = document.querySelectorAll('spell_and_header');
+      if ((!spell_and_header.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           spell_and_header.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const mean_and_body = document.querySelectorAll('mean_and_body');
+      if ((!mean_and_body.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           mean_and_body.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const linked_tag = document.querySelectorAll('linked_tag');
+      if ((!linked_tag.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           linked_tag.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const is_hidden = document.querySelectorAll('is_hidden');
+      if ((!is_hidden.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           is_hidden.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const is_exclude = document.querySelectorAll('is_exclude');
+      if ((!is_exclude.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           is_exclude.focus();
+      }
+  }
+})
+</script>
+{% endblock %}

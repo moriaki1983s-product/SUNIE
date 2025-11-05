@@ -56,10 +56,13 @@ onclick="document.getElementById('hidden-detail-item-id').value='{{item[0]}}';"/
 <br>
 <a class="btn btn-primary" href="{{url_for('view.show_generates')}}">生成一覧</a>
 <a class="btn btn-primary" href="{{url_for('view.search_generates')}}">生成検索</a>
-<a class="btn btn-primary" href="{{url_for('view.learn_generate')}}">生成学習</a>
+<a class="btn btn-primary" href="{{url_for('view.execute_generate')}}">生成実行</a>
 <a class="btn btn-primary" href="{{url_for('view.import_generates')}}">生成取込</a>
 <a class="btn btn-primary" href="{{url_for('view.export_generates')}}">生成書出</a>
 <br>
 <br>
 </section>
+{% endblock %}
+{% block script %}
+<script src="{{url_for('static', filename='statics/javascripts/page-reset.js')}}"></script>
 {% endblock %}

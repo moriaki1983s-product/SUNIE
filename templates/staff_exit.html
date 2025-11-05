@@ -32,3 +32,15 @@
 </div>
 </section>
 {% endblock %}
+{% block script %}
+<script>
+window.addEventListener('submit', function (event) {
+  const reason = document.getElementById('reason');
+  if ((!reason.value) &&
+      (event.submitter.value === '決定')) {
+       event.preventDefault();
+       reason.focus();
+  }
+})
+</script>
+{% endblock %}

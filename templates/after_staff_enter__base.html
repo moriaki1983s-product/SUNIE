@@ -40,7 +40,7 @@
 <a class="nav-link" href="{{url_for('view.show_themes')}}">主題</a>
 </li>
 <li class="nav-item">
-<a class="nav-link" href="{{url_for('view.show_categories')}}">分類</a>
+<a class="nav-link" href="{{url_for('view.show_categories')}}">範疇</a>
 </li>
 <li class="nav-item">
 <a class="nav-link" href="{{url_for('view.show_facts')}}">事実</a>
@@ -49,7 +49,7 @@
 <a class="nav-link" href="{{url_for('view.show_rules')}}">規則</a>
 </li>
 <li class="nav-item">
-<a class="nav-link" href="{{url_for('view.show_reactions')}}">反応</a>
+<a class="nav-link" href="{{url_for('view.show_reactions')}}">信条</a>
 </li>
 <li class="nav-item">
 <a class="nav-link" href="{{url_for('view.show_generates')}}">生成</a>
@@ -105,8 +105,7 @@
 <script src="{{url_for('static', filename='statics/javascripts/jquery-3.6.4.js')}}"></script>
 <script src="{{url_for('static', filename='statics/javascripts/bootstrap.bundle.js')}}"></script>
 <script src="{{url_for('static', filename='statics/javascripts/footer-default.js')}}"></script>
-<script src="{{url_for('static', filename='statics/javascripts/calender-default.js')}}"></script>
-<script src="{{url_for('static', filename='statics/javascripts/datepicker-default.js')}}"></script>
-<script src="{{url_for('static', filename='statics/javascripts/page-reset.js')}}"></script>
+{% block script %}
+{% endblock %}
 </body>
 </html>

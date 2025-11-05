@@ -51,12 +51,15 @@ onclick="document.getElementById('hidden-detail-item-id').value='{{item[0]}}';"/
 <section>
 <br>
 <br>
-<a class="btn btn-primary" href="{{url_for('view.show_reactions')}}">反応一覧</a>
-<a class="btn btn-primary" href="{{url_for('view.search_reactions')}}">反応検索</a>
-<a class="btn btn-primary" href="{{url_for('view.learn_reaction')}}">反応学習</a>
-<a class="btn btn-primary" href="{{url_for('view.import_reactions')}}">反応取込</a>
-<a class="btn btn-primary" href="{{url_for('view.export_reactions')}}">反応書出</a>
+<a class="btn btn-primary" href="{{url_for('view.show_reactions')}}">信条一覧</a>
+<a class="btn btn-primary" href="{{url_for('view.search_reactions')}}">信条検索</a>
+<a class="btn btn-primary" href="{{url_for('view.learn_reaction')}}">信条学習</a>
+<a class="btn btn-primary" href="{{url_for('view.import_reactions')}}">信条取込</a>
+<a class="btn btn-primary" href="{{url_for('view.export_reactions')}}">信条書出</a>
 <br>
 <br>
 </section>
+{% endblock %}
+{% block script %}
+<script src="{{url_for('static', filename='statics/javascripts/page-reset.js')}}"></script>
 {% endblock %}

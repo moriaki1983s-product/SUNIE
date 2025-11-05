@@ -33,3 +33,15 @@
 </div>
 </section>
 {% endblock %}
+{% block script %}
+<script>
+window.addEventListener('submit', function (event) {
+  const password = document.getElementById('password');
+  if ((!password.value) &&
+      (event.submitter.value === '決定')) {
+       event.preventDefault();
+       password.focus();
+     }
+})
+</script>
+{% endblock %}

@@ -1,6 +1,13 @@
 {% extends "after_staff_enter__base.html" %}
 {% block inner_main %}
 <section>
+<article>
+<div
+class="text-loop">
+</div>
+</article>
+</section>
+<section>
 <form method="post">
 {{ form.hidden_tag() }}
 <table class="table">
@@ -44,4 +51,16 @@
 </table>
 </form>
 </section>
+{% endblock %}
+{% block script %}
+<script>
+window.addEventListener('submit', function (event) {
+  const text_message = document.getElementById('text_message');
+  if ((!text_message.value) &&
+      (event.submitter.value === '決定')) {
+       event.preventDefault();
+       text_message.focus();
+  }
+})
+</script>
 {% endblock %}

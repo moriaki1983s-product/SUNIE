@@ -20,6 +20,13 @@
 <table class="table">
 <tr>
 <td>
+{{ form.linked_tag.label }}{{ form.linked_tag(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
 {{ form.staff_psychology.label }}{{ form.staff_psychology(class_="form-control", style_="resize: none;") }}
 </td>
 </tr>
@@ -110,11 +117,90 @@
 <section>
 <br>
 <br>
-<a class="btn btn-primary" href="{{url_for('view.show_reactions')}}">反応一覧</a>
-<a class="btn btn-primary" href="{{url_for('view.search_reactions')}}">反応検索</a>
-<a class="btn btn-primary" href="{{url_for('view.import_reactions')}}">反応取込</a>
-<a class="btn btn-primary" href="{{url_for('view.export_reactions')}}">反応書出</a>
+<a class="btn btn-primary" href="{{url_for('view.show_reactions')}}">信条一覧</a>
+<a class="btn btn-primary" href="{{url_for('view.search_reactions')}}">信条検索</a>
+<a class="btn btn-primary" href="{{url_for('view.import_reactions')}}">信条取込</a>
+<a class="btn btn-primary" href="{{url_for('view.export_reactions')}}">信条書出</a>
 <br>
 <br>
 </section>
+{% endblock %}
+{% block script %}
+<script>
+window.addEventListener('submit', function (event) {
+  var is_focusing_stop = false;
+  if (is_focusing_stop == false) {
+      const spell_and_header = document.querySelectorAll('spell_and_header');
+      if ((!spell_and_header.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           spell_and_header.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const mean_and_body = document.querySelectorAll('mean_and_body');
+      if ((!mean_and_body.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           mean_and_body.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const linked_tag = document.querySelectorAll('linked_tag');
+      if ((!linked_tag.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           linked_tag.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const staff_psychology = document.querySelectorAll('staff_psychology');
+      if ((!staff_psychology.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           staff_psychology.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const scene_and_background = document.querySelectorAll('scene_and_background');
+      if ((!scene_and_background.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           scene_and_background.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const staff_example_text_message = document.querySelectorAll('staff_example_text_message');
+      if ((!staff_example_text_message.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           staff_example_text_message.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const application_example_text_message = document.querySelectorAll('application_example_text_message');
+      if ((!application_example_text_message.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           application_example_text_message.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const is_hidden = document.querySelectorAll('is_hidden');
+      if ((!is_hidden.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           is_hidden.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const is_exclude = document.querySelectorAll('is_exclude');
+      if ((!is_exclude.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           is_exclude.focus();
+      }
+  }
+})
+</script>
 {% endblock %}

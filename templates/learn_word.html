@@ -20,6 +20,27 @@
 <table class="table">
 <tr>
 <td>
+{{ form.linked_tag.label }}{{ form.linked_tag(class_="form-control", style_="resize: none;") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.constructiveness_maximum_score.label }}{{ form.constructiveness_maximum_score(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
+{{ form.constructiveness_minimum_score.label }}{{ form.constructiveness_minimum_score(class_="form-control") }}
+</td>
+</tr>
+</table>
+<table class="table">
+<tr>
+<td>
 {{ form.intent.label }}{{ form.intent(class_="form-control") }}
 </td>
 </tr>
@@ -35,13 +56,6 @@
 <tr>
 <td>
 {{ form.sentiment_support.label }}{{ form.sentiment_support(class_="form-control") }}
-</td>
-</tr>
-</table>
-<table class="table">
-<tr>
-<td>
-{{ form.strength.label }}{{ form.strength(class_="form-control") }}
 </td>
 </tr>
 </table>
@@ -100,4 +114,99 @@
 </table>
 </form>
 </section>
+{% endblock %}
+{% block script %}
+<script>
+window.addEventListener('submit', function (event) {
+  var is_focusing_stop = false;
+  if (is_focusing_stop == false) {
+      const spell_and_header = document.querySelectorAll('spell_and_header');
+      if ((!spell_and_header.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           spell_and_header.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const mean_and_body = document.querySelectorAll('mean_and_body');
+      if ((!mean_and_body.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           mean_and_body.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const linked_tag = document.querySelectorAll('linked_tag');
+      if ((!linked_tag.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           linked_tag.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const constructiveness_maximum_score = document.querySelectorAll('constructiveness_maximum_score');
+      if ((!constructiveness_maximum_score.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           constructiveness_maximum_score.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const constructiveness_minimum_score = document.querySelectorAll('constructiveness_minimum_score');
+      if ((!constructiveness_minimum_score.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           constructiveness_minimum_score.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const intent = document.querySelectorAll('intent');
+      if ((!intent.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           intent.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const sentiment = document.querySelectorAll('sentiment');
+      if ((!sentiment.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           sentiment.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const sentiment_support = document.querySelectorAll('sentiment_support');
+      if ((!sentiment_support.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           sentiment_support.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const part_of_speech = document.querySelectorAll('part_of_speech');
+      if ((!part_of_speech.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           part_of_speech.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const is_hidden = document.querySelectorAll('is_hidden');
+      if ((!is_hidden.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           is_hidden.focus();
+      }
+  }
+  if (is_focusing_stop == false) {
+      const is_exclude = document.querySelectorAll('is_exclude');
+      if ((!is_exclude.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           is_exclude.focus();
+      }
+  }
+})
+</script>
 {% endblock %}

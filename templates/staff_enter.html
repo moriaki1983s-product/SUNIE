@@ -34,3 +34,37 @@
 </div>
 </section>
 {% endblock %}
+{% block script %}
+<script>
+window.addEventListener('submit', function (event) {
+  var is_focusing_stop = false;
+  if (is_focusing_stop == false) {
+      const name = document.getElementById('name');
+      if ((!name.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           name.focus();
+           is_focusing_stop = true;
+      }
+  }
+  if (is_focusing_stop == false) {
+      const password = document.getElementById('password');
+      if ((!password.value) &&
+          (event.submitter.value === '決定')) {
+           event.preventDefault();
+           password.focus();
+           is_focusing_stop = true;
+      }
+  }
+  if (is_focusing_stop == false) {
+      const reason = document.getElementById('reason');
+      if ((!reason.value) &&
+           (event.submitter.value === '決定')) {
+            event.preventDefault();
+            reason.focus();
+            is_focusing_stop = true;
+         }
+  }
+})
+</script>
+{% endblock %}
