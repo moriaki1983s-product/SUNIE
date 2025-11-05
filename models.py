@@ -39,11 +39,12 @@ class Word(Base):
       spell_and_header = Column(Text, nullable=False)
       mean_and_body = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
-      theme_tag = Column(Text, nullable=False)
+      linked_tag = Column(Text, nullable=False)
+      constructiveness_maximum_score = Column(Integer, nullable=False)
+      constructiveness_minimum_score = Column(Integer, nullable=False)
       intent = Column(String(consts.INTENT_LENGTH), nullable=False)
       sentiment = Column(String(consts.SENTIMENT_LENGTH), nullable=False)
       sentiment_support = Column(String(consts.SENTIMENT_LENGTH), nullable=False)
-      strength = Column(String(consts.STRENGTH_LENGTH), nullable=False)
       part_of_speech = Column(String(consts.PART_OF_SPEECH_LENGTH), nullable=False)
       first_character = Column(String(consts.FIRST_CHARACTER_LENGTH), nullable=False)
       last_character = Column(String(consts.LAST_CHARACTER_LENGTH), nullable=False)
@@ -59,11 +60,12 @@ class Word(Base):
                    spell_and_header,
                    mean_and_body,
                    concept_and_notion,
-                   theme_tag,
+                   linked_tag,
+                   constructiveness_maximum_score,
+                   constructiveness_minimum_score,
                    intent,
                    sentiment,
                    sentiment_support,
-                   strength,
                    part_of_speech,
                    first_character,
                    last_character,
@@ -78,11 +80,12 @@ class Word(Base):
           self.spell_and_header = spell_and_header
           self.mean_and_body = mean_and_body
           self.concept_and_notion = concept_and_notion
-          self.theme_tag = theme_tag
+          self.linked_tag = linked_tag
+          self.constructiveness_maximum_score = constructiveness_maximum_score
+          self.constructiveness_minimum_score = constructiveness_minimum_score
           self.intent = intent
           self.sentiment = sentiment
           self.sentiment_support = sentiment_support
-          self.strength = strength
           self.part_of_speech = part_of_speech
           self.first_character = first_character
           self.last_character = last_character
@@ -102,7 +105,7 @@ class Theme(Base):
       spell_and_header = Column(Text, nullable=False)
       mean_and_body = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
-      category_tag = Column(Text, nullable=False)
+      linked_tag = Column(Text, nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
       created_at = Column(DateTime, default=datetime.now(timezone.utc))
@@ -114,7 +117,7 @@ class Theme(Base):
                    spell_and_header,
                    mean_and_body,
                    concept_and_notion,
-                   category_tag,
+                   linked_tag,
                    staff_name,
                    staff_kana_name,
                    created_at,
@@ -125,7 +128,7 @@ class Theme(Base):
           self.spell_and_header = spell_and_header
           self.mean_and_body = mean_and_body
           self.concept_and_notion = concept_and_notion
-          self.category_tag = category_tag
+          self.linked_tag = linked_tag
           self.staff_name = staff_name
           self.staff_kana_name = staff_kana_name
           self.created_at = created_at
@@ -141,9 +144,9 @@ class Category(Base):
       spell_and_header = Column(Text, nullable=False)
       mean_and_body = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
-      parent_category_tag = Column(Text, nullable=False)
-      sibling_category_tag = Column(Text, nullable=False)
-      child_category_tag = Column(Text, nullable=False)
+      parent_linked_tag = Column(Text, nullable=False)
+      sibling_linked_tag = Column(Text, nullable=False)
+      child_linked_tag = Column(Text, nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
       created_at = Column(DateTime, default=datetime.now(timezone.utc))
@@ -155,9 +158,9 @@ class Category(Base):
                    spell_and_header,
                    mean_and_body,
                    concept_and_notion,
-                   parent_category_tag,
-                   sibling_category_tag,
-                   child_category_tag,
+                   parent_linked_tag,
+                   sibling_linked_tag,
+                   child_linked_tag,
                    staff_name,
                    staff_kana_name,
                    created_at,
@@ -168,9 +171,9 @@ class Category(Base):
           self.spell_and_header = spell_and_header
           self.mean_and_body = mean_and_body
           self.concept_and_notion = concept_and_notion
-          self.parent_category_tag = parent_category_tag
-          self.sibling_category_tag = sibling_category_tag
-          self.child_category_tag = child_category_tag
+          self.parent_linked_tag = parent_linked_tag
+          self.sibling_linked_tag = sibling_linked_tag
+          self.child_linked_tag = child_linked_tag
           self.staff_name = staff_name
           self.staff_kana_name = staff_kana_name
           self.created_at = created_at
@@ -186,7 +189,7 @@ class Fact(Base):
       spell_and_header = Column(Text, nullable=False)
       mean_and_body = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
-      category_tag = Column(Text, nullable=False)
+      linked_tag = Column(Text, nullable=False)
       archived_image_file_path = Column(String(consts.ARCHIVED_IMAGE_FILE_NAME_LENGTH), nullable=False)
       archived_sound_file_path = Column(String(consts.ARCHIVED_SOUND_FILE_NAME_LENGTH), nullable=False)
       archived_video_file_path = Column(String(consts.ARCHIVED_VIDEO_FILE_NAME_LENGTH), nullable=False)
@@ -201,7 +204,7 @@ class Fact(Base):
                    spell_and_header,
                    mean_and_body,
                    concept_and_notion,
-                   category_tag,
+                   linked_tag,
                    archived_image_file_path,
                    archived_sound_file_path,
                    archived_video_file_path,
@@ -215,7 +218,7 @@ class Fact(Base):
           self.spell_and_header = spell_and_header
           self.mean_and_body = mean_and_body
           self.concept_and_notion = concept_and_notion
-          self.category_tag = category_tag
+          self.linked_tag = linked_tag
           self.archived_image_file_path = archived_image_file_path
           self.archived_sound_file_path = archived_sound_file_path
           self.archived_video_file_path = archived_video_file_path
@@ -234,9 +237,9 @@ class Rule(Base):
       spell_and_header = Column(Text, nullable=False)
       mean_and_body = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
-      category_tag = Column(Text, nullable=False)
-      inference_and_speculation_condition = Column(Text, nullable=False)
-      inference_and_speculation_result = Column(Text, nullable=False)
+      linked_tag = Column(Text, nullable=False)
+      inference_condition = Column(Text, nullable=False)
+      inference_result = Column(Text, nullable=False)
       staff_name = Column(String(consts.STAFF_NAME_LENGTH), nullable=False)
       staff_kana_name = Column(String(consts.STAFF_KANA_NAME_LENGTH), nullable=False)
       created_at = Column(DateTime, default=datetime.now(timezone.utc))
@@ -248,9 +251,9 @@ class Rule(Base):
                    spell_and_header,
                    mean_and_body,
                    concept_and_notion,
-                   category_tag,
-                   inference_and_speculation_condition,
-                   inference_and_speculation_result,
+                   linked_tag,
+                   inference_condition,
+                   inference_result,
                    staff_name,
                    staff_kana_name,
                    created_at,
@@ -261,9 +264,9 @@ class Rule(Base):
           self.spell_and_header = spell_and_header
           self.mean_and_body = mean_and_body
           self.concept_and_notion = concept_and_notion
-          self.category_tag = category_tag
-          self.inference_and_speculation_condition = inference_and_speculation_condition
-          self.inference_and_speculation_result = inference_and_speculation_result
+          self.linked_tag = linked_tag
+          self.inference_condition = inference_condition
+          self.inference_result = inference_result
           self.staff_name = staff_name
           self.staff_kana_name = staff_kana_name
           self.created_at = created_at
@@ -279,6 +282,7 @@ class Reaction(Base):
       spell_and_header = Column(Text, nullable=False)
       mean_and_body = Column(Text, nullable=False)
       concept_and_notion = Column(Text, nullable=False)
+      linked_tag = Column(Text, nullable=False)
       staff_psychology = Column(Text, nullable=False)
       scene_and_background = Column(Text, nullable=False)
       staff_example_text_message = Column(Text, nullable=False)
@@ -294,6 +298,7 @@ class Reaction(Base):
                    spell_and_header,
                    mean_and_body,
                    concept_and_notion,
+                   linked_tag,
                    staff_psychology,
                    scene_and_background,
                    staff_example_message,
@@ -308,6 +313,7 @@ class Reaction(Base):
           self.spell_and_header = spell_and_header
           self.mean_and_body = mean_and_body
           self.concept_and_notion = concept_and_notion
+          self.linked_tag = linked_tag
           self.staff_psychology = staff_psychology
           self.scene_and_background = scene_and_background
           self.staff_example_message = staff_example_message

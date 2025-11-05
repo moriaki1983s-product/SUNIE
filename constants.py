@@ -288,11 +288,11 @@ LEARN_DEPTH_BOTTOM = 1
 # 学習の深さの上限を宣言・定義する.
 LEARN_DEPTH_TOP = 10
 
-# 推論測の深さの下限を宣言・定義する.
-INFERENCE_AND_SPECULATION_DEPTH_BOTTOM = 1
+# 推論の深さの下限を宣言・定義する.
+INFERENCE_DEPTH_BOTTOM = 1
 
-# 推論測の深さの上限を宣言・定義する.
-INFERENCE_AND_SPECULATION_DEPTH_TOP = 10
+# 推論の深さの上限を宣言・定義する.
+INFERENCE_DEPTH_TOP = 10
 
 # 短期記憶のデフォルト値を宣言・定義する.
 SHORT_TERM_MEMORY_SIZE_DEFAULT = "1"
@@ -303,8 +303,8 @@ LONG_TERM_MEMORY_SIZE_DEFAULT = "1"
 # 学習の深さのデフォルト値を宣言・定義する.
 LEARN_DEPTH_DEFAULT = "1"
 
-# 推論測の深さのデフォルト値を宣言・定義する.
-INFERENCE_AND_SPECULATION_DEPTH_DEFAULT = "1"
+# 推論の深さのデフォルト値を宣言・定義する.
+INFERENCE_DEPTH_DEFAULT = "1"
 
 # インメモリー化のデフォルト値を宣言・定義する.
 IN_MEMORIZE_DEFAULT = "False"
@@ -603,3 +603,21 @@ DOCUMENT_FILE_FORMAT = {"accept": "application/xml"}
 
 # フォーム内で扱えるプレーンファイルの形式(=拡張子)を宣言・定義する.
 PLAIN_FILE_FORMAT = {"accept": "text/csv"}
+
+# 語句スコアフィールドの刻み幅を宣言・定義する.
+FIELD_WORD_SCORE_STEP = 1
+
+# 語句スコアフィールドの最小値を宣言・定義する.
+FIELD_MIN_WORD_SCORE = -32768
+
+# 語句スコアフィールドの最大値を宣言・定義する.
+FIELD_MAX_WORD_SCORE = 32767
+
+# 設定レベルフィールドの刻み幅を宣言・定義する.
+FIELD_SETTING_LEVEL_STEP = 1
+
+# 設定レベルフィールドの最小値を宣言・定義する.
+FIELD_MIN_SETTING_LEVEL = 1
+
+# 設定レベルフィールドの最大値を宣言・定義する.
+FIELD_MAX_SETTING_LEVEL = 10
