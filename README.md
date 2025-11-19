@@ -18,15 +18,15 @@
 
 ## 本件アプリのコンポーネント構成(SUNIE-System)
 SUNIE-Core-Engine  
- ・SUNIE-ProtocolAnalyzer  
- ・SUNIE-ProtocolGenerater  
+ ・SUNIE-InputAnalyzer  
+ ・SUNIE-OutputGenerater  
+ ・SUNIE-OutputChecker  
  ・SUNIE-TagnetCrawler  
  ・SUNIE-TagnetReducer  
  ・SUNIE-TagnetBuilder  
  ・SUNIE-TagnetCompiler  
- ・SUNIE-TagnetTaskResolver(TSM含む)  
-   ※ TSM, Tagnet-State-Machine  
- ・SUNIE-TagnetPolicyChecker  
+ ・SUNIE-TagnetResolver(TSM含む)  
+   ※ TSM, Tagnet-State-Machine
 
 SUNIE-Visual-Engine  
  ・SUNIE-Image  
