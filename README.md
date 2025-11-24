@@ -17,7 +17,7 @@
 
 
 ## 本件アプリのコンポーネント構成(SUNIE-System)
-SUNIE-Core-Engine
+SUNIE-Core-Engine  
  ・SUNIE-InputAnalyzer  
  ・SUNIE-OutputGenerater  
  ・SUNIE-InputEncoder  
