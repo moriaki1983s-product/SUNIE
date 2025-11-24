@@ -17,7 +17,7 @@
 
 
 ## 本件アプリのコンポーネント構成(SUNIE-System)
-SUNIE-Core-Engine  
+SUNIE-Core-Engine
  ・SUNIE-InputAnalyzer  
  ・SUNIE-OutputGenerater  
  ・SUNIE-InputEncoder  
@@ -26,20 +26,20 @@ SUNIE-Core-Engine
  ・SUNIE-TagnetBuilder  
  ・SUNIE-TagnetCompiler  
  ・SUNIE-TagnetResolver(TSM含む)  
-   ※ TSM, Tagnet-State-Machine
+   ※ TSM, Tagnet-State-Machine  
  ・SUNIE-PolicyChecker  
+
+SUNIE-Audio-Engine  
+ ・SUNIE-Sound  
+ ・SUNIE-Voice  
+ ・SUNIE-Music  
 
 SUNIE-Visual-Engine  
  ・SUNIE-Image  
  ・SUNIE-Graphic  
  ・SUNIE-Clip  
  ・SUNIE-Effect  
- ・SUNIE-Transition  
-
-SUNIE-Audio-Engine  
- ・SUNIE-Sound  
- ・SUNIE-Voice  
- ・SUNIE-Music
+ ・SUNIE-Transition
 
 
 
