@@ -20,35 +20,26 @@
 SUNIE-Core-Engine  
  ・SUNIE-InputAnalyzer  
  ・SUNIE-OutputGenerater  
- ・SUNIE-OutputChecker  
+ ・SUNIE-InputEncoder  
+ ・SUNIE-OutputDecoder  
  ・SUNIE-TagnetCrawler  
- ・SUNIE-TagnetReducer  
  ・SUNIE-TagnetBuilder  
  ・SUNIE-TagnetCompiler  
  ・SUNIE-TagnetResolver(TSM含む)  
    ※ TSM, Tagnet-State-Machine
+ ・SUNIE-PolicyChecker  
 
 SUNIE-Visual-Engine  
  ・SUNIE-Image  
  ・SUNIE-Graphic  
-
-SUNIE-Audio-Engine  
- ・SUNIE-Sound  
- ・SUNIE-Voice  
- ・SUNIE-Music  
-
-SUNIE-Video-Engine  
  ・SUNIE-Clip  
  ・SUNIE-Effect  
  ・SUNIE-Transition  
 
-SUNIE-Draft  
-※ 以下の機能名称は, まだ検討の段階です.  
-SUNIE-Emotion-Engine  
-SUNIE-Robotics-Engine  
-SUNIE-Blockchain-Engine  
-SUNIE-Federation-Engine  
-SUNIE-Webdocs-Engine
+SUNIE-Audio-Engine  
+ ・SUNIE-Sound  
+ ・SUNIE-Voice  
+ ・SUNIE-Music
 
 
 
