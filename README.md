@@ -1,4 +1,4 @@
-# SUNIE - 構想支援・実現型AIアプリケーション
+# SUNIE - アイデア実験型AI-WEBアプリケーション
 ![SUNIEロゴ](./resources/statics/visionmarks/logo.jpg)
 
 
