@@ -1,4 +1,4 @@
-# SUNIE - 教育向けAI-WEBアプリケーション
+# SUNIE - 教育向けAI-WEBアプリケーション(Student & Teacher)
 ![SUNIEロゴ](./resources/statics/visionmarks/logo.jpg)
 
 
