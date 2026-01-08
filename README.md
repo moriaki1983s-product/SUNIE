@@ -17,95 +17,37 @@
 
 
 ## 本件アプリの設計案(SUNIE-Architecture)
-本件アプリは、ルールベースとニューラルネットを混成したハイブリッドAIを目指します。  
+本件アプリは、ルールベースとニューラルネット(LLM)を混成したハイブリッド次世代AI(AGI)を目指します。  
+そのために「ハイブリッド・ウェハ・アーキテクチャ」を採用します。  
 
-**ハイブリッド・ウェハ・アーキテクチャ
-5層の正式名称（提案）**
+**ハイブリッド・ウェハ・アーキテクチャ**
 
-Layer 1：Gate Layer（ゲート層）
-役割：入力検証・RAG引用（ファクト＋ルールのパック化）
+Layer-1 : Gate-Layer (関所層)  
+役割 : 入力検証＆RAG引用(ファクト＋ルールのパック化)  
 
-世界への入口
+Layer-2 : Interpretation-Layer (解釈層)  
+役割 : LLMによるタスクタイプとタスクパラメータの抽出(自然言語を構造化タスクに変換、意図の読み取り、曖昧性の解消) 
 
-情報の境界を守る
+Layer-3 : Reasoning-Layer (推論層)  
+役割 : タスク組み立て＆タスク実行＆結果解析＆解読ヒント(LLMのためのメタ情報)の生成  
 
-事実とルールをセットにして渡す
+Layer-4 : Expression-Layer (表現層)  
+役割：LLMによる応答文生成(意味を言語に変換、文脈に沿った自然な表現、人間に伝わる形に整える)  
 
-Gate は「門」であり「境界」。
-LUMIE（Bore）の入口として完璧に合う。
-
-Layer 2：Interpretation Layer（解釈層）
-役割：LLMによるタスクタイプ・パラメータ抽出
-
-自然言語を構造化タスクに変換
-
-意図の読み取り
-
-曖昧性の解消
-
-SUNIE（Flow）の“読解”の層。
-Interpretation は「意味を読み取る」行為そのもの。
-
-Layer 3：Reasoning Layer（推論層）
-役割：自律タスク組み立て・実行・解析・解読ヒント生成
-
-タスク分解
-
-実行
-
-結果の分析
-
-LLMのためのメタ情報生成
-
-これは AGI の“頭脳”であり、
-LUMIE（Bore）の中心。
-
-Reasoning は「考える」「決める」「構造化する」。
-
-Layer 4：Expression Layer（表現層）
-役割：LLMによる応答文生成
-
-意味を言語に変換
-
-文脈に沿った自然な表現
-
-人間に伝わる形に整える
-
-SUNIE（Flow）の“語り”の層。
-Expression は「流れを言葉にする」。
-
-Layer 5：Validation Layer（検証層）
-役割：出力検証・RAGへのルール書き戻し
-
-出力の安全性・整合性チェック
-
-禁則・仕様の検証
-
-新しいルール（洞察）を RAG に書き戻す
-
-LUMIE（Bore）の出口であり、
-AI の“自己改善”を担う層。
-
-Validation は「確かめる」「正す」「蓄積する」。
-
-アーキテクチャ要約  
-Layer 1	Gate Layer	入力検証・RAG引用	LUMIE  
-Layer 2	Interpretation Layer	タスク抽出	SUNIE  
-Layer 3	Reasoning Layer	自律タスク実行・解析	LUMIE  
-Layer 4	Expression Layer	応答生成	SUNIE  
-Layer 5	Validation Layer	出力検証・ルール書き戻し	LUMIE
+Layer-5 : Validation-Layer（検証層）  
+役割：出力検証＆RAGへのルール書き戻し(出力の安全性と整合性のチェック、新しい知見・洞察であるルールをRAGベースに書き戻す)
 
 
 
 
 ## 本件アプリのコンポーネント構成(SUNIE-System)
 SUNIE-Core-Engine  
- ・SUNIE-InputAnalyzer  
- ・SUNIE-OutputGenerater  
- ・SUNIE-InputEncoder  
- ・SUNIE-OutputDecoder  
- ・SUNIE-TaskResolver  
- ・SUNIE-PolicyChecker  
+ ・SUNIE-InputAnalyzer(仮称)  
+ ・SUNIE-OutputGenerater(仮称)  
+ ・SUNIE-InputEncoder(仮称)  
+ ・SUNIE-OutputDecoder(仮称)  
+ ・SUNIE-TaskResolver(仮称)  
+ ・SUNIE-PolicyChecker(仮称)  
 
 SUNIE-Audio-Engine  
  ・SUNIE-Sound  
