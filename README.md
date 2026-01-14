@@ -1,12 +1,11 @@
-# SUNIE - 教育向けAI-WEBアプリケーション(Student & Teacher)
+# SUNIE - 教育向けAI-WEBアプリケーション(Client & Server)
 ![SUNIEロゴ](./resources/statics/visionmarks/logo.jpg)
 
 
 
 
 ## 本件プロジェクト(2本立てアプリ)の共通の設計思想＆設計哲学
-導入に、別途、外部エンジンや外部サービスなしで、ローカル環境・ローカルネットワークで動作が完結し、  
-「GitHubクローン」と「pip install」をするだけで、誰でも、即、簡単に実行して試せることを目指します。
+「Client(Streamlitベース)」→「Nginx」→「RedisQue or RabbitMQ」→「Celery」→「uvicorn」→「Server(Flaskベース)」。
 
 
 
@@ -62,12 +61,12 @@ Layer-5 : Validation-Layer（検証層）
 
 
 
-## SUNIE-Studentのディレクトリ構造
+## SUNIE-Clientのディレクトリ構造
 
 
 
 
-## SUNIE-Teacherのディレクトリ構造
+## SUNIE-Serverのディレクトリ構造
 `app.py` アプリの実行基点となっているファイルです。  
 `appcore.py` アプリの中核機能を収めたファイルです。  
 `views.py` ビュー関数を収めたファイルです。  
@@ -96,12 +95,12 @@ Layer-5 : Validation-Layer（検証層）
 
 
 
-## SUNIE-Studentの使い方
+## SUNIE-Clientの使い方
 
 
 
 
-## SUNIE-Teacherの使い方
+## SUNIE-Serverの使い方
 
 
 
