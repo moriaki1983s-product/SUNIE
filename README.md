@@ -4,13 +4,13 @@
 
 
 
-## 本件プロジェクト(2本立てアプリ)の共通の設計思想＆設計哲学
-「Client(Streamlitベース)」→「Nginx」→「RedisQue or RabbitMQ」→「Celery」→「uvicorn」→「Server(Flaskベース)」。
+## 本件プロジェクトのシステム構成(SUNIE-System)
+「Client(Streamlitベース)」⇔「Nginx」⇔「RedisQue or RabbitMQ」⇔「Celery」⇔「gunicorn」⇔「Server(Flaskベース)」。
 
 
 
 
-## 本件プロジェクト(2本立てアプリ)の共通の仕様・設計案(SUNIE-Architecture)
+## 本件プロジェクト(2本立てアプリ)の共通原理(SUNIE-Architecture)
 本件アプリは、ルールベースとニューラルネット(LLM)を混成したハイブリッド次世代AI(AGI)を目指します。  
 そのために「ハイブリッド・ウェハ・アーキテクチャ」を採用します。  
 
