@@ -5,7 +5,7 @@
 
 
 ## 本件プロジェクトのシステム構成(SUNIE-System)
-「Client(Streamlitベース)」⇔「Nginx」⇔「RedisQue or RabbitMQ」⇔「Celery」⇔「gunicorn」⇔「Server(Flaskベース)」。
+「Client(Streamlitベース)」⇔「Nginx」⇔「RedisQue」⇔「Celery」⇔「gunicorn」⇔「Server(Flaskベース)」⇔「PostgreSQL」。
 
 
 
