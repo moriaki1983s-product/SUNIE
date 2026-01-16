@@ -7,7 +7,8 @@
 ## 本件プロジェクトのシステム構成(SUNIE-System)
 **技術スタック＆システム全体のデータの流れ**  
 
-「Client(Streamlitベース)」⇔「Nginx」⇔「RedisQue」⇔「Celery」⇔「gunicorn」⇔「Server(Flaskベース)」⇔「PostgreSQL」。
+「Client(Streamlitベース)」⇔「Nginx」⇔「Server(Flask + gunicorn)」⇔  
+「RedisQue」⇔「Celery(Celery-Worker)」⇔「PostgreSQL + pgvector + tsvector」。  
 
 **技術選定の理由**  
 
