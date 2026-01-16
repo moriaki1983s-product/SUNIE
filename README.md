@@ -5,14 +5,14 @@
 
 
 ## 本件プロジェクトのシステム構成(SUNIE-System)
-** 技術スタック＆システム全体のデータの流れ **
+**技術スタック＆システム全体のデータの流れ**
 「Client(Streamlitベース)」⇔「Nginx」⇔「RedisQue」⇔「Celery」⇔「gunicorn」⇔「Server(Flaskベース)」⇔「PostgreSQL」。
 
-** 技術選定の理由 **
-「Nginx」「RedisQue」「Celery」「PostgreSQL」については、将来的なユーザー数増大や、システムの拡張を見越した技術選定です。
-また、「gunicorn」については、Flaskをバックエンドに採用する関係で必然的な選択になっています。
-特に、「Client(Streamlitベース)」「Server(Flaskベース)」については、
-既に、情報科目に組み込まれているPythonだけで、フロントとバックを一貫して記述できることと、
+**技術選定の理由**
+「Nginx」「RedisQue」「Celery」「PostgreSQL」については、将来的なユーザー数増大や、システムの拡張を見越した技術選定です。  
+また、「gunicorn」については、Flaskをバックエンドに採用する関係で必然的な選択になっています。  
+特に、「Client(Streamlitベース)」「Server(Flaskベース)」については、  
+既に、情報科目に組み込まれているPythonだけで、フロントとバックを一貫して記述できることと、  
 日本の各自治体ごとに設置されている教育委員会の審議に通りやすくするために、このような選定としました。
 
 
