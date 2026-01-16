@@ -5,7 +5,7 @@
 
 
 ## 本件プロジェクトのシステム構成(SUNIE-System)
-「Client(SvelteKitベース)」⇔「Nginx」⇔「RedisQue」⇔「Celery」⇔「uvicorn」⇔「Server(FastAPIベース)」⇔「PostgreSQL」。
+「Client(Streamlitベース)」⇔「Nginx」⇔「RedisQue」⇔「Celery」⇔「gunicorn」⇔「Server(Flaskベース)」⇔「PostgreSQL」。
 
 
 
