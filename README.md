@@ -1,5 +1,5 @@
 # SUNIE - 教育向けAI-WEBアプリケーション(Client & Server)
-![SUNIEロゴ](./resources/statics/visionmarks/logo.jpg)
+![SUNIEロゴ](./logo.jpg)
 
 
 
