@@ -7,14 +7,23 @@
 ## 本件プロジェクトのシステム構成(SUNIE-System)
 **技術スタック＆システム全体のデータの流れ**  
 
-「Client(Streamlitベース)」⇔「Nginx」⇔「Server(Flask + gunicorn)」⇔  
+「Client(Streamlit)」⇔「Nginx」⇔「Server(Flask + gunicorn)」⇔  
 「RedisQue」⇔「Celery(Celery-Worker)」⇔「PostgreSQL + pgvector + tsvector」。  
+
+**個々の技術の目的と役割**  
+
+「Client(Streamlit)」＝Web-UI/Web-UX(フロントエンド)。  
+「Nginx」＝非同期Webサーバー。  
+「Server(Flask + gunicorn)」＝API＆ダッシュボード(バックエンド)。  
+「RedisQue」＝メッセージキュー(タスク要求の整理)。  
+「Celery(Celery-Worker)」＝タスクワーカーの生成と管理。  
+「PostgreSQL + pgvector + tsvector」＝データベース(ベクトル検索＆キーワード検索)。  
 
 **技術選定の理由**  
 
 「Nginx」「RedisQue」「Celery」「PostgreSQL」については、将来的なユーザー数増大や、システムの拡張を見越した技術選定です。  
 また、「gunicorn」については、Flaskをバックエンドに採用する関係で必然的な選択になっています。  
-特に、「Client(Streamlitベース)」「Server(Flaskベース)」については、  
+特に、「Client(Streamlit)」「Server(Flask + gunicorn)」については、  
 既に、日本の公立学校の情報科目の中で採用されているPythonだけでフロントとバックを一貫して記述できることと、  
 日本の各自治体ごとに設置されている教育委員会の審議に通りやすくするために、このような選定としました。
 
@@ -59,6 +68,7 @@ Layer-5 : Validation-Layer（検証層）
 ## 本件プロジェクトの最終的な目標
 私の構想・開発する、この次世代AIによって「全世界の教育の向上に資すること」です。  
 「誰もが SUNIEを利用することで 楽しんで教育を受けることができる」。  
+より具体的に言えば、教育分野における理解の支援(学術的な再発見機会の提供)。  
 そのような未来を夢見ています・・・。
 
 
