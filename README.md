@@ -21,7 +21,8 @@
 
 **技術選定の理由**  
 
-「Nginx」「RedisQue」「Celery」「PostgreSQL」については、将来的なユーザー数増大や、システムの拡張を見越した技術選定です。  
+「Nginx」「RedisQue」「Celery」「PostgreSQL」については、  
+将来的なユーザー数増大や、システムの拡張を見越した技術選定です。  
 また、「gunicorn」については、Flaskをバックエンドに採用する関係で必然的な選択になっています。  
 特に、「Client(Streamlit)」「Server(Flask + gunicorn)」については、  
 既に、日本の公立学校の情報科目の中で採用されているPythonだけでフロントとバックを一貫して記述できることと、  
