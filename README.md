@@ -7,18 +7,14 @@
 ## 本件プロジェクトのシステム構成(SUNIE-System)
 **技術スタック＆システム全体のデータの流れ**  
 
-①「Client(Streamlit)」⇔「Nginx」⇔「Server(Flask + gunicorn)」⇔  
-「PostgreSQL + pgvector + tsvector」。  
+①「Client(Streamlit)」⇔「Nginx」⇔  
+「Server(Flask + gunicorn)」⇔「PostgreSQL + pgvector + tsvector」。  
 
-②「Client(Streamlit)」⇔「Nginx」⇔「Server(Flask + gunicorn)」⇔  
-「RedisQue」⇔「Celery(Celery-Worker)」⇔「PostgreSQL + pgvector + tsvector」。  
+②「Client(Streamlit)」⇔「Nginx」⇔「Server(Flask + gunicorn)」⇔「System-Core」。  
+「System-Core」＝「Celery(Celery-Worker)」→「RedisQue」→「PostgreSQL + pgvector + tsvector」→ ...(Coreの外側)。  
 
 ①は、Server側(ダッシュボード)から観た、DB直接アクセスのルート。  
 ②は、Server側から観た、タスク処理に伴うDB間接アクセスのルート。  
-
-※①のダッシュボード機能については、  
-「Redisのキュー状況」「Celeryのタスク状況」「PostgreSQLのテーブル状況」  
-「ログ」「モデルの状態」「ハイブリッド・ウェハの各レイヤー統計」などの情報へのアクセス。  
 
 **個々の技術の目的と役割**  
 
