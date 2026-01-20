@@ -7,8 +7,18 @@
 ## 本件プロジェクトのシステム構成(SUNIE-System)
 **技術スタック＆システム全体のデータの流れ**  
 
-「Client(Streamlit)」⇔「Nginx」⇔「Server(Flask + gunicorn)」⇔  
+①「Client(Streamlit)」⇔「Nginx」⇔「Server(Flask + gunicorn)」⇔  
+「PostgreSQL + pgvector + tsvector」。  
+
+②「Client(Streamlit)」⇔「Nginx」⇔「Server(Flask + gunicorn)」⇔  
 「RedisQue」⇔「Celery(Celery-Worker)」⇔「PostgreSQL + pgvector + tsvector」。  
+
+①は、Server側(ダッシュボード)から観た、DB直接アクセスのルート。  
+②は、Server側から観た、タスク処理に伴うDB間接アクセスのルート。  
+
+※①のダッシュボード機能については、  
+「Redisのキュー状況」「Celeryのタスク状況」「PostgreSQLのテーブル状況」  
+「ログ」「モデルの状態」「ハイブリッド・ウェハの各レイヤー統計」などの情報へのアクセス。  
 
 **個々の技術の目的と役割**  
 
@@ -31,11 +41,11 @@
 
 
 
-## 本件プロジェクト(2本立てアプリ)の共通原理(SUNIE-Architecture)
-本件アプリは、ルールベースとニューラルネット(LLM)を混成したハイブリッド次世代AI(AGI)を目指します。  
-そのために「ハイブリッド・ウェハ・アーキテクチャ」を採用します。  
+## 本件プロジェクトの中心・中核原理(SUNIE-Architecture)
+本件プロジェクトの、いわば「心臓部となる部分(Celery式の推論ワーカー)」は、  
+ルールベースとニューラルネット(LLM)を混成したハイブリッド仕様となっています。  
 
-**ハイブリッド・ウェハ・アーキテクチャ**
+**ハイブリッド・ウェハ・ワーカー・アーキテクチャ**
 
 Layer-1 : Gate-Layer (関所層)  
 役割 : ルールベースによる入力検証＆RAG引用(ファクト＋ルールのパック化)  
