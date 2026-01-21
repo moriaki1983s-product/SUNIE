@@ -10,9 +10,9 @@
 ┌─────────────────────────┐  
   Client(Streamlit)  
 └─────────────────────────┘  
-                 ⇅  
-              Nginx  
-                 ⇅  
+⇅  
+Nginx  
+⇅  
 ┌─────────────────────────┐  
   Server(Flask + gunicorn)  
     - ダッシュボード  
@@ -28,15 +28,15 @@
 ──────────── 非同期処理(System-Core) ────────────  
   
 ┌─────────────────────────┐  
-  Celery-Worker(ハイブリッド・ウェハ・ワーカー)  
+  Celery-Worker  
     - 教材解析(LLM)  
     - 視覚化生成  
     - 生徒の視点解析  
 └─────────────────────────┘  
-                 ⇅  
-              Redis Queue  
-                 ⇅  
-      PostgreSQL ←→ ElasticSearch  
+⇅  
+RedisQueue  
+⇅  
+PostgreSQL ←→ ElasticSearch  
 
 ①「Client(Streamlit)」⇔「Nginx」⇔  
 「Server(Flask + gunicorn)」⇔「PostgreSQL」「ElasticSearch」。  
