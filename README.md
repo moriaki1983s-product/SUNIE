@@ -18,12 +18,12 @@ Nginx
     - ダッシュボード  
     - 即時検索(PostgreSQL/ElasticSearch)  
 └─────────────────────────┘  
-        ⇅                     ⇅  
-  PostgreSQL(倉庫)   ElasticSearch(検索)  
-   - 生徒ログ               - 全文検索(BM25)  
-   - 教材メタ               - ベクトル検索(HNSW)  
-   - 視覚化メタ            - ハイブリッド検索  
-   - 生徒の視点  
+⇅  
+PostgreSQL/ElasticSearch  
+- 生徒ログ    - 全文検索(BM25)  
+- 教材メタ    - ベクトル検索(HNSW)  
+- 視覚化メタ  - ハイブリッド検索  
+- 生徒の視点  
   
 ──────────── 非同期処理(System-Core) ────────────  
   
