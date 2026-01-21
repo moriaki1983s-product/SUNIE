@@ -5,13 +5,44 @@
 
 
 ## 本件プロジェクトのシステム構成(SUNIE-System)
-**技術スタック＆システム全体のデータの流れ**  
+**技術スタック＆システム全体のデータフロー**  
+
+┌─────────────────────────┐  
+  Client(Streamlit)  
+└─────────────────────────┘  
+                 ⇅  
+              Nginx  
+                 ⇅  
+┌─────────────────────────┐  
+  Server(Flask + gunicorn)  
+    - ダッシュボード  
+    - 即時検索(PostgreSQL/ElasticSearch)  
+└─────────────────────────┘  
+        ⇅                     ⇅  
+  PostgreSQL(倉庫)   ElasticSearch(検索)  
+   - 生徒ログ               - 全文検索(BM25)  
+   - 教材メタ               - ベクトル検索(HNSW)  
+   - 視覚化メタ            - ハイブリッド検索  
+   - 生徒の視点  
+  
+──────────── 非同期処理(System-Core) ────────────  
+  
+┌─────────────────────────┐  
+  Celery-Worker(ハイブリッド・ウェハ・ワーカー)  
+    - 教材解析(LLM)  
+    - 視覚化生成  
+    - 生徒の視点解析  
+└─────────────────────────┘  
+                 ⇅  
+              Redis Queue  
+                 ⇅  
+      PostgreSQL ←→ ElasticSearch  
 
 ①「Client(Streamlit)」⇔「Nginx」⇔  
-「Server(Flask + gunicorn)」⇔「PostgreSQL + pgvector + tsvector」。  
+「Server(Flask + gunicorn)」⇔「PostgreSQL」「ElasticSearch」。  
 
 ②「Client(Streamlit)」⇔「Nginx」⇔「Server(Flask + gunicorn)」⇔「System-Core」。  
-「System-Core」＝「Celery(Celery-Worker)」→「RedisQue」→「PostgreSQL + pgvector + tsvector」→ ...(Coreの外側)。  
+「System-Core」＝「Celery(Celery-Worker)」→「RedisQue」→「PostgreSQL」「ElasticSearch」→ ...(Coreの外側)。  
 
 ①は、Server側(ダッシュボード)から観た、DB直接アクセスのルート。  
 ②は、Server側から観た、タスク処理に伴うDB間接アクセスのルート。  
