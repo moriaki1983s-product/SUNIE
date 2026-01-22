@@ -8,52 +8,38 @@
 **技術スタック＆システム全体のデータフロー**  
 
 ┌─────────────────────────┐  
-Client(Streamlit)  
+Client(Streamlit)           ←→ SQLite 
 └─────────────────────────┘  
 ⇅  
 Nginx  
 ⇅  
 ┌─────────────────────────┐  
-Server(Flask + gunicorn)  
-・ダッシュボード  
-・即時検索  
+Server(Flask + gunicorn)    ←→ PostgreSQL/ElasticSearch  
 └─────────────────────────┘  
 ⇅  
-PostgreSQL/ElasticSearch  
-・生徒ログ  
-・教材メタ  
-・視覚化メタ  
-・生徒の視点  
-・キーワード検索(BM25)  
-・ベクトル検索(HNSW)  
-・ハイブリッド検索  
-
 ──────────── 非同期処理(System-Core) ────────────  
   
-┌─────────────────────────┐  
-Celery-Worker  
-・教材解析(LLM)  
-・視覚化生成  
-・生徒の視点解析  
-└─────────────────────────┘  
-⇅  
+Celery  
+↓  
 RedisQueue  
 ⇅  
-PostgreSQL ←→ ElasticSearch  
+┌─────────────────────────┐  
+Celery-Worker               ←→ PostgreSQL/ElasticSearch  
+└─────────────────────────┘  
 
 **制御＆データフローの詳細**
 
-①「Client(Streamlit)」⇔「Nginx」⇔  
-「Server(Flask + gunicorn)」⇔「PostgreSQL」「ElasticSearch」。  
+①「Client(Streamlit)」←→「Nginx」←→  
+「Server(Flask + gunicorn)」←→「PostgreSQL」「ElasticSearch」。  
 
-②「Client(Streamlit)」⇔「Nginx」⇔  
-「Server(Flask + gunicorn)」⇔「System-Core」。  
+②「Client(Streamlit)」←→「Nginx」←→  
+「Server(Flask + gunicorn)」←→「System-Core」。  
 ※「System-Core」＝  
-「Celery(Celery-Worker)」→「RedisQue」→  
-「PostgreSQL」「ElasticSearch」→ ...(Coreの外側)。  
+「Celery」→「RedisQue」←→「Celery-Worker」←→  
+「PostgreSQL」「ElasticSearch」。  
 
-①は、Server側(ダッシュボード)から観た、DB直接アクセスのルート。  
-②は、Server側から観た、タスク処理に伴うDB間接アクセスのルート。  
+①は、Server(ダッシュボード)から観た、DBアクセスのルート。  
+②は、Celery-Workerから観た、タスク処理に伴うDBアクセスのルート。  
 
 **個々の技術の目的と役割**  
 
@@ -61,7 +47,7 @@ PostgreSQL ←→ ElasticSearch
 「Nginx」＝非同期Webサーバー。  
 「Server(Flask + gunicorn)」＝API＆ダッシュボード(バックエンド)。  
 「RedisQue」＝メッセージキュー(タスク要求の整理)。  
-「Celery(Celery-Worker)」＝タスクワーカーの生成と管理。  
+「Celery」＝タスクワーカーの生成と管理。  
 「PostgreSQL」＝保存特化データベース。  
 「ElasticSearch」＝検索特化データベース。
 
