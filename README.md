@@ -8,35 +8,40 @@
 **技術スタック＆システム全体のデータフロー**  
 
 ┌─────────────────────────┐  
-  Client(Streamlit)  
+Client(Streamlit)  
 └─────────────────────────┘  
 ⇅  
 Nginx  
 ⇅  
 ┌─────────────────────────┐  
-  Server(Flask + gunicorn)  
-    - ダッシュボード  
-    - 即時検索(PostgreSQL/ElasticSearch)  
+Server(Flask + gunicorn)  
+・ダッシュボード  
+・即時検索  
 └─────────────────────────┘  
 ⇅  
 PostgreSQL/ElasticSearch  
-- 生徒ログ    - 全文検索(BM25)  
-- 教材メタ    - ベクトル検索(HNSW)  
-- 視覚化メタ  - ハイブリッド検索  
-- 生徒の視点  
-  
+・生徒ログ  
+・教材メタ  
+・視覚化メタ  
+・生徒の視点  
+・キーワード検索(BM25)  
+・ベクトル検索(HNSW)  
+・ハイブリッド検索  
+
 ──────────── 非同期処理(System-Core) ────────────  
   
 ┌─────────────────────────┐  
-  Celery-Worker  
-    - 教材解析(LLM)  
-    - 視覚化生成  
-    - 生徒の視点解析  
+Celery-Worker  
+・教材解析(LLM)  
+・視覚化生成  
+・生徒の視点解析  
 └─────────────────────────┘  
 ⇅  
 RedisQueue  
 ⇅  
 PostgreSQL ←→ ElasticSearch  
+
+**制御＆データフローの詳細**
 
 ①「Client(Streamlit)」⇔「Nginx」⇔  
 「Server(Flask + gunicorn)」⇔「PostgreSQL」「ElasticSearch」。  
@@ -54,7 +59,8 @@ PostgreSQL ←→ ElasticSearch
 「Server(Flask + gunicorn)」＝API＆ダッシュボード(バックエンド)。  
 「RedisQue」＝メッセージキュー(タスク要求の整理)。  
 「Celery(Celery-Worker)」＝タスクワーカーの生成と管理。  
-「PostgreSQL + pgvector + tsvector」＝データベース(ベクトル検索＆キーワード検索)。  
+「PostgreSQL」＝保存特化データベース。  
+「ElasticSearch」＝検索特化データベース。
 
 **技術選定の理由**  
 
