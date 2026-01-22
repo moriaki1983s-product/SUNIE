@@ -8,24 +8,23 @@
 **技術スタック＆システム全体のデータフロー**  
 
 ┌─────────────────────────┐  
-Client(Streamlit)           ←→ SQLite 
+Client(Streamlit) ←→ SQLite  
 └─────────────────────────┘  
 ⇅  
 Nginx  
 ⇅  
-┌─────────────────────────┐  
-Server(Flask + gunicorn)    ←→ PostgreSQL/ElasticSearch  
-└─────────────────────────┘  
+┌───────────────────────────────────────┐  
+Server(Flask) ←→ PostgreSQL/ElasticSearch  
+└───────────────────────────────────────┘  
 ⇅  
-──────────── 非同期処理(System-Core) ────────────  
-  
+──────────── System-Core ────────────  
 Celery  
 ↓  
 RedisQueue  
 ⇅  
-┌─────────────────────────┐  
-Celery-Worker               ←→ PostgreSQL/ElasticSearch  
-└─────────────────────────┘  
+┌───────────────────────────────────────┐  
+Celery-Worker ←→ PostgreSQL/ElasticSearch  
+└───────────────────────────────────────┘  
 
 **制御＆データフローの詳細**
 
