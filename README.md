@@ -46,8 +46,11 @@ PostgreSQL ←→ ElasticSearch
 ①「Client(Streamlit)」⇔「Nginx」⇔  
 「Server(Flask + gunicorn)」⇔「PostgreSQL」「ElasticSearch」。  
 
-②「Client(Streamlit)」⇔「Nginx」⇔「Server(Flask + gunicorn)」⇔「System-Core」。  
-「System-Core」＝「Celery(Celery-Worker)」→「RedisQue」→「PostgreSQL」「ElasticSearch」→ ...(Coreの外側)。  
+②「Client(Streamlit)」⇔「Nginx」⇔  
+「Server(Flask + gunicorn)」⇔「System-Core」。  
+※「System-Core」＝  
+「Celery(Celery-Worker)」→「RedisQue」→  
+「PostgreSQL」「ElasticSearch」→ ...(Coreの外側)。  
 
 ①は、Server側(ダッシュボード)から観た、DB直接アクセスのルート。  
 ②は、Server側から観た、タスク処理に伴うDB間接アクセスのルート。  
@@ -64,8 +67,8 @@ PostgreSQL ←→ ElasticSearch
 
 **技術選定の理由**  
 
-「Nginx」「RedisQue」「Celery」「PostgreSQL」については、  
-将来的なユーザー数増大や、システムの拡張を見越した技術選定です。  
+「Nginx」「RedisQue」「Celery」「PostgreSQL」「ElasticSearch」については、  
+将来的なユーザー数の増大や、システムの拡張を見越した技術選定です。  
 また、「gunicorn」については、Flaskをバックエンドに採用する関係で必然的な選択になっています。  
 特に、「Client(Streamlit)」「Server(Flask + gunicorn)」については、  
 既に、日本の公立学校の情報科目の中で採用されているPythonだけでフロントとバックを一貫して記述できることと、  
@@ -126,46 +129,12 @@ Layer-5 : Validation-Layer（検証層）
 
 
 
-## SUNIE-Clientのディレクトリ構造
+## SUNIEのディレクトリ構造
 
 
 
 
-## SUNIE-Serverのディレクトリ構造
-`app.py` アプリの実行基点となっているファイルです。  
-`appcore.py` アプリの中核機能を収めたファイルです。  
-`views.py` ビュー関数を収めたファイルです。  
-`forms.py` フォームクラスを収めたファイルです。  
-`models.py` モデルクラスを収めたファイルです。  
-`constants.py` アプリ内で参照している定数を収めたファイルです。  
-`configurations.py` アプリ内で参照している初期設定値を収めたファイルです。  
-`app.db` データベースのファイルです。※このファイルはアプリ実行時に自動的に作成されます。  
-`appenv.ini` アプリ内で参照している環境設定値を収めたファイルです。※このファイルはアプリ実行時に自動的に作成されます。  
-`appsec.ini` アプリ内で参照している機密設定値を収めたファイルです。※このファイルはアプリ実行時に自動的に作成されます。  
-`app.log` アプリの実行ログを収めたファイルです。※このファイルはアプリ実行時に自動的に作成されます。  
-`.env` dot-envが参照するファイルです。  
-`templates` HTMLテンプレートを収めたフォルダーです。  
-`resources` JS＆CSS＆ファビコン＆テンプレート背景画像等を収めたフォルダーです。  
-`temporaries` アプリが実行時に使用する一時ファイルを収めたフォルダーです。  
-`modules` アプリが実行時に呼び出すモジュールを収めたフォルダーです。  
-`models` アプリが実行時に呼び出すAIモデルを収めたフォルダーです。  
-`migrations` アプリのマイグレーションコードを収めたフォルダーです。  
-`tests` アプリのテストコードを収めたフォルダーです。  
-`tools` アプリの利用・運用を効率化するためのツールを収めたフォルダーです。  
-`dictionaries` アプリのバンドル辞書ファイルを収めたフォルダーです。  
-`manuals` 各種マニュアルやアプリの関連資料を収めたフォルダーです。利用・運用上、困ったことがあったら参照してください。  
-`licenses` アプリが内部で使用している各種ライブラリーに付帯するライセンスファイルを収めたフォルダーです。  
-`extras(others)` Pythonコマンドの使用法等のマニュアルを収めたフォルダーです。このプロジェクトのオマケです。
-
-
-
-
-## SUNIE-Clientの使い方
-
-
-
-
-## SUNIE-Serverの使い方
+## SUNIEの使い方
 
 
 
