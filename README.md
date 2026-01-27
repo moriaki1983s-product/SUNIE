@@ -7,7 +7,7 @@
 ## 本件プロジェクトのシステム構成(SUNIE-System)
 **技術スタック＆システム全体のデータフロー**  
 
-![SUNIEダイアグラム](./system_diagram.jpg)
+![SUNIEダイアグラム](./diagram.jpg)
 
 
 Client(Streamlit) ←→ SQLite  
