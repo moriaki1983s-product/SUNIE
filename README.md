@@ -103,6 +103,22 @@ Layer-5 : Validation-Layer（検証層）
 
 
 ## SUNIEのディレクトリ構造
+SUNIE/  
+├── client/  
+│   ├── app.py  
+│   ├── requirements.txt  
+│   └── Dockerfile  
+│  
+├── server/  
+│   ├── app.py  
+│   ├── requirements.txt  
+│   └── Dockerfile  
+│
+├── nginx/  
+│   └── nginx.conf  
+│  
+├── docker-compose.yml  
+└── README.md  
 
 
 
