@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use SUNIE in your research, development, or educational work, please cite this repository."
+title: "SUNIE: Structured Understanding & Natural Inference Engine"
+abstract: >
+  SUNIE is an educational AI framework designed to unify structured learning,
+  transparent inference, and meaning-based knowledge representation. It provides
+  a client-server architecture with Streamlit, Flask, Celery, Redis, and Elasticsearch,
+  enabling modular reasoning and scalable educational applications.
+
+authors:
+  - family-names: Morishita
+    given-names: Akihiro
+    # ORCID を持っていればここに追加（任意）
+    # orcid: "https://orcid.org/0000-0000-0000-0000"
+
+version: "0.1.0"
+date-released: "2025-01-01"
+
+repository-code: "https://github.com/moriaki1983s-product/SUNIE"
+license: "MIT"
+
+keywords:
+  - educational AI
+  - inference engine
+  - structured learning
+  - knowledge representation
+  - SUNIE
+  - reasoning transparency
+  - AI architecture
+
+preferred-citation:
+  type: software
+  authors:
+    - family-names: Morishita
+      given-names: Akihiro
+  title: "SUNIE: Structured Understanding & Natural Inference Engine"
+  year: 2025
+  url: "https://github.com/moriaki1983s-product/SUNIE"
