@@ -112,22 +112,24 @@ SUNIE/
 ├── server/  
 │   ├── app.py  
 │   ├── celery_app.py  
-│   ├── task/  
+│   ├── tasks/  
 │   │   ├── __init__.py  
-│   │   └── task.py  
+│   │   └── system_task.py  
 │   └── requirements.txt  
 │  
 ├── worker/  
-│ ├── Dockerfile  
-│ └── start-worker.sh  
+│   ├── Dockerfile  
+│   └── start-worker.sh  
 │  
 ├── nginx/  
 │   └── nginx.conf  
 │  
+├── logo.jpg  
+├── diagram.jpg  
 ├── docker-compose.yml  
 ├── CITATION.cff  
+├── LICENSE.md  
 └── README.md
-
 
 
 ## SUNIEの使い方
