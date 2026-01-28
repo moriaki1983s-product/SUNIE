@@ -132,7 +132,14 @@ SUNIE/
 └── README.md
 
 
-## SUNIEの使い方
+
+## 本件プロジェクトの導入方法
+[SUNIEガイド1](INSTALL_GUIDE.md)
+
+
+
+## 本件プロジェクトの利用方法
+[SUNIEガイド2](USE_GUIDE.md)
 
 
 
