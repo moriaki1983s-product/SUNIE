@@ -184,7 +184,7 @@ input[type="file"]::file-selector-button {
     display: none;
 }
 
-@media screen and (max-width: 1500px) {
+@media screen and (max-width: 1000px) {
     .display-depend-on-viewport {
         display: none;
     }
