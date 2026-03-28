@@ -12,25 +12,25 @@ Client(Streamlit) ←→ SQLite
 ⇅  
 Nginx  
 ⇅  
-Server(Flask) ←→ PostgreSQL/ElasticSearch  
+Server(Flask) ←→ PostgreSQL/Memgraph  
 ⇅  
 ──────────── System-Core ────────────  
 Celery  
 ↓  
-RedisQueue  
+Redis/RedisQueue  
 ⇅  
-Celery-Worker ←→ PostgreSQL/ElasticSearch  
+Celery-Worker ←→ PostgreSQL/Memgraph  
 
 **制御＆データフローの詳細**
 
 ①「Client(Streamlit)」←→「Nginx」←→  
-「Server(Flask + gunicorn)」←→「PostgreSQL」「ElasticSearch」。  
+「Server(Flask + gunicorn)」←→「PostgreSQL」「Memgraph」。  
 
 ②「Client(Streamlit)」←→「Nginx」←→  
 「Server(Flask + gunicorn)」←→「System-Core」。  
 ※「System-Core」＝  
 「Celery」→「RedisQue」←→「Celery-Worker」←→  
-「PostgreSQL」「ElasticSearch」。  
+「PostgreSQL」「Memgraph」。  
 
 ①は、Server(ダッシュボード)から観た、DBアクセスのルート。  
 ②は、Celery-Workerから観た、タスク処理に伴うDBアクセスのルート。  
@@ -42,12 +42,12 @@ Celery-Worker ←→ PostgreSQL/ElasticSearch
 「Server(Flask + gunicorn)」＝API＆ダッシュボード(バックエンド)。  
 「RedisQue」＝メッセージキュー(タスク要求の整理)。  
 「Celery」＝タスクワーカーの生成と管理。  
-「PostgreSQL」＝保存特化データベース。  
-「ElasticSearch」＝検索特化データベース。
+「PostgreSQL」＝学習・ログイン履歴保存特化データベース。  
+「Memgraph」＝教材データ検索特化データベース。
 
 **技術選定の理由**  
 
-「Nginx」「RedisQue」「Celery」「PostgreSQL」「ElasticSearch」については、  
+「Nginx」「Redis」「RedisQue」「Celery」「PostgreSQL」「Memgraph」については、  
 将来的なユーザー数の増大や、システムの拡張を見越した技術選定です。  
 また、「gunicorn」については、Flaskをバックエンドに採用する関係で必然的な選択になっています。  
 特に、「Client(Streamlit)」「Server(Flask + gunicorn)」については、  
@@ -128,7 +128,12 @@ SUNIE/
 ├── diagram.jpg  
 ├── docker-compose.yml  
 ├── CITATION.cff  
+├── CONTRIBUTING.md  
 ├── LICENSE.md  
+├── INSTALL.md  
+├── SETUP.md  
+├── USE.md  
+├── DEVELOP.md  
 └── README.md
 
 
@@ -138,8 +143,18 @@ SUNIE/
 
 
 
+## 本件プロジェクトの立上げ方法
+[SUNIEガイド2](SETUP_GUIDE.md)
+
+
+
 ## 本件プロジェクトの利用方法
-[SUNIEガイド2](USE_GUIDE.md)
+[SUNIEガイド3](USE_GUIDE.md)
+
+
+
+## 本件プロジェクトの開発方法
+[SUNIEガイド4](DEVELOP_GUIDE.md)
 
 
 
