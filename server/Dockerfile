@@ -7,16 +7,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-
-COPY requirements.txt .
-
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# アプリ本体をコピー
+COPY . /app
 
 EXPOSE 5000
 
 # FastAPI なら uvicorn、Flask なら python app.py
 # app.py 内で FastAPI or Flask を切り替える構成でも対応可能
-CMD ["python", "app.py"]
+CMD ["python3", "app.py"]

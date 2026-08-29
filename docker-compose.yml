@@ -27,11 +27,9 @@ services:
     depends_on:
       - db
       - redis
-      - elasticsearch
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/sunie
       - REDIS_URL=redis://redis:6379/0
-      - ES_URL=http://elasticsearch:9200
     networks:
       - sunie-net
 
@@ -46,11 +44,9 @@ services:
       - sunie-server
       - redis
       - db
-      - elasticsearch
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/sunie
       - REDIS_URL=redis://redis:6379/0
-      - ES_URL=http://elasticsearch:9200
     networks:
       - sunie-net
 
@@ -100,4 +96,3 @@ networks:
 volumes:
   sunie-db-data:
   redis-data:
-  es-data:
