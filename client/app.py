@@ -345,8 +345,7 @@ def execute_chain_db_driven(initial_status):
 def main():
     init_db()
 
-    st.title("🍏 関数まで DB に完全移行した NoLLM 状態遷移エンジン PoC")
-    st.write("属性次元・関数・条件分岐・ロタリー・関数チェーンをすべて SQLite に持たせ、Python は実行エンジンだけになります。")
+    st.title("🍏 状態遷移エンジン PoC")
 
     if "apple_status" not in st.session_state:
         st.session_state.apple_status = load_initial_status()
@@ -354,11 +353,11 @@ def main():
     st.subheader("1. 現在の状態（属性次元）")
     st.json(st.session_state.apple_status)
 
-    if st.button("🔥 リンゴを加熱する（DB定義チェーンを実行）"):
+    if st.button("🔥 リンゴを加熱する（チェーンを実行）"):
         final_status, logs = execute_chain_db_driven(st.session_state.apple_status)
         st.session_state.apple_status = final_status
 
-        st.subheader("2. 実行ログ（完全 DB 駆動・説明可能）")
+        st.subheader("2. 実行ログ（説明可能）")
         for log in logs:
             ts = time.strftime("%H:%M:%S", time.localtime(log["timestamp"]))
             st.markdown(f"- `{ts}` {log['message']}")

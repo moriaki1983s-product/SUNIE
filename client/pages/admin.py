@@ -126,7 +126,7 @@ def delete_lottery_rule(rule_id):
 # UI
 # -----------------------------
 st.title("🛠️ NoLLM 管理画面（DB 駆動ロジック編集）")
-st.write("関数・チェーン・ロタリーを GUI で編集できます。")
+st.write("関数・チェーン・ロタリーを GUI で編集します。")
 
 tab1, tab2, tab3 = st.tabs(["関数（Functions）", "関数チェーン（Chain）", "ロタリー（Lottery）"])
 

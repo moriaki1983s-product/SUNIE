@@ -65,7 +65,7 @@ app.register_error_handler(HTTPException, http_exception_handler)
 app.permanent_session_lifetime = timedelta(minutes=consts.SESSION_TIME)
 
 # FlaskとTalismanを連携させる.
-Talisman(app, content_security_policy=consts.CSP, force_https=consts.FORCE_HTTPS)
+#Talisman(app, content_security_policy=consts.CSP, force_https=consts.FORCE_HTTPS)
 
 # FlaskとSQLAlchemyを連携させる.
 db = SQLAlchemy(app)
@@ -80,4 +80,4 @@ with app.app_context():
 
 # 当該モジュールが実行起点かどうかを確認した上でFlask本体を起動する.
 if __name__ == "__main__":
-    app.run()
+    app.run(host="0.0.0.0", port=5000, debug=True)
