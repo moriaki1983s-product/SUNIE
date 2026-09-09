@@ -1,7 +1,195 @@
+![SUNIE-LOGO](./logo.jpg)
+
+
+SUNIE – AI Web Application for Education (Client & Server)
+
+System Architecture of This Project (SUNIE-System)
+
+Technology Stack & Overall Data Flow
+
+Client (Streamlit) ←→ SQLite
+⇅
+Nginx
+⇅
+Server (Flask) ←→ PostgreSQL / Memgraph
+⇅
+──────────── System-Core ────────────
+Celery
+↓
+Redis / RedisQueue
+⇅
+Celery Worker ←→ PostgreSQL / Memgraph
+
+Detailed Control & Data Flow
+
+Client (Streamlit) ←→ Nginx ←→
+Server (Flask + gunicorn) ←→ PostgreSQL / Memgraph
+
+Client (Streamlit) ←→ Nginx ←→
+Server (Flask + gunicorn) ←→ System-Core  
+※ System-Core =
+Celery → RedisQueue ←→ Celery Worker ←→
+PostgreSQL / Memgraph
+
+Route ① represents the DB access path from the perspective of the Server (dashboard).
+Route ② represents the DB access path associated with task execution from the perspective of Celery Workers.
+
+Purpose and Role of Each Technology
+Client (Streamlit) — Web UI / Web UX (Frontend)
+Nginx — Asynchronous web server
+Server (Flask + gunicorn) — API & dashboard (Backend)
+RedisQueue — Message queue (task request management)
+Celery — Task worker generation and management
+PostgreSQL — Database specialized for learning and login history
+Memgraph — Database specialized for educational material graph search
+
+Reasons for Technology Selection
+Technologies such as Nginx, Redis, RedisQueue, Celery, PostgreSQL, and Memgraph were chosen with future scalability and increased user volume in mind.
+The use of gunicorn is a natural consequence of adopting Flask as the backend.
+
+Particularly, Client (Streamlit) and Server (Flask + gunicorn) were selected because:
+
+Both frontend and backend can be implemented entirely in Python, which is already widely used in Japanese public-school information science curricula.
+
+This makes the system easier to pass through the review processes of local Boards of Education across Japan.
+
+Core Principle of This Project (SUNIE-Architecture)
+The “heart” of this project—the Celery-based inference worker—is a hybrid system combining rule-based logic and neural networks (LLM).
+
+Hybrid AI Co-Worker (SUNIE / LUMIE System)
+Start
+—---------------------
+↓
+↓
+Input Validation Layer  
+Eliminates meaningless, inappropriate, or system-disruptive input
+↓
+↓
+Input Encoding Layer (Natural Language Ambiguity Processing)  
+Transforms ambiguous natural language (Gödel encoding, Cantor encoding, etc.)
+Extracts user intent
+Generates structured requests for the core
+↓
+↓
+Simulation & Inference Core (Structured Execution of Simulation & Reasoning)  
+Adjusts rotary mechanisms based on LLM-driven estimation of user psychology
+Selects conceptual data and processing code based on rotary results
+Graph-based search and retrieval of conceptual data
+Relational search and retrieval of conceptual data processing code
+Validity and soundness verification of conceptual data
+Safety verification of conceptual data processing code
+Constructs Gödelian & Cantorian chains (simulation & inference)
+Executes Gödelian & Cantorian chains
+Records audit logs in relational storage
+Generates structured results (reports) for downstream layers
+↓
+↓
+Output Decoding Layer (Natural Language Conversion of Structured Results)  
+Converts artificial language into natural language (reverse Gödel/Cantor encoding, etc.)
+Generates explanations and answers
+↓
+↓
+Output Validation Layer  
+Eliminates meaningless or inappropriate output that may confuse users
+↓
+↓
+—---------------------
+End
+
+Key Point I Want to Emphasize Most
+Through the technical ideas behind this next-generation AI I am designing,
+I aim to solve long-standing challenges such as:
+
+The Frame Problem
+
+The Hallucination Problem
+
+The Black Box Problem
+
+And ultimately realize an AI that can perceive, think, judge, and express itself like a human being.
+
+Ultimate Goal of This Project
+My goal is for this next-generation AI to contribute to the improvement of education worldwide.
+I envision a future where anyone can enjoy learning simply by using SUNIE.
+
+More concretely, SUNIE aims to support understanding in the educational domain
+and provide opportunities for academic rediscovery.
+That is the future I dream of.
+
+To Those Who Are Following the Development Progress
+The logo of this project was designed with the image of “a sun illuminating the sea.”  
+I am deeply grateful to everyone who has been watching over the progress of this project.
+I hope you will continue to support SUNIE warmly as it evolves.
+
+Directory Structure of SUNIE
+コード
+SUNIE/
+├── client/
+│   ├── app.py
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── server/
+│   ├── app.py
+│   ├── celery_app.py
+│   ├── tasks/
+│   │   ├── __init__.py
+│   │   └── system_task.py
+│   └── requirements.txt
+│
+├── worker/
+│   ├── Dockerfile
+│   └── start-worker.sh
+│
+├── nginx/
+│   └── nginx.conf
+│
+├── logo.jpg
+├── diagram.jpg
+├── docker-compose.yml
+├── CITATION.cff
+├── CONTRIBUTING.md
+├── LICENSE.md
+├── INSTALL.md
+├── SETUP.md
+├── USE.md
+├── DEVELOP.md
+└── README.md
+
+Installation Guide for This Project
+
+Startup Guide for This Project
+
+Usage Guide for This Project
+
+Development Guide for This Project
+
+License & Disclaimer
+These codes are released under the MIT License.
+For details, please refer to the LICENSE file.
+
+Modification: Allowed
+
+Reuse: Allowed
+
+Redistribution: Allowed
+
+The contents of the code files are provided solely for informational purposes.
+Any operation based on the code must be performed at your own responsibility and judgment.
+While accuracy is pursued as much as possible, the author assumes no responsibility for any outcomes resulting from the use of the code.
+Thank you for your understanding.
+
+Creator / Developer
+Akihiro Morishita (moriaki1983)
+
+Contact
+moriaki1983@outlook.jp
+
+
+
+
+
 # SUNIE - 教育向けAI-WEBアプリケーション(Client & Server)
-![SUNIEロゴ](./logo.jpg)
-
-
 
 ## 本件プロジェクトのシステム構成(SUNIE-System)
 [SUNIEダイアグラム](./diagram.jpg)
@@ -58,42 +246,42 @@ Celery-Worker ←→ PostgreSQL/Memgraph
 本件プロジェクトの、いわば「心臓部となる部分」(Celery式の推論ワーカー)は、  
 ルールベースとニューラルネット(LLM)を混成したハイブリッド仕様となっています。  
 
-**ハイブリッドAIコワーカー(SUNIEシステム)**
+**ハイブリッドAIコワーカー(SUNIE/LUMIE System)**  
 
 開始
 —---------------------
 ↓
 ↓
 入力検証層(入力の検証)
-- 無意味・不適切な語句、システムを混乱させるような入力の排除
+無意味・不適切な語句、システムを混乱させるような入力の排除
 ↓
 ↓
 入力エンコーディング層(自然言語の曖昧性処理)
-- 曖昧な自然言語の変換(ゲーデル符号化＆カントール符号化 等)
-- ユーザー意図の抽出
-- 後続のコアに渡すための構造化要求の生成
+曖昧な自然言語の変換(ゲーデル符号化＆カントール符号化 等)
+ユーザー意図の抽出
+後続のコアに渡すための構造化要求の生成
 ↓
 ↓
 シミュレーションと推論コア(シミュレーションと推論の構造化実行)
-- LLMによるユーザー心理の推定・評価に基づくロタリーの調整
-- ロタリーの実施結果に基づく概念データとその処理コードの選定
-- 要求に含まれる概念データのグラフベース検索・取得
-- 概念データ処理コードのリレーショナルベース検索・取得
-- 概念データの有効性・妥当性検証
-- 安全ステージでの概念データ処理コードの安全性検証
-- ゲーデリアン＆カントーリアンに基づくチェーン(シミュレーション＆推論)の構成
-- ゲーデリアン＆カントーリアンに基づくチェーン(シミュレーション＆推論)の実行
-- 監査ログのリレーショナルベース記録・保存
-- 後続の層に渡すための構造化結果(レポート)の生成
+LLMによるユーザー心理の推定・評価に基づくロタリーの調整
+ロタリーの実施結果に基づく概念データとその処理コードの選定
+要求に含まれる概念データのグラフベース検索・取得
+概念データ処理コードのリレーショナルベース検索・取得
+概念データの有効性・妥当性検証
+安全ステージでの概念データ処理コードの安全性検証
+ゲーデリアン＆カントーリアンに基づくチェーン(シミュレーション＆推論)の構成
+ゲーデリアン＆カントーリアンに基づくチェーン(シミュレーション＆推論)の実行
+監査ログのリレーショナルベース記録・保存
+後続の層に渡すための構造化結果(レポート)の生成
 ↓
 ↓
 出力復号層(構造化結果の自然言語化)
-- 明確な人工言語の変換(逆ゲーデル符号化＆逆カントール符号化 等)
-- 説明・回答の生成
+明確な人工言語の変換(逆ゲーデル符号化＆逆カントール符号化 等)
+説明・回答の生成
 ↓
 ↓
 出力検証層(出力の検証)
-- 無意味・不適切な語句、ユーザーを混乱させるような出力の排除
+無意味・不適切な語句、ユーザーを混乱させるような出力の排除
 ↓
 ↓
 —---------------------
