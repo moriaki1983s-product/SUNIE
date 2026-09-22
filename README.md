@@ -312,37 +312,37 @@ LLMによるユーザー心理の推定・評価に基づくロタリーの調�
 
 
 ## SUNIEのディレクトリ構造
-SUNIE/  
-├── client/  
-│   ├── app.py  
-│   ├── requirements.txt  
-│   └── Dockerfile  
-│  
-├── server/  
-│   ├── app.py  
-│   ├── celery_app.py  
-│   ├── tasks/  
-│   │   ├── __init__.py  
-│   │   └── system_task.py  
-│   └── requirements.txt  
-│  
-├── worker/  
-│   ├── Dockerfile  
-│   └── start-worker.sh  
-│  
-├── nginx/  
-│   └── nginx.conf  
-│  
-├── logo.jpg  
-├── diagram.jpg  
-├── docker-compose.yml  
-├── CITATION.cff  
-├── CONTRIBUTING.md  
-├── LICENSE.md  
-├── INSTALL.md  
-├── SETUP.md  
-├── USE.md  
-├── DEVELOP.md  
+SUNIE/
+├── client/
+│   ├── app.py
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── server/
+│   ├── app.py
+│   ├── celery_app.py
+│   ├── tasks/
+│   │   ├── __init__.py
+│   │   └── system_task.py
+│   └── requirements.txt
+│
+├── worker/
+│   ├── Dockerfile
+│   └── start-worker.sh
+│
+├── nginx/
+│   └── nginx.conf
+│
+├── logo.jpg
+├── diagram.jpg
+├── docker-compose.yml
+├── CITATION.cff
+├── CONTRIBUTING.md
+├── LICENSE.md
+├── INSTALL.md
+├── SETUP.md
+├── USE.md
+├── DEVELOP.md
 └── README.md
 
 
