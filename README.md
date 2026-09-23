@@ -1,9 +1,13 @@
 ![SUNIE-LOGO](./logo.jpg)
 
 
-SUNIE – AI Web Application for Education (Client & Server)
+# SUNIE – AI Web Application for Education (Client & Server)
 
-System Architecture of This Project (SUNIE-System)
+
+
+
+
+## System Architecture of This Project (SUNIE-System)
 
 Technology Stack & Overall Data Flow
 
@@ -34,7 +38,7 @@ PostgreSQL / Memgraph
 Route ① represents the DB access path from the perspective of the Server (dashboard).
 Route ② represents the DB access path associated with task execution from the perspective of Celery Workers.
 
-Purpose and Role of Each Technology
+## Purpose and Role of Each Technology
 Client (Streamlit) — Web UI / Web UX (Frontend)
 Nginx — Asynchronous web server
 Server (Flask + gunicorn) — API & dashboard (Backend)
@@ -43,7 +47,7 @@ Celery — Task worker generation and management
 PostgreSQL — Database specialized for learning and login history
 Memgraph — Database specialized for educational material graph search
 
-Reasons for Technology Selection
+## Reasons for Technology Selection
 Technologies such as Nginx, Redis, RedisQueue, Celery, PostgreSQL, and Memgraph were chosen with future scalability and increased user volume in mind.
 The use of gunicorn is a natural consequence of adopting Flask as the backend.
 
@@ -53,10 +57,10 @@ Both frontend and backend can be implemented entirely in Python, which is alread
 
 This makes the system easier to pass through the review processes of local Boards of Education across Japan.
 
-Core Principle of This Project (SUNIE-Architecture)
+## Core Principle of This Project (SUNIE-Architecture)
 The “heart” of this project—the Celery-based inference worker—is a hybrid system combining rule-based logic and neural networks (LLM).
 
-Hybrid AI Co-Worker (SUNIE / LUMIE System)
+## Hybrid AI Co-Worker (SUNIE / LUMIE System)
 Start
 —---------------------
 ↓
@@ -96,7 +100,7 @@ Eliminates meaningless or inappropriate output that may confuse users
 —---------------------
 End
 
-Key Point I Want to Emphasize Most
+## Key Point I Want to Emphasize Most
 Through the technical ideas behind this next-generation AI I am designing,
 I aim to solve long-standing challenges such as:
 
@@ -108,7 +112,7 @@ The Black Box Problem
 
 And ultimately realize an AI that can perceive, think, judge, and express itself like a human being.
 
-Ultimate Goal of This Project
+## Ultimate Goal of This Project
 My goal is for this next-generation AI to contribute to the improvement of education worldwide.
 I envision a future where anyone can enjoy learning simply by using SUNIE.
 
@@ -116,12 +120,12 @@ More concretely, SUNIE aims to support understanding in the educational domain
 and provide opportunities for academic rediscovery.
 That is the future I dream of.
 
-To Those Who Are Following the Development Progress
+## To Those Who Are Following the Development Progress
 The logo of this project was designed with the image of “a sun illuminating the sea.”  
 I am deeply grateful to everyone who has been watching over the progress of this project.
 I hope you will continue to support SUNIE warmly as it evolves.
 
-Directory Structure of SUNIE
+## Directory Structure of SUNIE
 コード
 SUNIE/
 ├── client/
@@ -156,15 +160,27 @@ SUNIE/
 ├── DEVELOP.md
 └── README.md
 
-Installation Guide for This Project
+## Installation Guide for This Project
+[SUNIE-GUIDE1](INSTALL.md)
 
-Startup Guide for This Project
 
-Usage Guide for This Project
 
-Development Guide for This Project
+## Startup Guide for This Project
+[SUNIE-GUIDE2](SETUP.md)
 
-License & Disclaimer
+
+
+## Usage Guide for This Project
+[SUNIE-GUIDE3](USE.md)
+
+
+
+## Development Guide for This Project
+[SUNIE-GUIDE4](DEVELOP.md)
+
+
+
+## License & Disclaimer
 These codes are released under the MIT License.
 For details, please refer to the LICENSE file.
 
@@ -179,13 +195,15 @@ Any operation based on the code must be performed at your own responsibility and
 While accuracy is pursued as much as possible, the author assumes no responsibility for any outcomes resulting from the use of the code.
 Thank you for your understanding.
 
-Creator / Developer
+## Creator / Developer
 Akihiro Morishita (moriaki1983)
 
-Contact
+## Contact
 moriaki1983@outlook.jp
 
 
+
+---
 
 
 
@@ -348,22 +366,22 @@ SUNIE/
 
 
 ## 本件プロジェクトの導入方法
-[SUNIEガイド1](INSTALL.md)
+[SUNIE-GUIDE1](INSTALL.md)
 
 
 
 ## 本件プロジェクトの立上げ方法
-[SUNIEガイド2](SETUP.md)
+[SUNIE-GUIDE2](SETUP.md)
 
 
 
 ## 本件プロジェクトの利用方法
-[SUNIEガイド3](USE.md)
+[SUNIE-GUIDE3](USE.md)
 
 
 
 ## 本件プロジェクトの開発方法
-[SUNIEガイド4](DEVELOP.md)
+[SUNIE-GUIDE4](DEVELOP.md)
 
 
 
