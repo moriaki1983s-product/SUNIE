@@ -1,6 +1,8 @@
 # **SUNIE / LUMIE – Product Philosophy**
 
----
+
+
+
 
 ## **1. The world is not a content platform; the human inner world is the true platform**  
 The world we live in does not automatically provide meaning or value.  
@@ -90,7 +92,9 @@ of these projects.
 
 ## **SUNIE / LUMIE - プロダクト哲学**  
 
----
+
+
+
 
 ## **1. 世界はコンテンツ・プラットフォームではなく、人の内面こそが真のプラットフォームである**  
 私達が生きる世界は、意味や価値を自動的に提供してくれる場ではない。  
