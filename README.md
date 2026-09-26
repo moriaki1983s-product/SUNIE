@@ -9,56 +9,74 @@
 
 ## System Architecture of This Project (SUNIE-System)
 
-Technology Stack & Overall Data Flow
+![SUNIE-DIAGRAM](./diagram.jpg)
 
-Client (Streamlit) ←→ SQLite
-⇅
-Nginx
-⇅
-Server (Flask) ←→ PostgreSQL / Memgraph
-⇅
-──────────── System-Core ────────────
-Celery
-↓
-Redis / RedisQueue
-⇅
-Celery Worker ←→ PostgreSQL / Memgraph
 
-Detailed Control & Data Flow
 
-Client (Streamlit) ←→ Nginx ←→
-Server (Flask + gunicorn) ←→ PostgreSQL / Memgraph
+## Technology Stack & Overall Data Flow
 
-Client (Streamlit) ←→ Nginx ←→
-Server (Flask + gunicorn) ←→ System-Core  
-※ System-Core =
-Celery → RedisQueue ←→ Celery Worker ←→
-PostgreSQL / Memgraph
+Client (Streamlit) ←→ SQLite  
+⇅  
+Nginx  
+⇅  
+Server (Flask) ←→ PostgreSQL / Memgraph  
+⇅  
+──────────── System-Core ────────────  
+Celery  
+↓  
+Redis / RedisQueue  
+⇅  
+Celery Worker ←→ PostgreSQL / Memgraph  
 
-Route ① represents the DB access path from the perspective of the Server (dashboard).
+
+
+## Detailed Control & Data Flow
+
+Client (Streamlit) ←→ Nginx ←→  
+Server (Flask + gunicorn) ←→ PostgreSQL / Memgraph  
+
+Client (Streamlit) ←→ Nginx ←→  
+Server (Flask + gunicorn) ←→ System-Core    
+
+※ System-Core =  
+Celery → RedisQueue ←→ Celery Worker ←→  
+PostgreSQL / Memgraph  
+
+Route ① represents the DB access path from the perspective of the Server (dashboard).  
 Route ② represents the DB access path associated with task execution from the perspective of Celery Workers.
 
+
+
 ## Purpose and Role of Each Technology
-Client (Streamlit) — Web UI / Web UX (Frontend)
-Nginx — Asynchronous web server
-Server (Flask + gunicorn) — API & dashboard (Backend)
-RedisQueue — Message queue (task request management)
-Celery — Task worker generation and management
-PostgreSQL — Database specialized for learning and login history
+
+Client (Streamlit) — Web UI / Web UX (Frontend)  
+Nginx — Asynchronous web server  
+Server (Flask + gunicorn) — API & dashboard (Backend)  
+RedisQueue — Message queue (task request management)  
+Celery — Task worker generation and management  
+PostgreSQL — Database specialized for learning and login history  
 Memgraph — Database specialized for educational material graph search
 
+
+
 ## Reasons for Technology Selection
-Technologies such as Nginx, Redis, RedisQueue, Celery, PostgreSQL, and Memgraph were chosen with future scalability and increased user volume in mind.
-The use of gunicorn is a natural consequence of adopting Flask as the backend.
+Technologies such as Nginx, Redis, RedisQueue, Celery, PostgreSQL, and Memgraph were chosen with future scalability and increased user volume in mind.  
 
-Particularly, Client (Streamlit) and Server (Flask + gunicorn) were selected because:
+The use of gunicorn is a natural consequence of adopting Flask as the backend.  
 
-Both frontend and backend can be implemented entirely in Python, which is already widely used in Japanese public-school information science curricula.
+Particularly, Client (Streamlit) and Server (Flask + gunicorn) were selected because:  
+
+Both frontend and backend can be implemented entirely in Python, which is already widely used in   Japanese public-school information science curricula.
 
 This makes the system easier to pass through the review processes of local Boards of Education across Japan.
 
+
+
 ## Core Principle of This Project (SUNIE-Architecture)
+
 The “heart” of this project—the Celery-based inference worker—is a hybrid system combining rule-based logic and neural networks (LLM).
+
+
 
 ## Hybrid AI Co-Worker (SUNIE / LUMIE System)
 
@@ -101,32 +119,43 @@ Eliminates meaningless or inappropriate output that may confuse users
 —---------------------  
 End
 
+
+
 ## Key Point I Want to Emphasize Most
-Through the technical ideas behind this next-generation AI I am designing,
-I aim to solve long-standing challenges such as:
+Through the technical ideas behind this next-generation AI I am designing,  
+I aim to solve long-standing challenges such as:  
 
-The Frame Problem
+The Frame Problem  
 
-The Hallucination Problem
+The Hallucination Problem  
 
-The Black Box Problem
+The Black Box Problem  
 
 And ultimately realize an AI that can perceive, think, judge, and express itself like a human being.
 
+
+
 ## Ultimate Goal of This Project
-My goal is for this next-generation AI to contribute to the improvement of education worldwide.
-I envision a future where anyone can enjoy learning simply by using SUNIE.
+
+My goal is for this next-generation AI to contribute to the improvement of education worldwide.  
+I envision a future where anyone can enjoy learning simply by using SUNIE.  
 
 More concretely, SUNIE aims to support understanding in the educational domain
-and provide opportunities for academic rediscovery.
+and provide opportunities for academic rediscovery.  
 That is the future I dream of.
 
+
+
 ## To Those Who Are Following the Development Progress
+
 The logo of this project was designed with the image of “a sun illuminating the sea.”  
-I am deeply grateful to everyone who has been watching over the progress of this project.
+I am deeply grateful to everyone who has been watching over the progress of this project.  
 I hope you will continue to support SUNIE warmly as it evolves.
 
+
+
 ## Directory Structure of SUNIE
+
 SUNIE/  
 ├── client/  
 │   ├── app.py  
@@ -183,24 +212,31 @@ SUNIE/
 
 
 ## License & Disclaimer
-These codes are released under the MIT License.
-For details, please refer to the LICENSE file.
 
-Modification: Allowed
+These codes are released under the MIT License.  
+For details, please refer to the LICENSE file.  
 
-Reuse: Allowed
+Modification: Allowed  
 
-Redistribution: Allowed
+Reuse: Allowed  
 
-The contents of the code files are provided solely for informational purposes.
-Any operation based on the code must be performed at your own responsibility and judgment.
-While accuracy is pursued as much as possible, the author assumes no responsibility for any outcomes resulting from the use of the code.
+Redistribution: Allowed  
+
+The contents of the code files are provided solely for informational purposes.  
+Any operation based on the code must be performed at your own responsibility and judgment.  
+While accuracy is pursued as much as possible, the author assumes no responsibility for any outcomes resulting from the use of the code.  
 Thank you for your understanding.
 
+
+
 ## Creator / Developer
+
 Akihiro Morishita (moriaki1983)
 
+
+
 ## Contact
+
 moriaki1983@outlook.jp
 
 
@@ -211,10 +247,15 @@ moriaki1983@outlook.jp
 
 # SUNIE - 教育向けAI-WEBアプリケーション(Client & Server)
 
-## 本件プロジェクトのシステム構成(SUNIE-System)
-[SUNIEダイアグラム](./diagram.jpg)
 
-**技術スタック＆システム全体のデータフロー**  
+
+## 本件プロジェクトのシステム構成(SUNIE-System)
+
+[SUNIE-DIAGRAM](./diagram.jpg)
+
+
+
+## 技術スタック＆システム全体のデータフロー  
 
 Client(Streamlit) ←→ SQLite  
 ⇅  
@@ -229,7 +270,9 @@ Redis/RedisQueue
 ⇅  
 Celery-Worker ←→ PostgreSQL/Memgraph  
 
-**制御＆データフローの詳細**
+
+
+## 制御＆データフローの詳細
 
 ①「Client(Streamlit)」←→「Nginx」←→  
 「Server(Flask + gunicorn)」←→「PostgreSQL」「Memgraph」。  
@@ -243,7 +286,9 @@ Celery-Worker ←→ PostgreSQL/Memgraph
 ①は、Server(ダッシュボード)から観た、DBアクセスのルート。  
 ②は、Celery-Workerから観た、タスク処理に伴うDBアクセスのルート。  
 
-**個々の技術の目的と役割**  
+
+
+## 個々の技術の目的と役割  
 
 「Client(Streamlit)」＝Web-UI/Web-UX(フロントエンド)。  
 「Nginx」＝非同期Webサーバー。  
@@ -253,7 +298,9 @@ Celery-Worker ←→ PostgreSQL/Memgraph
 「PostgreSQL」＝学習・ログイン履歴保存特化データベース。  
 「Memgraph」＝教材データ検索特化データベース。
 
-**技術選定の理由**  
+
+
+## 技術選定の理由  
 
 「Nginx」「Redis」「RedisQue」「Celery」「PostgreSQL」「Memgraph」については、  
 将来的なユーザー数の増大や、システムの拡張を見越した技術選定です。  
@@ -262,11 +309,15 @@ Celery-Worker ←→ PostgreSQL/Memgraph
 既に、日本の公立学校の情報科目の中で採用されているPythonだけでフロントとバックを一貫して記述できることと、  
 日本の各自治体ごとに設置されている教育委員会の審議に通りやすくするために、このような選定としました。
 
+
+
 ## 本件プロジェクトの中心・中核原理(SUNIE-Architecture)
 本件プロジェクトの、いわば「心臓部となる部分」(Celery式の推論ワーカー)は、  
 ルールベースとニューラルネット(LLM)を混成したハイブリッド仕様となっています。  
 
-**ハイブリッドAIコワーカー(SUNIE/LUMIE System)**  
+
+
+## ハイブリッドAIコワーカー(SUNIE/LUMIE System)  
 
 開始  
 —---------------------  
@@ -368,44 +419,51 @@ SUNIE/
 
 
 ## 本件プロジェクトの導入方法
+
 [SUNIE-GUIDE1](INSTALL.md)
 
 
 
 ## 本件プロジェクトの立上げ方法
+
 [SUNIE-GUIDE2](SETUP.md)
 
 
 
 ## 本件プロジェクトの利用方法
+
 [SUNIE-GUIDE3](USE.md)
 
 
 
 ## 本件プロジェクトの開発方法
+
 [SUNIE-GUIDE4](DEVELOP.md)
 
 
 
 ## ライセンス＆免責事項
-これらのコードはMITライセンスのもとで公開されています。詳しくは「LISENCE」ファイルを参照してください。
 
-- 改変: 可
-- 再利用: 可
-- 再頒布: 可
+これらのコードはMITライセンスのもとで公開されています。詳しくは「LISENCE」ファイルを参照してください。  
 
-コードファイルに記載された内容は、情報提供のみを目的としています。
-したがって、コードを参考にした運用は必ずご自身の責任と判断において行ってください。
-コードの内容については、できる限り正確を期していますが、コードの内容に基づく運用結果について、作者は一切の責任を負いかねます。
+- 改変: 可  
+- 再利用: 可  
+- 再頒布: 可  
+
+コードファイルに記載された内容は、情報提供のみを目的としています。  
+したがって、コードを参考にした運用は必ずご自身の責任と判断において行ってください。  
+コードの内容については、できる限り正確を期していますが、コードの内容に基づく運用結果について、作者は一切の責任を負いかねます。  
 あらかじめご了承ください。
 
 
 
 ## 製作・開発者
+
 森下哲博(moriaki1983)
 
 
 
 
 ## 連絡先
+
 moriaki1983@outlook.jp
