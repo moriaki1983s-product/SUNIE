@@ -7,7 +7,7 @@
 ## **1. The world is not a content platform; the human inner world is the true platform**  
 
 The world we live in does not automatically provide meaning or value.  
-Meaning does not arise from the outside—it emerges from within.  
+Meaning does not arise from the outside — it emerges from within.  
 The human mind is the only true *platform of creation*.
 
 
@@ -25,8 +25,7 @@ it is something one can cultivate and shape with their own hands.
 Computers, robots, and AI  
 externalize the ideas and imagination residing within people  
 and form a magical system for acting upon the world.  
-It is not a force that binds people—  
-it is a force that liberates them.
+It is not a force that binds people — it is a force that liberates them.
 
 
 
@@ -34,8 +33,7 @@ it is a force that liberates them.
 
 If the environment takes away our agency,  
 we reclaim it from within ourselves.  
-If something is taken, we do not merely take it back—  
-we create it anew in a different form.  
+If something is taken, we do not merely take it back—we create it anew in a different form.  
 If something is broken, we do not leave it broken—  
 we create it again with a better structure.
 
@@ -44,8 +42,7 @@ we create it again with a better structure.
 ## **5. The magic of computing is a shared asset accessible to everyone**  
 
 This magical system does not belong to a select few.  
-Children, adults, experts, beginners—  
-anyone can learn it.  
+Children, adults, experts, beginners—anyone can learn it.  
 Anyone can use it.  
 Anyone can hack their own world.
 
@@ -55,8 +52,7 @@ Anyone can hack their own world.
 
 Computing offers new choices  
 to those who feel crushed by the absurdity of the world.  
-It is not an escape—  
-it is a power to create the future from one’s inner world.
+It is not an escape—it is a power to create the future from one’s inner world.
 
 
 
@@ -78,7 +74,7 @@ and within the human inner world.
 
 
 
-## **9. SUNIE / LUMIE are structures that quietly support this philosophy**  
+## **9. SUNIE/LUMIE are structures that quietly support this philosophy**  
 
 SUNIE supports people through education,  
 and LUMIE supports them through research.  
@@ -88,7 +84,7 @@ designed to maximize human inner freedom.
 
 
 
-## **10. This document is the quiet manifesto of SUNIE / LUMIE**  
+## **10. This document is the quiet manifesto of SUNIE/LUMIE**  
 
 By simply existing here,  
 it preserves the unwavering spirit  
@@ -106,7 +102,7 @@ of these projects.
 
 
 
-## **1. 世界はコンテンツ・プラットフォームではなく、人の内面こそが真のプラットフォームである**  
+## **1. 個人の内面こそが真のコンテンツ・プラットフォームである**  
 
 私達が生きる世界は、意味や価値を自動的に提供してくれる場ではない。  
 意味は外側ではなく、内側から生まれる。  
@@ -182,7 +178,7 @@ of these projects.
 
 
 
-## **9. SUNIE / LUMIE は、この思想を静かに支えるための構造である**  
+## **9. SUNIE/LUMIE は、この思想を静かに支えるための構造である**  
 
 SUNIEは教育面で、LUMIEは研究面で人々を支える。  
 両者は、人の内面の自由度を最大化するための  
