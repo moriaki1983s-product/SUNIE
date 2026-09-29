@@ -7,13 +7,7 @@
 
 
 
-## System Architecture of This Project (SUNIE-System)
-
-![SUNIE-DIAGRAM](./diagram.jpg)
-
-
-
-## Technology Stack & Overall Data Flow
+## Technology Stack & Overall Data Flow & System Architecture (SUNIE-System)
 
 Client (Streamlit) ←→ SQLite  
 ⇅  
@@ -60,6 +54,7 @@ Memgraph — Database specialized for educational material graph search
 
 
 ## Reasons for Technology Selection
+
 Technologies such as Nginx, Redis, RedisQueue, Celery, PostgreSQL, and Memgraph were chosen with future scalability and increased user volume in mind.  
 
 The use of gunicorn is a natural consequence of adopting Flask as the backend.  
@@ -122,6 +117,7 @@ End
 
 
 ## Key Point I Want to Emphasize Most
+
 Through the technical ideas behind this next-generation AI I am designing,  
 I aim to solve long-standing challenges such as:  
 
@@ -249,13 +245,9 @@ moriaki1983@outlook.jp
 
 
 
-## 本件プロジェクトのシステム構成(SUNIE-System)
-
-[SUNIE-DIAGRAM](./diagram.jpg)
 
 
-
-## 技術スタック＆システム全体のデータフロー  
+## 技術スタック＆システム全体のデータフロー＆システムアーキテクチャ(SUNIE-System)  
 
 Client(Streamlit) ←→ SQLite  
 ⇅  
@@ -312,6 +304,7 @@ Celery-Worker ←→ PostgreSQL/Memgraph
 
 
 ## 本件プロジェクトの中心・中核原理(SUNIE-Architecture)
+
 本件プロジェクトの、いわば「心臓部となる部分」(Celery式の推論ワーカー)は、  
 ルールベースとニューラルネット(LLM)を混成したハイブリッド仕様となっています。  
 
@@ -361,6 +354,7 @@ LLMによるユーザー心理の推定・評価に基づくロタリーの調�
 
 
 ## もっとも強調・アピールしたい点
+
 私の構想・開発する、この次世代AIの技術的アイデアによって、  
 長年にわたって議論されてきた「フレーム問題」「ハルシネーション問題」「ブラックボックス問題」が解決されて、  
 「人間のように 物事を知覚したり 思考したり 判断したり 表現できるAI」を実現させたいと思っています。
@@ -368,6 +362,7 @@ LLMによるユーザー心理の推定・評価に基づくロタリーの調�
 
 
 ## 本件プロジェクトの最終的な目標
+
 私の構想・開発する、この次世代AIによって「全世界の教育の向上に資すること」です。  
 「誰もが SUNIEを利用することで 楽しんで教育を受けることができる」。  
 より具体的に言えば、教育分野における理解の支援(学術的な再発見機会の提供)。  
@@ -376,6 +371,7 @@ LLMによるユーザー心理の推定・評価に基づくロタリーの調�
 
 
 ## 開発状況をチェックして下さっている方々へ
+
 本件プロジェクトのロゴは「海を照らす太陽」をイメージして作成しました。  
 プロジェクトの進捗を見守ってくださる方々には、感謝の気持ちで一杯です・・・。  
 今後とも、本件アプリの進捗を温かく見守って下さると幸いです。
@@ -459,7 +455,7 @@ SUNIE/
 
 ## 製作・開発者
 
-森下哲博(moriaki1983)
+森下哲博 (moriaki1983)
 
 
 
