@@ -1,86 +1,154 @@
-① Windows の初期設定（2分）
-✔ Windows Update を一度だけ実行
-（放置でOK。裏で勝手に進む）
+# はじめに
 
-✔ Microsoft Store を開いて「Windows Terminal」をインストール
-あなたは Terminal をよく使うので、最初に入れておくとスムーズ。
+これは、教育機関向け(小/中/高)の導入マニュアルです。  
+本書は、教育機関のシステム担当者が、SUNIEを安全かつ確実に導入するための公式ガイドです。
 
-② WSL2 + Ubuntu の導入（3分）
-Windows Terminal を開いて、これだけ。
-
-コード
-wsl --install
-自動で：
-
-WSL2
-
-Ubuntu
-
-必要なコンポーネント
-
-が全部入る。
-
-再起動後、Ubuntu が起動してユーザー名とパスワードを設定するだけ。
-
-③ Ubuntu の初期設定（3分）
-Ubuntu が起動したら、まず更新。
-
-コード
-sudo apt update && sudo apt upgrade -y
-次に、SUNIE/LUMIE に必要な最低限のパッケージを入れる。
-
-コード
-sudo apt install -y python3 python3-pip python3-venv \
-    redis-server postgresql graphviz
-これで SUNIE/LUMIE の基盤がすべて揃う。
-
-④ PostgreSQL の初期設定（1分）
-コード
-sudo service postgresql start
-必要ならユーザー作成：
-
-コード
-sudo -u postgres createuser -s $USER
-⑤ SUNIE/LUMIE のディレクトリを作る（1分）
-コード
-mkdir -p ~/sunie/{server,client}
-GitHub からコードを持ってくる場合は：
-
-コード
-git clone https://github.com/あなたのリポジトリ
-（Web-UI 中心なら、ここは後でOK）
-
-⑥ 起動スクリプトを配置（1分）
-あなたが作った：
-
-start_sunie.sh
-
-stop_sunie.sh
-
-sunie-control.sh
-
-を ~/sunie/ に置いて、権限付与。
-
-コード
-chmod +x *.sh
-🌄 これで準備完了
-ここまでで 10分以内。
-あとは SUNIE を起動するだけ。
-
-コード
-./sunie-control.sh start
-あなたの新しいマシンで、
-SUNIE/LUMIE が“OSとして”動き始める瞬間です。
+SUNIEは、学習/推論/意味構造を扱う新しいコンセプト・システムであり、  
+授業/探究学習/AIリテラシー教育など幅広い用途に利用されることを想定しています。
 
 
-git clone https://github.com/あなた/SUNIE ~/sunie
+
+# 導入の全体フロー
+
+教育機関向けの標準導入手順は次の通りです。
+
+1. **WSL2 の有効化 (Windows)**  
+2. **Ubuntu のインストール (WSL2 上)**  
+3. **Docker Desktop の導入**  
+4. **GitHub CLI の導入**  
+5. **Python (開発者向け)**  
+6. **SUNIE/LUMIE の取得と起動**
+
+この順番で進めることで、  
+**本番環境に近い Linux + Docker 構成を安全に再現**できます。
 
 
-~/sunie/
-    server/
-    client/
-    scripts/
-        start_sunie.sh
-        stop_sunie.sh
-        sunie-control.sh
-    logs/
+
+# システム要件
+
+## ハードウェア
+
+- CPU：Intel / AMD (仮想化支援 VT-x/AMD-V が有効)  
+- メモリ：8GB 以上推奨 (最低 4GB)  
+- ストレージ：20GB 以上の空き容量  
+- OS：Windows 10/11 (教育機関向けエディション対応)
+
+## ネットワーク要件
+
+以下の外部サービスへのアクセスが必要です。  
+
+- GitHub (https://github.com)  
+- Docker Hub (https://hub.docker.com)  
+- Python パッケージ (https://pypi.org)  
+- Redis (Docker イメージ取得時)
+
+プロキシ環境の場合は、担当者が事前に許可設定を行ってください。  
+
+
+
+## 管理者権限が必要な操作
+
+- WSL2 の有効化  
+- Docker Desktop のインストール  
+- 仮想化機能 (Hyper-V/Virtual Machine Platform) の有効化  
+
+
+
+# WSL2 の導入
+
+## WSL2 を有効化
+
+PowerShell (管理者権限) で以下を実行します。
+PC を再起動します。
+
+## WSL バージョン確認
+
+
+
+# Ubuntu のインストール (WSL2)
+
+Microsoft Store から **Ubuntu 22.04 LTS** をインストールします。  
+初回起動時に以下を設定します。
+
+- UNIX ユーザー名  
+- パスワード  
+
+
+
+# Docker Desktop の導入
+
+## インストール
+
+公式サイトから Docker Desktop をダウンロードし、インストールします。
+
+## 設定
+
+- "Use WSL2 backend" を有効化  
+- Ubuntu を Docker のバックエンドとして登録
+
+## 動作確認
+
+
+
+# GitHub CLI の導入
+
+## インストール
+
+## GitHub へのログイン
+
+- GitHub.com  
+- HTTPS  
+- ブラウザで認証
+
+## リポジトリの取得
+
+
+
+# トラブルシューティング
+
+## Docker が起動しない
+
+- BIOS で仮想化支援が無効  
+- Hyper-V が無効  
+- 管理者権限不足  
+
+## GitHub にアクセスできない
+
+- プロキシ設定が必要  
+- 学校のフィルタリングでブロック  
+
+## Celery Worker が動かない
+
+- Redis が起動していない  
+- ポートが塞がれている  
+
+
+
+# 授業・研究での活用例
+
+- 探究学習での AI モデル構築  
+- 大学研究室での意味構造解析  
+- プログラミング授業での API 開発  
+- データサイエンス教育  
+- AI リテラシー教材としての活用  
+
+
+
+# よくある質問（FAQ）
+
+### Q. Windows だけで動かせますか？  
+A. 基本的には WSL2 + Docker を推奨します。
+
+### Q. Python を触らなくても使えますか？  
+A. はい。Docker だけで利用可能です。
+
+### Q. 学校 PC の制限が厳しい場合は？  
+A. 管理者権限が必要な操作を事前に申請してください。
+
+
+
+# おわりに
+
+**SUNIE は、「学習・推論・意味構造の再設計」を目指す教育向けの新しい基盤です。**
+
+本マニュアルが、学校現場での導入をスムーズにし、生徒・学生の創造性を広げる一助となれば幸いです。

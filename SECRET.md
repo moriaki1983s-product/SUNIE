@@ -68,8 +68,7 @@ That is the purpose of this philosophy.
 ## **8. Magic exists everywhere**  
 
 Computing does not reside in special places;  
-it already exists  
-in everyday life,  
+it already exists, in everyday life,  
 and within the human inner world.
 
 
@@ -172,9 +171,7 @@ of these projects.
 ## **8. 魔法は、どこにでも存在する**  
 
 コンピューティングは特別な場所にあるのではなく、  
-日常の中に、  
-人の内面の中に、  
-すでに存在している。  
+日常の中に、人の内面の中に、すでに存在している。  
 
 
 
